@@ -1,0 +1,20 @@
+name = "edgewise-journal"
+compatibility_date = "2026-11-01"
+pages_build_output_dir = "./public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "edgewise-db"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+[vars]
+# Model used for every AI feature. Change any time without redeploying code.
+CLAUDE_MODEL = "claude-sonnet-5-5"
+# Max AI requests per user per day.
+AI_DAILY_LIMIT = "60"
+# Set to "false" to close sign-ups.
+ALLOW_SIGNUP = "true"
+
+# The Claude key is a SECRET, never put it here:
+#   npx wrangler pages secret put ANTHROPIC_API_KEY
+# For local dev, put it in a .dev.vars file:  ANTHROPIC_API_KEY=sk-ant-...

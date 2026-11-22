@@ -1,0 +1,52 @@
+EDGEWISE: TRADING JOURNAL WITH AN AI COACH
+Cloudflare Pages + Pages Functions + D1. No build step.
+
+WHAT'S IN HERE
+  public/                 the app (HTML, CSS, JS, plus self-hosted GSAP, SheetJS and the Urbanist font)
+  functions/api/[[path]].js   the backend: sign-up/login, data sync, chart screenshots, Claude proxy
+  schema.sql              database tables
+  wrangler.toml           Cloudflare config
+
+DEPLOY (about 10 minutes)
+1. Install Node 18+ and run:   npm install
+2. Log in to Cloudflare:       npx wrangler login
+3. Create the database:        npx wrangler d1 create edgewise-db
+   Copy the "database_id" it prints into wrangler.toml (replace REPLACE_WITH_YOUR_D1_DATABASE_ID).
+4. Create the tables:          npm run db:remote
+5. Create the Pages project:   npx wrangler pages project create edgewise-journal
+6. Deploy:                     npm run deploy
+7. Add your Claude API key as a SECRET (never in code):
+       npx wrangler pages secret put ANTHROPIC_API_KEY
+   Paste your key when asked, then run "npm run deploy" once more.
+8. Optional: in the Cloudflare dashboard > Pages > edgewise-journal > Custom domains, add your domain.
+
+RUN IT LOCALLY
+  npm run db:local
+  Create a file named .dev.vars containing:   ANTHROPIC_API_KEY=sk-ant-...
+  npm run dev      then open http://127.0.0.1:8788
+
+SETTINGS YOU CAN CHANGE (wrangler.toml [vars], or Pages > Settings > Variables)
+  CLAUDE_MODEL     which Claude model the coach uses (default claude-sonnet-5-5)
+  AI_DAILY_LIMIT   AI requests per user per day (default 60), keeps your API bill predictable
+  ALLOW_SIGNUP     set to "false" to stop new sign-ups
+
+HOW THE AI WORKS
+  The browser never sees your key. The page sends a summary of the user's own journal
+  (stats, accounts, rules, recent trades, notes) to /api/ai; the function adds the key and
+  calls Claude. Features: dashboard insight, trade grading, chart-screenshot reading,
+  weekly review, tomorrow's plan, journal reflection, and a free-form coach chat.
+
+SPREADSHEET IMPORT
+  Onboarding step 4 reads .xlsx files laid out like "MISSION NO DEBT": an accounts table
+  (Firm, Cost, Quantity, Passed, Ongoing Funded, Date), the payout goal (Est. Payout,
+  Start Date / End Date), monthly payout estimates and the first 5-trading-day plan.
+
+CSV TRADE IMPORT
+  Trades > Import CSV. Columns are matched by name (date, symbol, side, qty, entry, exit,
+  P&L, fees), which covers most Tradovate / NinjaTrader / MT4-5 / broker exports.
+
+BEFORE CHARGING FOR IT (SaaS to-dos)
+  - Password reset email (e.g. Resend or Cloudflare Email Workers)
+  - Billing (Stripe or Razorpay) that sets users.plan, and plan-based AI limits
+  - Cloudflare Turnstile on the sign-up form to stop bot accounts
+  - Privacy policy + terms (you store users' trading data)
