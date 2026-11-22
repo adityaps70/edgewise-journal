@@ -25,7 +25,7 @@ export function equityChart(points, { h = 200, events = [], forecast = null, goa
   let fc = '';
   if (forecast && forecast.length) {
     const start = pts.length - 1;
-    fc = `<path d="M${xs(start)},${ys(pts[start].eq)}${forecast.map((f, i) => `L${xs(start + i + 1)},${ys(f.eq)}`).join('')}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="3 5" opacity=".7" data-fade/>`;
+    fc = `<path d="M${xs(start)},${ys(pts[start].eq)}${forecast.map((f, i) => `L${xs(start + i + 1)},${ys(f.eq)}`).join('')}" fill="none" stroke="var(--violet)" stroke-width="2" stroke-dasharray="3 5" opacity=".8" data-fade/>`;
     fc += `<line x1="${xs(start)}" x2="${xs(start)}" y1="${T}" y2="${H - B}" stroke="var(--line-2)" stroke-dasharray="2 3"/><g data-fade><rect x="${xs(start) - 22}" y="${T - 12}" width="44" height="18" rx="6" fill="var(--card-3)"/><text x="${xs(start)}" y="${T + 1}" text-anchor="middle" style="fill:var(--ink-2)">Today</text></g>`;
   }
   const goalL = goal ? `<line x1="${L}" x2="${W - R}" y1="${ys(goal)}" y2="${ys(goal)}" stroke="var(--warn)" stroke-dasharray="6 6" opacity=".7"/><text x="${W - R}" y="${ys(goal) - 6}" text-anchor="end" style="fill:var(--warn)">Goal ${esc(short(goal))}</text>` : '';
@@ -37,10 +37,10 @@ export function equityChart(points, { h = 200, events = [], forecast = null, goa
   const first = pts[1] || pts[0]; const last = pts[pts.length - 1];
   return `<div class="chartwrap" style="position:relative">
   <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px">
-    <defs><linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".32"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+    <defs><linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--chart)" stop-opacity=".3"/><stop offset="1" stop-color="var(--chart)" stop-opacity="0"/></linearGradient><linearGradient id="${id}s" gradientUnits="userSpaceOnUse" x1="${L}" x2="${W - R}" y1="0" y2="0"><stop offset="0" stop-color="var(--blue)"/><stop offset=".7" stop-color="var(--violet)"/><stop offset="1" stop-color="var(--accent)"/></linearGradient></defs>
     ${grid}${goalL}
     <path d="${area}" fill="url(#${id}g)" data-fade/>
-    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" data-draw vector-effect="non-scaling-stroke"/>
+    <path d="${line}" fill="none" stroke="url(#${id}s)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" data-draw vector-effect="non-scaling-stroke"/>
     ${fc}${dots}
     <text x="${L}" y="${H - 4}">${esc(fmtDate(first.date))}</text><text x="${xs(pts.length - 1)}" y="${H - 4}" text-anchor="end">${esc(fmtDate(last.date))}</text>
     ${hit}

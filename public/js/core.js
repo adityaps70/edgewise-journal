@@ -376,7 +376,7 @@ export function aiContext({ trades, focus } = {}) {
   });
   S.payout.forEach((p2) => lines.push(`Payout ${accName(p2.accountId)} ${money(p2.amount || p2.estimate)} status ${p2.status} req ${p2.reqDate || '-'} credited ${p2.creditDate || '-'}`));
   lines.push(`All-time: ${st.n} trades, net ${money(st.total)}, win rate ${pct(st.winRate)}, PF ${Number.isFinite(st.pf) ? st.pf.toFixed(2) : '∞'}, expectancy ${money(st.expectancy)}, avg win ${money(st.avgWin)}, avg loss ${money(st.avgLoss)}, max DD ${money(st.maxDD)}, avg R ${st.avgR?.toFixed(2) ?? '-'}`);
-  lines.push(`Last 30 days: ${last30.n} trades, net ${money(last30.total)}, win rate ${pct(last30.winRate)}, green days ${pct(last30.dayWinRate)}`);
+  lines.push(`Last 30 days: ${last30.n} trades, net ${money(last30.total)}, win rate ${pct(last30.winRate)}, winning days ${pct(last30.dayWinRate)}`);
   const g = (label, fn) => { const rows = groupBy(all, fn).slice(0, 12); if (rows.length) lines.push(`${label}: ` + rows.map((r) => `${r.key} ${money(r.net)} (${r.n}t, ${pct(r.winRate)})`).join('; ')); };
   g('By setup', (t) => t.setup); g('By symbol', (t) => t.symbol); g('By session', (t) => t.session); g('By emotion', (t) => t.emotion);
   g('By mistake', (t) => (t.mistakes || []).filter((x) => x !== 'None')); g('By weekday', (t) => parseISO(t.date).toLocaleDateString('en-US', { weekday: 'short' }));
