@@ -5,7 +5,7 @@ pages_build_output_dir = "./public"
 [[d1_databases]]
 binding = "DB"
 database_name = "smarttrade-db"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id = "e4e2edf6-18fe-40f5-8c83-9a41c0c5215d"
 
 [vars]
 # Model used for every AI feature. Change any time without redeploying code.
