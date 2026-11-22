@@ -2,17 +2,132 @@
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Edgewise · Trading journal</title>
-  <meta name="description" content="A trading journal for prop-firm and independent traders, with an AI coach built in.">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edgewise · The trading journal built for prop firm traders</title>
+  <meta name="description" content="Log trades, guard every prop account's drawdown, track payouts in your own currency and get an AI coach that reads your whole journal.">
   <meta name="theme-color" content="#0c1210">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='6' fill='%23137a50'/><path d='M5 17 9 11l4 4 6-9' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/></svg>">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="landing.css">
   <script src="vendor/gsap.min.js" defer></script>
-  <script src="vendor/xlsx.full.min.js" defer></script>
-  <script type="module" src="js/app.js"></script>
+  <script src="vendor/ScrollTrigger.min.js" defer></script>
+  <script type="module" src="js/landing.js"></script>
 </head>
-<body>
-  <div id="app"></div>
+<body class="lp">
+  <header class="lnav" id="lnav">
+    <a class="lnav__brand" href="#top"><span class="mark" data-ico="logo"></span><b>Edgewise</b></a>
+    <nav class="lnav__links"><a href="#features">Features</a><a href="#firms">Prop firms</a><a href="#coach">AI coach</a><a href="#faq">FAQ</a></nav>
+    <button class="rbtn rbtn--plain" id="lTheme" aria-label="Switch theme"></button>
+    <a class="btn btn--primary" href="app.html" data-cta>Open journal</a>
+  </header>
+
+  <main id="top">
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero__copy">
+        <span class="eyebrow"><span class="live"></span>Built for prop firm traders</span>
+        <h1 class="hsplit">Trade the plan. Keep the payout.</h1>
+        <p class="hero__sub">Edgewise knows your firm's rules, watches every account's drawdown, and tells you where your money actually leaks. Log a trade in seconds; the journal does the maths.</p>
+        <div class="hero__cta"><a class="btn btn--primary btn--lg" href="app.html" data-cta data-ico-r="right">Start journaling free</a><a class="btn btn--lg" href="#how">See how it works</a></div>
+        <p class="hero__fine">No sign-up needed to try it. Your journal stays in your browser.</p>
+      </div>
+      <div class="hero__stage" id="stage">
+        <div class="hs hs--main">
+          <div class="hs__head"><div><small>Net P&amp;L · this month</small><b data-count="4835" data-fmt="usdSign">+$0</b></div><span class="delta"><span data-ico="up"></span>18.4%</span></div>
+          <svg class="hs__chart" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true">
+            <defs><linearGradient id="hg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".35"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+            <path class="hs__area" d="M0,120 L30,112 60,116 90,98 120,104 150,86 180,90 210,70 240,76 270,58 300,62 330,44 360,40 400,24 L400,140 L0,140Z" fill="url(#hg)"/>
+            <path class="hs__line" d="M0,120 L30,112 60,116 90,98 120,104 150,86 180,90 210,70 240,76 270,58 300,62 330,44 360,40 400,24" fill="none" stroke="var(--accent)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+            <circle class="hs__pt" cx="210" cy="70" r="5" fill="var(--mint)"/><circle class="hs__pt" cx="330" cy="44" r="5" fill="var(--mint)"/>
+          </svg>
+          <div class="hs__kpis"><div><small>Win rate</small><b data-count="58" data-fmt="pct0">0%</b></div><div><small>Profit factor</small><b data-count="1.9" data-fmt="dec">0</b></div><div><small>Avg R</small><b data-count="0.74" data-fmt="r">0R</b></div></div>
+        </div>
+        <div class="hs hs--acct vcard" data-tone="1"><div class="vcard__face" style="position:relative">
+          <div class="vcard__top"><span class="fmono">EV</span><div class="vcard__id"><b>50K Evaluation</b><small>Sample firm · EOD trailing</small></div><span class="vstage vstage--challenge">Challenge</span></div>
+          <div class="vcard__pnl"><small>Account P&amp;L</small><b data-count="1840" data-fmt="usdSign">+$0</b><em>61% of $3,000 target</em></div>
+          <div class="ladder"><div class="ladder__track"><i class="ladder__fill hs__fill" style="left:40%;width:24%"></i><span class="ladder__zero" style="left:40%"></span><span class="ladder__dot hs__dot" style="left:64%"></span></div><div class="ladder__lab"><span class="bad">Breach −$2,000</span><span>Target +$3,000</span></div></div>
+          <div class="vcard__stats"><div><small>Daily left</small><b>$650</b></div><div><small>DD buffer</small><b>$3,840</b></div><div><small>Days</small><b>4/5</b></div></div>
+        </div></div>
+        <div class="hs hs--chip hs--c1"><span class="gtag g-a">A+</span><span><b>Opening range break</b><small>NQ · +2.4R</small></span></div>
+        <div class="hs hs--chip hs--c2"><span class="spark" data-ico="coach"></span><span><b>Coach</b><small>Your C-grade trades lost $1,120 this month.</small></span></div>
+        <div class="hs hs--chip hs--c3"><span class="prodico" data-ico="shield"></span><span><b>Daily stop</b><small>$350 left today</small></span></div>
+      </div>
+    </section>
+
+    <div class="marquee" aria-label="Firm rules included"><div class="marquee__track" id="marq"></div></div>
+
+    <!-- FEATURES -->
+    <section class="sec" id="features">
+      <div class="sec__head"><span class="eyebrow">Everything a journal should do</span><h2 class="hsplit">Less spreadsheet. More edge.</h2><p>Built around how funded traders actually work: several accounts, firm rules, payouts, and a plan you're trying to stick to.</p></div>
+      <div class="fgrid">
+        <article class="card feat"><span class="prodico" data-ico="shield"></span><h3>Drawdown guard</h3><p>Every account shows how far you are from breaching and from the profit target, updated the moment you log a trade.</p><div class="mini-ladder"><i></i></div></article>
+        <article class="card feat"><span class="prodico t2" data-ico="bolt"></span><h3>Firm rules built in</h3><p>Pick your firm, plan and size. Target, max loss, daily limit and consistency rules fill themselves in.</p></article>
+        <article class="card feat"><span class="prodico t3" data-ico="target"></span><h3>Risk by setup grade</h3><p>Size A+ setups bigger and C setups smaller. Tag each trade and see whether your conviction actually pays.</p><div class="feat__grades"><span class="gtag g-a">A+</span><span class="gtag g-b">B</span><span class="gtag g-c">C</span></div></article>
+        <article class="card feat"><span class="prodico t4" data-ico="payouts"></span><h3>Payouts in your currency</h3><p>Track estimated vs actual payouts by month, converted at today's live exchange rate.</p></article>
+        <article class="card feat"><span class="prodico" data-ico="calendar"></span><h3>Calendar &amp; analytics</h3><p>Green and red days at a glance, plus your edge by setup, session, weekday, hour and emotion.</p></article>
+        <article class="card feat"><span class="prodico t2" data-ico="coach"></span><h3>AI coach</h3><p>Grades trades, reads chart screenshots, writes your weekly review and plans tomorrow from your own numbers.</p></article>
+      </div>
+    </section>
+
+    <!-- FIRMS DEMO -->
+    <section class="sec sec--split" id="firms">
+      <div class="sec__head sec__head--left"><span class="eyebrow">Prop firm aware</span><h2 class="hsplit">Pick your firm. The rules come with it.</h2><p>Published rules from major futures and forex firms, checked November 2026. Your own daily stop sits on top, because most traders want to quit before the firm makes them.</p>
+        <p class="fine">Rules change often, so every value stays editable and links back to the firm's site.</p></div>
+      <div class="card demo" id="demo">
+        <div class="demo__firms" id="dFirms"></div>
+        <div class="demo__row"><div class="seg seg--accent" id="dSizes"></div><div class="seg" id="dStage"><button data-v="challenge" class="is-on">Challenge</button><button data-v="funded">Funded</button></div></div>
+        <div class="fp__rules" id="dRules"></div>
+        <div id="dSlider"></div>
+        <div class="demo__ladder"><div class="ladder"><div class="ladder__track"><i class="ladder__fill" id="dFill"></i><span class="ladder__zero" id="dZero"></span><span class="ladder__stop" id="dStop"></span><span class="ladder__dot" id="dDot"></span></div><div class="ladder__lab"><span class="bad" id="dLo"></span><span id="dHi"></span></div></div><p class="muted fine" id="dCap"></p></div>
+      </div>
+    </section>
+
+    <!-- COACH -->
+    <section class="sec sec--split sec--rev" id="coach">
+      <div class="sec__head sec__head--left"><span class="eyebrow">Powered by Claude</span><h2 class="hsplit">A coach that has read every trade.</h2><p>Ask anything about your trading. The coach sees your stats, accounts, rules and notes, and answers with your numbers, not generic tips.</p>
+        <ul class="ticks lp-ticks"><li><span data-ico="check"></span>Weekly review with dollar cost of each leak</li><li><span data-ico="check"></span>Tomorrow's plan from your limits and best setups</li><li><span data-ico="check"></span>Chart screenshot read-back on any trade</li></ul></div>
+      <div class="card chatdemo" id="chat">
+        <div class="msg msg--user">Where am I losing money this month?</div>
+        <div class="msg msg--ai"><h4>Two leaks, $1,540 total</h4><ul><li><b>C-grade trades:</b> 9 trades, 22% win rate, <b>−$1,120</b>. Your A+ trades made +$3,980.</li><li><b>After 2 losses:</b> the third trade of the day lost $420 across 4 sessions.</li></ul><p><b>Next week:</b> skip C-grade setups and stop after two losses. That alone would have kept you 31% further from your drawdown.</p></div>
+        <div class="msg msg--user">Plan tomorrow for my 50K eval.</div>
+        <div class="msg msg--ai typing-msg"><span class="typing"><i></i><i></i><i></i></span></div>
+      </div>
+    </section>
+
+    <!-- HOW -->
+    <section class="sec" id="how">
+      <div class="sec__head"><span class="eyebrow">Two minutes to set up</span><h2 class="hsplit">How it works</h2></div>
+      <div class="steps3"><svg class="steps3__line" viewBox="0 0 1000 4" preserveAspectRatio="none" aria-hidden="true"><path d="M0,2 L1000,2"/></svg>
+        <div class="card step3"><span class="step3__n">1</span><h3>Add your accounts</h3><p>Choose firm, plan and size, or import the spreadsheet you already use.</p></div>
+        <div class="card step3"><span class="step3__n">2</span><h3>Set your risk</h3><p>Daily stop per account, risk per setup grade, the rules you want to be held to.</p></div>
+        <div class="card step3"><span class="step3__n">3</span><h3>Log and learn</h3><p>Log trades or import a CSV. Your stats, calendar and coach update as you go.</p></div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="sec sec--narrow" id="faq">
+      <div class="sec__head"><span class="eyebrow">Questions</span><h2 class="hsplit">Good to know</h2></div>
+      <div class="faq">
+        <details class="card"><summary>Is it free?<span data-ico="plus"></span></summary><p>Yes, while it's in beta. No sign-up is needed to try it.</p></details>
+        <details class="card"><summary>Where is my data stored?<span data-ico="plus"></span></summary><p>On this version, everything stays in your own browser. Nothing is uploaded. Use Settings → Export to keep a backup or move to another device.</p></details>
+        <details class="card"><summary>Which prop firms are included?<span data-ico="plus"></span></summary><p>Topstep, Apex Trader Funding, TopOne Futures, Tradeify, MyFundedFutures, Lucid Trading, Take Profit Trader, FTMO and FundingPips, plus any other firm whose rules you enter yourself.</p></details>
+        <details class="card"><summary>Are the firm rules always current?<span data-ico="plus"></span></summary><p>They were checked against public sources in November 2026, but firms change rules often. Each account links to the firm's site and every value can be edited.</p></details>
+        <details class="card"><summary>Is Edgewise affiliated with any prop firm?<span data-ico="plus"></span></summary><p>No. Edgewise is an independent journal and doesn't sell or promote any firm's accounts.</p></details>
+      </div>
+    </section>
+
+    <section class="final">
+      <div class="final__card">
+        <h2 class="hsplit">Your next payout starts with your next trade.</h2>
+        <p>Set up in two minutes. Free while in beta.</p>
+        <a class="btn btn--primary btn--lg" href="app.html" data-cta data-ico-r="right">Open the journal</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="lfoot">
+    <span class="lnav__brand"><span class="mark" data-ico="logo"></span><b>Edgewise</b></span>
+    <p>Edgewise is a journaling tool, not financial advice. It is not affiliated with any prop firm; firm names belong to their owners and rules are summarised from public sources. Exchange rates by <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">ExchangeRate-API</a>.</p>
+  </footer>
 </body>
 </html>

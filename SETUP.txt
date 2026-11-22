@@ -37,7 +37,7 @@ HOW THE AI WORKS
   weekly review, tomorrow's plan, journal reflection, and a free-form coach chat.
 
 SPREADSHEET IMPORT
-  Onboarding step 4 reads .xlsx files laid out like "MISSION NO DEBT": an accounts table
+  Onboarding (Accounts step) reads .xlsx files with an accounts table
   (Firm, Cost, Quantity, Passed, Ongoing Funded, Date), the payout goal (Est. Payout,
   Start Date / End Date), monthly payout estimates and the first 5-trading-day plan.
 

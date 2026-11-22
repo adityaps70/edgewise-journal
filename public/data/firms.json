@@ -1,0 +1,766 @@
+{
+ "verified": "2026-11",
+ "note": "Rules and prices change often. Always confirm on the firm's website; every value is editable per account.",
+ "firms": [
+  {
+   "id": "topstep",
+   "name": "Topstep",
+   "market": "futures",
+   "url": "https://www.topstep.com",
+   "programs": [
+    {
+     "id": "combine",
+     "name": "Trading Combine",
+     "billing": "monthly",
+     "ddType": "trailing",
+     "ddNote": "End-of-day trailing",
+     "consistency": 50,
+     "minDays": 2,
+     "activation": 149,
+     "split": 90,
+     "stages": [
+      "challenge",
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 50000,
+       "target": 3000,
+       "maxLoss": 2000,
+       "price": 49
+      },
+      {
+       "size": 100000,
+       "target": 6000,
+       "maxLoss": 3000,
+       "price": 99
+      },
+      {
+       "size": 150000,
+       "target": 9000,
+       "maxLoss": 4500,
+       "price": 149
+      }
+     ],
+     "note": "No firm daily loss limit by default on TopstepX; you can add one at setup."
+    }
+   ],
+   "mono": "TS"
+  },
+  {
+   "id": "apex",
+   "name": "Apex Trader Funding",
+   "market": "futures",
+   "url": "https://apextraderfunding.com",
+   "programs": [
+    {
+     "id": "eod",
+     "name": "EOD Trail",
+     "billing": "one-time",
+     "ddType": "trailing",
+     "ddNote": "End-of-day trailing",
+     "consistency": null,
+     "minDays": 1,
+     "activation": 0,
+     "split": 90,
+     "stages": [
+      "challenge",
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 25000,
+       "target": 1500,
+       "maxLoss": 1000,
+       "price": 49
+      },
+      {
+       "size": 50000,
+       "target": 3000,
+       "maxLoss": 2000,
+       "price": 59
+      },
+      {
+       "size": 100000,
+       "target": 6000,
+       "maxLoss": 3000,
+       "price": 119
+      },
+      {
+       "size": 150000,
+       "target": 9000,
+       "maxLoss": 4500,
+       "price": 219
+      }
+     ]
+    },
+    {
+     "id": "intraday",
+     "name": "Intraday Trail",
+     "billing": "one-time",
+     "ddType": "trailing",
+     "ddNote": "Intraday trailing",
+     "consistency": null,
+     "minDays": 1,
+     "activation": 0,
+     "split": 90,
+     "stages": [
+      "challenge",
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 25000,
+       "target": 1500,
+       "maxLoss": 1000,
+       "price": 49
+      },
+      {
+       "size": 50000,
+       "target": 3000,
+       "maxLoss": 2000,
+       "price": 79
+      },
+      {
+       "size": 100000,
+       "target": 6000,
+       "maxLoss": 3000,
+       "price": 129
+      },
+      {
+       "size": 150000,
+       "target": 9000,
+       "maxLoss": 4500,
+       "price": 189
+      }
+     ]
+    }
+   ],
+   "mono": "AX"
+  },
+  {
+   "id": "topone",
+   "name": "TopOne Futures",
+   "market": "futures",
+   "url": "https://toponefutures.com",
+   "programs": [
+    {
+     "id": "elite",
+     "name": "Elite Challenge",
+     "billing": "monthly",
+     "ddType": "trailing",
+     "ddNote": "End-of-day trailing",
+     "consistency": null,
+     "minDays": 1,
+     "activation": 149,
+     "split": 90,
+     "stages": [
+      "challenge",
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 25000,
+       "target": 1500,
+       "maxLoss": 1000,
+       "daily": 625,
+       "price": 69
+      },
+      {
+       "size": 50000,
+       "target": 3000,
+       "maxLoss": 2000,
+       "daily": 1250,
+       "price": 99
+      },
+      {
+       "size": 100000,
+       "target": 6000,
+       "maxLoss": 3000,
+       "daily": 2500,
+       "price": 199
+      },
+      {
+       "size": 150000,
+       "target": 9000,
+       "maxLoss": 4500,
+       "daily": 3750,
+       "price": 297
+      }
+     ]
+    },
+    {
+     "id": "access",
+     "name": "Elite Access",
+     "billing": "one-time",
+     "ddType": "trailing",
+     "ddNote": "End-of-day trailing, locks at break-even + $100",
+     "consistency": null,
+     "minDays": 1,
+     "activation": 0,
+     "split": 90,
+     "stages": [
+      "challenge",
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 25000,
+       "target": 1500,
+       "maxLoss": 1000,
+       "price": 39
+      },
+      {
+       "size": 50000,
+       "target": 3000,
+       "maxLoss": 2000,
+       "price": 39
+      },
+      {
+       "size": 100000,
+       "target": 6000,
+       "maxLoss": 3000,
+       "price": 39
+      },
+      {
+       "size": 150000,
+       "target": 9000,
+       "maxLoss": 4000,
+       "price": 39
+      }
+     ],
+     "note": "No daily loss limit in the evaluation; a daily limit applies once funded. Set it on the account."
+    }
+   ],
+   "mono": "T1"
+  },
+  {
+   "id": "tradeify",
+   "name": "Tradeify",
+   "market": "futures",
+   "url": "https://tradeify.co",
+   "programs": [
+    {
+     "id": "select",
+     "name": "Select",
+     "billing": "one-time",
+     "ddType": "trailing",
+     "ddNote": "End-of-day trailing",
+     "consistency": 40,
+     "minDays": 3,
+     "activation": 0,
+     "split": 90,
+     "stages": [
+      "challenge",
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 25000,
+       "target": 1500,
+       "maxLoss": 1000,
+       "price": 109,
+       "fundedDaily": 500
+      },
+      {
+       "size": 50000,
+       "target": 3000,
+       "maxLoss": 2000,
+       "price": 165,
+       "fundedDaily": 1000
+      },
+      {
+       "size": 100000,
+       "target": 6000,
+       "maxLoss": 3000,
+       "price": 259,
+       "fundedDaily": 1250
+      },
+      {
+       "size": 150000,
+       "target": 9000,
+       "maxLoss": 4500,
+       "price": 359,
+       "fundedDaily": 1750
+      }
+     ],
+     "note": "No daily loss limit in the evaluation. The Daily payout path adds one when funded."
+    },
+    {
+     "id": "growth",
+     "name": "Growth",
+     "billing": "one-time",
+     "ddType": "trailing",
+     "ddNote": "End-of-day trailing",
+     "consistency": null,
+     "minDays": 1,
+     "activation": 0,
+     "split": 90,
+     "stages": [
+      "challenge",
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 25000,
+       "target": 1500,
+       "maxLoss": 1000,
+       "daily": 600,
+       "price": 99
+      },
+      {
+       "size": 50000,
+       "target": 3000,
+       "maxLoss": 2000,
+       "daily": 1250,
+       "price": 139
+      },
+      {
+       "size": 100000,
+       "target": 6000,
+       "maxLoss": 3500,
+       "daily": 2500,
+       "price": 249
+      },
+      {
+       "size": 150000,
+       "target": 9000,
+       "maxLoss": 5000,
+       "daily": 3750,
+       "price": 359
+      }
+     ],
+     "note": "Daily loss limit is a soft breach: trading pauses for the day."
+    }
+   ],
+   "mono": "TF"
+  },
+  {
+   "id": "mffu",
+   "name": "MyFundedFutures",
+   "market": "futures",
+   "url": "https://myfundedfutures.com",
+   "programs": [
+    {
+     "id": "rapid",
+     "name": "Rapid",
+     "billing": "monthly",
+     "ddType": "trailing",
+     "ddNote": "End-of-day trailing",
+     "consistency": 50,
+     "minDays": 2,
+     "activation": 0,
+     "split": 90,
+     "stages": [
+      "challenge",
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 25000,
+       "target": 1500,
+       "maxLoss": 1000,
+       "price": 129
+      },
+      {
+       "size": 50000,
+       "target": 3000,
+       "maxLoss": 2000,
+       "price": 209
+      },
+      {
+       "size": 100000,
+       "target": 6000,
+       "maxLoss": 3000,
+       "price": 356
+      },
+      {
+       "size": 150000,
+       "target": 9000,
+       "maxLoss": 4500,
+       "price": 449
+      }
+     ]
+    },
+    {
+     "id": "pro",
+     "name": "Pro",
+     "billing": "monthly",
+     "ddType": "trailing",
+     "ddNote": "End-of-day trailing",
+     "consistency": 50,
+     "minDays": 2,
+     "activation": 0,
+     "split": 80,
+     "stages": [
+      "challenge",
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 50000,
+       "target": 3000,
+       "maxLoss": 2000,
+       "price": 227
+      },
+      {
+       "size": 100000,
+       "target": 6000,
+       "maxLoss": 3000,
+       "price": 401
+      },
+      {
+       "size": 150000,
+       "target": 9000,
+       "maxLoss": 4500,
+       "price": 557
+      }
+     ]
+    }
+   ],
+   "mono": "MF"
+  },
+  {
+   "id": "lucid",
+   "name": "Lucid Trading",
+   "market": "futures",
+   "url": "https://lucidtrading.com",
+   "programs": [
+    {
+     "id": "flex",
+     "name": "LucidFlex",
+     "billing": "one-time",
+     "ddType": "trailing",
+     "ddNote": "End-of-day trailing",
+     "consistency": 50,
+     "minDays": 2,
+     "activation": 0,
+     "split": 90,
+     "stages": [
+      "challenge",
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 25000,
+       "target": 1250,
+       "maxLoss": 1000,
+       "price": 76
+      },
+      {
+       "size": 50000,
+       "target": 3000,
+       "maxLoss": 2000,
+       "price": 126
+      },
+      {
+       "size": 100000,
+       "target": 6000,
+       "maxLoss": 3000,
+       "price": 215
+      },
+      {
+       "size": 150000,
+       "target": 9000,
+       "maxLoss": 4500,
+       "price": 323
+      }
+     ]
+    },
+    {
+     "id": "pro",
+     "name": "LucidPro",
+     "billing": "one-time",
+     "ddType": "trailing",
+     "ddNote": "End-of-day trailing",
+     "consistency": null,
+     "minDays": 1,
+     "activation": 0,
+     "split": 90,
+     "stages": [
+      "challenge",
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 25000,
+       "target": 1250,
+       "maxLoss": 1000,
+       "price": 135
+      },
+      {
+       "size": 50000,
+       "target": 3000,
+       "maxLoss": 2000,
+       "daily": 1200,
+       "price": 185
+      },
+      {
+       "size": 100000,
+       "target": 6000,
+       "maxLoss": 3000,
+       "daily": 1800,
+       "price": 285
+      },
+      {
+       "size": 150000,
+       "target": 9000,
+       "maxLoss": 4500,
+       "daily": 2700,
+       "price": 385
+      }
+     ],
+     "note": "Daily loss limit is soft: it locks you out until the next session."
+    }
+   ],
+   "mono": "LT"
+  },
+  {
+   "id": "tpt",
+   "name": "Take Profit Trader",
+   "market": "futures",
+   "url": "https://takeprofittrader.com",
+   "programs": [
+    {
+     "id": "test",
+     "name": "Test",
+     "billing": "monthly",
+     "ddType": "trailing",
+     "ddNote": "End-of-day trailing (intraday once PRO)",
+     "consistency": 50,
+     "minDays": 3,
+     "activation": 130,
+     "split": 80,
+     "stages": [
+      "challenge",
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 25000,
+       "target": 1500,
+       "maxLoss": 1500,
+       "price": 150
+      },
+      {
+       "size": 50000,
+       "target": 3000,
+       "maxLoss": 2000,
+       "price": 170
+      },
+      {
+       "size": 75000,
+       "target": 4500,
+       "maxLoss": 2500,
+       "price": 245
+      },
+      {
+       "size": 100000,
+       "target": 6000,
+       "maxLoss": 3000,
+       "price": 330
+      },
+      {
+       "size": 150000,
+       "target": 9000,
+       "maxLoss": 4500,
+       "price": 360
+      }
+     ]
+    }
+   ],
+   "mono": "TP"
+  },
+  {
+   "id": "ftmo",
+   "name": "FTMO",
+   "market": "forex",
+   "url": "https://ftmo.com",
+   "currency": "USD",
+   "programs": [
+    {
+     "id": "2step",
+     "name": "2-Step Challenge",
+     "billing": "one-time",
+     "ddType": "static",
+     "ddNote": "Static (from initial balance)",
+     "consistency": null,
+     "minDays": 4,
+     "activation": 0,
+     "split": 80,
+     "stages": [
+      "challenge",
+      "verification",
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 10000,
+       "target": 1000,
+       "target2": 500,
+       "maxLoss": 1000,
+       "daily": 500,
+       "price": 155
+      },
+      {
+       "size": 25000,
+       "target": 2500,
+       "target2": 1250,
+       "maxLoss": 2500,
+       "daily": 1250,
+       "price": 250
+      },
+      {
+       "size": 50000,
+       "target": 5000,
+       "target2": 2500,
+       "maxLoss": 5000,
+       "daily": 2500,
+       "price": 345
+      },
+      {
+       "size": 100000,
+       "target": 10000,
+       "target2": 5000,
+       "maxLoss": 10000,
+       "daily": 5000,
+       "price": 540
+      },
+      {
+       "size": 200000,
+       "target": 20000,
+       "target2": 10000,
+       "maxLoss": 20000,
+       "daily": 10000,
+       "price": 1080
+      }
+     ],
+     "priceCurrency": "EUR",
+     "note": "Fee refunded with your first reward."
+    },
+    {
+     "id": "1step",
+     "name": "1-Step Challenge",
+     "billing": "one-time",
+     "ddType": "static",
+     "ddNote": "Static",
+     "consistency": 50,
+     "minDays": 0,
+     "activation": 0,
+     "split": 90,
+     "stages": [
+      "challenge",
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 10000,
+       "target": 1000,
+       "maxLoss": 1000,
+       "daily": 300,
+       "price": 89
+      },
+      {
+       "size": 25000,
+       "target": 2500,
+       "maxLoss": 2500,
+       "daily": 750,
+       "price": 170
+      },
+      {
+       "size": 50000,
+       "target": 5000,
+       "maxLoss": 5000,
+       "daily": 1500,
+       "price": 290
+      },
+      {
+       "size": 100000,
+       "target": 10000,
+       "maxLoss": 10000,
+       "daily": 3000,
+       "price": 460
+      },
+      {
+       "size": 200000,
+       "target": 20000,
+       "maxLoss": 20000,
+       "daily": 6000,
+       "price": 920
+      }
+     ],
+     "priceCurrency": "EUR",
+     "note": "Best Day Rule: no single day over 50% of profit."
+    }
+   ],
+   "mono": "FT"
+  },
+  {
+   "id": "fundingpips",
+   "name": "FundingPips",
+   "market": "forex",
+   "url": "https://fundingpips.com",
+   "programs": [
+    {
+     "id": "2step",
+     "name": "2-Step Standard",
+     "billing": "one-time",
+     "ddType": "static",
+     "ddNote": "Static",
+     "consistency": null,
+     "minDays": 3,
+     "activation": 0,
+     "split": 80,
+     "stages": [
+      "challenge",
+      "verification",
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 5000,
+       "target": 400,
+       "target2": 250,
+       "maxLoss": 500,
+       "daily": 250,
+       "price": 36
+      },
+      {
+       "size": 10000,
+       "target": 800,
+       "target2": 500,
+       "maxLoss": 1000,
+       "daily": 500,
+       "price": 66
+      },
+      {
+       "size": 25000,
+       "target": 2000,
+       "target2": 1250,
+       "maxLoss": 2500,
+       "daily": 1250,
+       "price": 156
+      },
+      {
+       "size": 50000,
+       "target": 4000,
+       "target2": 2500,
+       "maxLoss": 5000,
+       "daily": 2500,
+       "price": 289
+      },
+      {
+       "size": 100000,
+       "target": 8000,
+       "target2": 5000,
+       "maxLoss": 10000,
+       "daily": 5000,
+       "price": 529
+      }
+     ]
+    }
+   ],
+   "mono": "FP"
+  }
+ ]
+}

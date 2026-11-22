@@ -71,6 +71,7 @@ const MODES = {
   week: `Task: weekly review of the period provided. Sections: "Scorecard" (P&L, trades, win rate, avg R, best/worst day), "Your edge" (what is working), "Leaks" (costliest patterns with $ impact), "Prop accounts" (drawdown buffer and payout progress per account), "Next week plan". Max 350 words.`,
   plan: `Task: build tomorrow's pre-market game plan from the trader's rules, recent performance and account limits: max loss for the day per account, max trades, which setups to allow/avoid, time windows to trade/avoid, a 3-item mental checklist. Max 220 words.`,
   chart: `Task: the trader attached a chart screenshot from their trade. Describe the structure you can see (trend, key levels, where entry/stop/target appear to be), whether the execution matched the stated setup, and what a cleaner entry/exit would have looked like. Do not predict future price. Max 220 words.`,
+  firmrules: `Task: look up the CURRENT published rules for the prop firm account described, using web search on the firm's official site or help center first. Reply with ONLY a JSON object, no prose: {"target": number|null, "maxLoss": number, "ddType": "trailing"|"static", "dailyLimit": number|null, "minDays": number|null, "consistency": number|null, "price": number|null, "source": "url you used", "notes": "one short sentence on anything notable, e.g. soft vs hard daily limit"}. Dollar amounts as plain numbers. Use null when the firm has no such rule.`,
   insight: `Task: give ONE sharp insight for the dashboard (max 40 words, no headers, no bullets) — the single most useful observation from this data right now.`,
 };
 
@@ -106,8 +107,9 @@ async function callClaude(env, { mode, messages, context, image }) {
     body: JSON.stringify({
       model: env.CLAUDE_MODEL || 'claude-sonnet-5-5',
       max_tokens: mode === 'insight' ? 200 : 1500,
-      system,
+      system: mode === 'firmrules' ? MODES.firmrules : system,
       messages: msgs,
+      ...(mode === 'firmrules' ? { tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 4 }] } : {}),
     }),
   });
   const body = await res.json().catch(() => ({}));

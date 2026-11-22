@@ -1,9 +1,12 @@
 // App shell: boot, auth, onboarding, sidebar + router, header tools.
 import {
   APP, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
-  saveProfile, save, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net,
+  saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net,
 } from './core.js';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced } from './motion.js';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js';
+import { slider, liveRate, fxAgo } from './ui.js';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js';
+window.__segInit = segInit; window.__segSelect = segSelect;
 import * as V from './views.js';
 
 // ---------------------------------------------------------------- formatters used by count-ups
@@ -34,6 +37,7 @@ async function boot() {
     else if (e.status === 401) return auth();
     else { app.innerHTML = `<div class="solo"><div class="solo__card"><h1>Can't reach the server</h1><p>${esc(e.message)}</p><button class="btn btn--primary" onclick="location.reload()">Try again</button></div></div>`; return; }
   }
+  await loadFirms();
   const cached = loadCache();
   if (S.local) { if (cached) hydrate(cached); }
   else {
@@ -76,132 +80,177 @@ function auth(mode = 'login') {
 }
 
 // ---------------------------------------------------------------- onboarding
-const FIRMS = ['Topstep', 'TopOne Futures', 'Apex Trader Funding', 'Tradeify', 'MyFundedFutures', 'Lucid Trading', 'Take Profit Trader', 'FTMO', 'The5ers', 'FundingPips', 'Alpha Capital'];
 const RULES = ['Max 3 trades a day', 'Stop after 2 losses in a row', 'No trades in the first 5 minutes', 'Always set a hard stop', 'No trading during red-folder news', 'Only A+ setups from my playbook', 'Walk away after hitting the daily goal'];
+const GRADES = [['A+', 'High conviction', 'Everything lines up: your best setup, best time, clear invalidation.'], ['B', 'Normal', 'A valid setup with one thing missing.'], ['C', 'Low probability', 'Scouting or reduced-size trades.']];
+const STEPS = ['You', 'Markets', 'Accounts', 'Goal', 'Style', 'Risk', 'Ready'];
+const round25 = (v) => Math.max(25, Math.round(v / 25) * 25);
 let ob;
-function onboarding() {
+async function onboarding() {
   const p = S.profile || {};
+  await loadFirms();
   ob = {
-    step: 0, name: p.name || S.user?.name || '', currency: p.currency || 'USD', localCode: p.local?.code || 'INR', rate: p.local?.rate || '',
-    markets: p.markets || [], instruments: p.instruments || [], funding: p.funding || [], firms: p.firms || [],
+    step: 0, name: p.name || S.user?.name || '', currency: p.currency || 'USD', localCode: p.local?.code ?? 'INR', rate: p.local?.rate || '', rateAuto: p.local?.auto !== false, rateMeta: null,
+    markets: p.markets || [], instruments: p.instruments || [],
     accounts: S.account.length ? S.account.map((a) => ({ ...a })) : [],
-    hasGoal: p.mission ? true : null, mission: p.mission || { name: '', target: '', start: today(), end: addDays(today(), 41) }, monthEst: '',
+    hasGoal: p.mission ? true : null, mission: p.mission || { name: '', target: 2000, start: today(), end: addDays(today(), 41) }, monthEst: '',
     style: p.style || '', sessions: p.sessions || [], sessionTz: p.sessionTz || 'IST',
-    setups: S.setup.length ? S.setup.map((s) => s.name) : DEFAULT_SETUPS.slice(0, 4), allSetups: [...new Set([...DEFAULT_SETUPS, ...S.setup.map((s) => s.name)])],
-    risk: p.risk || {}, rules: S.rule.length ? S.rule.map((r) => r.text) : [], allRules: [...new Set([...RULES, ...S.rule.map((r) => r.text)])],
+    setups: S.setup.length ? S.setup.map((s) => s.name) : DEFAULT_SETUPS.slice(0, 3), allSetups: [...new Set([...DEFAULT_SETUPS, ...S.setup.map((s) => s.name)])],
+    riskMode: p.risk?.mode || 'grade', grades: p.risk?.byGrade || null, fixed: p.risk?.perTrade || '', maxDailyLoss: p.risk?.maxDailyLoss || '', maxTrades: p.risk?.maxTrades ?? 3,
+    rules: S.rule.length ? S.rule.map((r) => r.text) : RULES.slice(2, 4), allRules: [...new Set([...RULES, ...S.rule.map((r) => r.text)])],
     imported: null,
   };
   app.innerHTML = `<div class="solo"><div class="solo__card solo__card--wide" id="ob">
-    <div class="row row--between"><span class="row"><span class="mark">${icon('logo')}</span><b style="font-size:var(--fs-2xl)">${APP.name}</b></span><span class="muted" id="obCount"></span></div>
-    <ol class="steps" style="margin-top:22px">${[0, 1, 2, 3, 4, 5, 6].map(() => '<li><i></i></li>').join('')}</ol>
+    <div class="row row--between"><a class="row" href="index.html" style="gap:10px"><span class="mark">${icon('logo')}</span><b style="font-size:var(--fs-2xl)">${APP.name}</b></a><span class="ob-count" id="obCount"></span></div>
+    <ol class="steps" style="margin-top:22px">${STEPS.map((s) => `<li title="${s}"><i></i></li>`).join('')}</ol>
     <div id="obBody"></div>
-    <div class="row row--between" style="margin-top:26px"><button class="btn btn--ghost" id="obBack">${icon('left')}Back</button><button class="btn btn--primary" id="obNext">Continue${icon('right')}</button></div>
+    <div class="row row--between ob-nav"><button class="btn btn--ghost" id="obBack">${icon('left')}Back</button><button class="btn btn--primary btn--lg" id="obNext">Continue${icon('right')}</button></div>
   </div></div>`;
   if (window.gsap && !reduced.matches) window.gsap.fromTo('#ob', { opacity: 0, y: 30, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.9, ease: 'expo.out' });
   $('#obBack').onclick = () => obGo(-1);
   $('#obNext').onclick = () => obGo(1);
   obRender(0);
 }
-const chipRow = (id, all, on, labels = {}) => `<div class="chips" id="${id}">${all.map((v) => `<button type="button" class="chip ${on.includes(v) ? 'is-on' : ''}" data-v="${esc(v)}">${esc(labels[v] || v)}</button>`).join('')}<button type="button" class="chip chip--add" data-add="${id}">${icon('plus')} Add</button></div>`;
+const chipRow = (id, all, on, labels = {}, add = true) => `<div class="chips" id="${id}">${all.map((v) => `<button type="button" class="chip ${on.includes(v) ? 'is-on' : ''}" data-v="${esc(v)}">${esc(labels[v] || v)}</button>`).join('')}${add ? `<button type="button" class="chip chip--add" data-add="${id}">${icon('plus')} Add</button>` : ''}</div>`;
+const dailyBase = () => { const d = ob.accounts.map((a) => num(a.personalDaily)).filter(Boolean); return d.length ? Math.min(...d) : 500; };
+function gradeDefaults(base) { return { 'A+': round25(base * 0.5), B: round25(base * 0.3), C: round25(base * 0.15) }; }
+const sym2 = (c) => ({ USD: '$', EUR: '€', GBP: '£', INR: '₹', AUD: 'A$', CAD: 'C$', AED: 'AED ', SGD: 'S$' }[c] ?? c + ' ');
+function rateLine() {
+  if (!ob.localCode || ob.localCode === ob.currency) return '';
+  if (!ob.rateAuto) return `<label class="field"><span>Your rate</span><input class="in" id="o_rate" type="number" step="any" value="${esc(ob.rate)}" placeholder="1 ${esc(ob.currency)} = ?"><em><button type="button" class="linkbtn" id="o_live">Use the live rate instead</button></em></label>`;
+  const m = ob.rateMeta;
+  return `<div class="fxline" id="o_fx">${m ? `<span class="live"></span><span>1 ${esc(ob.currency)} = <b>${sym2(ob.localCode)}${m.rate.toFixed(2)}</b></span><small>live · ${esc(m.source)} · ${fxAgo(m.at)}</small>` : '<span class="typing"><i></i><i></i><i></i></span><small>Fetching today\'s rate…</small>'}<button type="button" class="linkbtn" id="o_manual">Set my own</button></div>`;
+}
+async function obFetchRate() {
+  if (!ob.localCode || ob.localCode === ob.currency || !ob.rateAuto) return;
+  const r = await liveRate(ob.currency, ob.localCode);
+  if (!ob || ob.step !== 0) return;
+  if (r) { ob.rateMeta = r; ob.rate = +r.rate.toFixed(4); } else { ob.rateAuto = false; toast('Couldn\'t fetch a live rate. Enter yours.', icon('info')); }
+  const box = $('#o_fxbox'); if (box) { box.innerHTML = rateLine(); bindRate(); if (window.gsap) window.gsap.fromTo(box.firstElementChild, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.4 }); }
+}
+function bindRate() {
+  const man = $('#o_manual'); if (man) man.onclick = () => { ob.rateAuto = false; $('#o_fxbox').innerHTML = rateLine(); bindRate(); $('#o_rate')?.focus(); };
+  const lv = $('#o_live'); if (lv) lv.onclick = () => { ob.rateAuto = true; ob.rateMeta = null; $('#o_fxbox').innerHTML = rateLine(); bindRate(); obFetchRate(); };
+}
 function obRender(dir) {
   const s = ob.step; const body = $('#obBody');
-  $('#obCount').textContent = `Step ${s + 1} of 7`;
-  $$('.steps li').forEach((li, i) => { const fill = li.firstElementChild; const done = i <= s; if (window.gsap && !reduced.matches) window.gsap.to(fill, { scaleX: done ? 1 : 0, duration: 0.7, ease: 'expo.out', delay: done ? 0.05 * (i === s) : 0 }); else fill.style.transform = `scaleX(${done ? 1 : 0})`; });
+  $('#obCount').innerHTML = `<b>${STEPS[s]}</b> · ${s + 1} of ${STEPS.length}`;
+  $$('.steps li').forEach((li, i) => { const fill = li.firstElementChild; const done = i <= s; if (window.gsap && !reduced.matches) window.gsap.to(fill, { scaleX: done ? 1 : 0, duration: 0.7, ease: 'expo.out' }); else fill.style.transform = `scaleX(${done ? 1 : 0})`; });
   $('#obBack').style.visibility = s ? 'visible' : 'hidden';
-  $('#obNext').innerHTML = s === 6 ? `${icon('bolt')}Build my dashboard` : `Continue${icon('right')}`;
+  $('#obNext').innerHTML = s === STEPS.length - 1 ? `${icon('bolt')}Open my journal` : `Continue${icon('right')}`;
   const ex = (ob.markets.length ? ob.markets : ['futures']).flatMap((m) => MARKETS[m].examples);
   const instAll = [...new Set([...ex, ...ob.instruments])];
-  const prop = ob.funding.includes('prop') || ob.funding.includes('funded');
   const screens = [
-    () => `<p class="ob-q">First, who's trading?</p><p class="ob-sub">This sets your greeting, currency and how payouts convert.</p>
+    () => `<p class="ob-q">First, who's trading?</p><p class="ob-sub">Sets your greeting, your account currency and how payouts convert to your bank currency.</p>
       <div class="form" style="grid-template-columns:1fr 1fr">
-      <label class="field full"><span>Your name</span><input class="in" id="o_name" value="${esc(ob.name)}" placeholder="Prakhar"></label>
+      <label class="field full"><span>Your name</span><input class="in" id="o_name" value="${esc(ob.name)}" placeholder="Name" autocomplete="given-name"></label>
       <label class="field"><span>Account currency</span><select class="in" id="o_cur">${['USD', 'EUR', 'GBP', 'INR', 'AUD', 'CAD'].map((c) => `<option ${c === ob.currency ? 'selected' : ''}>${c}</option>`).join('')}</select><em>What your P&amp;L and prop accounts are in</em></label>
-      <label class="field"><span>Payouts land in</span><select class="in" id="o_loc"><option value="">Same currency</option>${['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD'].map((c) => `<option ${c === ob.localCode ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
-      <label class="field"><span>Conversion rate</span><input class="in" id="o_rate" type="number" step="any" value="${esc(ob.rate)}" placeholder="e.g. 88"><em>1 ${esc(ob.currency)} = ? — update any time in Settings</em></label></div>`,
-    () => `<p class="ob-q">What do you trade?</p><p class="ob-sub">Pick all that apply. It changes units (contracts, lots, shares) and lets the journal calculate P&amp;L for you.</p>
-      ${chipRow('o_mk', Object.keys(MARKETS), ob.markets, Object.fromEntries(Object.entries(MARKETS).map(([k, v]) => [k, v.label]))).replace(/<button type="button" class="chip chip--add"[^]*?<\/button>/, '')}
-      <p class="ob-q" style="font-size:var(--fs-xl);margin-top:24px">Your main instruments</p><p class="ob-sub">These show up as quick picks when you log a trade.</p>${chipRow('o_in', instAll, ob.instruments)}`,
-    () => `<p class="ob-q">How is your trading funded?</p><p class="ob-sub">Prop firm traders get account cards with drawdown buffers, payout tracking and weekly plans.</p>
-      ${chipRow('o_fd', ['prop', 'funded', 'own'], ob.funding, { prop: 'Prop firm challenges', funded: 'Funded prop accounts', own: 'My own capital' }).replace(/<button type="button" class="chip chip--add"[^]*?<\/button>/, '')}
-      ${prop ? `<p class="ob-q" style="font-size:var(--fs-xl);margin-top:24px">Which firms?</p>${chipRow('o_fm', [...new Set([...FIRMS, ...ob.firms])], ob.firms)}` : ''}`,
-    () => `<p class="ob-q">Your accounts</p><p class="ob-sub">Already tracking in a spreadsheet? Import it and we'll pull your accounts, costs, goal and weekly plan.</p>
-      <div class="drop" id="o_drop">${icon('sheet')}<div style="flex:1"><b>Import from Excel / Google Sheets export</b><span class="muted" style="font-size:var(--fs-sm)" id="o_dropInfo">${ob.imported ? esc(ob.imported) : '.xlsx with an accounts table (Firm, Cost, Quantity…)'}</span></div><input type="file" id="o_file" accept=".xlsx,.xls,.csv" hidden><button type="button" class="btn btn--sm" id="o_pick">Choose file</button></div>
-      <div style="margin-top:18px" id="o_accs"></div>
-      <button type="button" class="btn btn--sm" id="o_addAcc" style="margin-top:6px">${icon('plus')}Add account</button>
-      <p class="muted" style="font-size:var(--fs-xs);margin-top:12px">Targets, drawdown and daily limits can be added per account later on the Accounts page.</p>`,
-    () => `<p class="ob-q">Are you working toward a payout goal?</p><p class="ob-sub">Like clearing a debt or hitting a monthly number. You'll get a progress card, a pace check and a forecast.</p>
+      <label class="field"><span>Payouts land in</span><select class="in" id="o_loc"><option value="">Same currency</option>${['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD', 'AUD', 'CAD'].map((c) => `<option ${c === ob.localCode ? 'selected' : ''}>${c}</option>`).join('')}</select><em>Your bank's currency</em></label>
+      <div class="full" id="o_fxbox">${rateLine()}</div></div>`,
+    () => `<p class="ob-q">What do you trade?</p><p class="ob-sub">Pick all that apply. It sets units (contracts, lots, shares) and lets the journal calculate P&amp;L for you.</p>
+      ${chipRow('o_mk', Object.keys(MARKETS), ob.markets, Object.fromEntries(Object.entries(MARKETS).map(([k, v]) => [k, v.label])), false)}
+      <p class="ob-q ob-q--sm">Your main instruments</p><p class="ob-sub">Quick picks when you log a trade.</p>${chipRow('o_in', instAll, ob.instruments)}`,
+    () => `<p class="ob-q">Which accounts do you trade?</p><p class="ob-sub">Pick your prop firm, plan and size. The journal fills in the firm's rules: profit target, max loss and daily limit. Then set your own daily stop, which is usually tighter than the firm's.</p>
+      <div class="explain">${icon('info')}<span>Prop firm path: you buy a <b>challenge</b>, pass it, and the firm gives you a <b>funded</b> account. Add each account at the stage it's in now; you can move it to funded later.</span></div>
+      <div id="o_picker"></div>
+      <details class="imp"><summary>${icon('sheet')}Already tracking in a spreadsheet? Import it</summary>
+      <div class="drop" id="o_drop" style="margin-top:12px">${icon('sheet')}<div style="flex:1"><b>Import from Excel / Google Sheets export</b><span class="muted" style="font-size:var(--fs-sm)" id="o_dropInfo">${ob.imported ? esc(ob.imported) : 'Reads an accounts table with Firm, Cost and Quantity columns'}</span></div><input type="file" id="o_file" accept=".xlsx,.xls,.csv" hidden><button type="button" class="btn btn--sm" id="o_pick">Choose file</button></div></details>`,
+    () => `<p class="ob-q">Working toward a payout goal?</p><p class="ob-sub">Paying something off, or a monthly number. You'll get a progress card, a pace check and a forecast.</p>
       <div class="seg seg--accent" id="o_goalSeg" style="margin-bottom:18px"><button data-v="yes" class="${ob.hasGoal !== false ? 'is-on' : ''}">Yes, I have a goal</button><button data-v="no" class="${ob.hasGoal === false ? 'is-on' : ''}">Not right now</button></div>
       <div class="form" style="grid-template-columns:1fr 1fr" id="o_goal" ${ob.hasGoal === false ? 'hidden' : ''}>
-        <label class="field full"><span>Name it</span><input class="in" id="o_gn" value="${esc(ob.mission.name)}" placeholder="Mission No Debt"></label>
-        <label class="field"><span>Payout target (${esc(ob.currency)})</span><input class="in" id="o_gt" type="number" step="any" value="${esc(ob.mission.target)}" placeholder="2900"></label>
-        <label class="field"><span>This month's payout estimate</span><input class="in" id="o_me" type="number" step="any" value="${esc(ob.monthEst)}" placeholder="900"></label>
+        <label class="field full"><span>Name it</span><input class="in" id="o_gn" value="${esc(ob.mission.name)}" placeholder="e.g. Clear my credit card"></label>
+        <div class="field">${slider({ name: 'o_gt', label: `Payout target`, value: ob.mission.target || 2000, min: 0, max: 50000, step: 100, prefix: sym2(ob.currency) })}</div>
+        <div class="field">${slider({ name: 'o_me', label: 'Expected payout this month', value: ob.monthEst || 0, min: 0, max: 20000, step: 100, prefix: sym2(ob.currency), zero: 'Skip' })}</div>
         <label class="field"><span>Start</span><input class="in" id="o_gs" type="date" value="${esc(ob.mission.start)}"></label>
         <label class="field"><span>Deadline</span><input class="in" id="o_ge" type="date" value="${esc(ob.mission.end)}"></label></div>`,
-    () => `<p class="ob-q">How do you trade?</p><p class="ob-sub">Your style, sessions, setups and the rules you want to be held to.</p>
-      <div class="stack"><div class="field"><span>Style</span>${chipRow('o_st', ['Scalping', 'Day trading', 'Swing', 'Positional'], [ob.style]).replace(/<button type="button" class="chip chip--add"[^]*?<\/button>/, '')}</div>
-      <div class="field"><span>Sessions you trade</span>${chipRow('o_ss', SESSIONS, ob.sessions).replace(/<button type="button" class="chip chip--add"[^]*?<\/button>/, '')}</div>
+    () => `<p class="ob-q">How do you trade?</p><p class="ob-sub">Used to group your stats and to brief the AI coach.</p>
+      <div class="stack"><div class="field"><span>Style</span>${chipRow('o_st', ['Scalping', 'Day trading', 'Swing', 'Positional'], [ob.style], {}, false)}</div>
+      <div class="field"><span>Sessions you trade</span>${chipRow('o_ss', SESSIONS, ob.sessions, {}, false)}</div>
       <div class="row row--between"><span class="field"><span>I log trade times in</span></span><div class="seg" id="o_tz"><button data-v="IST" class="${ob.sessionTz === 'IST' ? 'is-on' : ''}">India (IST)</button><button data-v="ET" class="${ob.sessionTz === 'ET' ? 'is-on' : ''}">New York (ET)</button></div></div>
-      <div class="field"><span>Setups in your playbook</span>${chipRow('o_su', ob.allSetups, ob.setups)}</div>
-      <div class="form" style="grid-template-columns:repeat(4,1fr)"><label class="field"><span>Max daily loss</span><input class="in" id="o_rd" type="number" value="${esc(ob.risk.maxDailyLoss ?? '')}" placeholder="500"></label><label class="field"><span>Max trades / day</span><input class="in" id="o_rt" type="number" value="${esc(ob.risk.maxTrades ?? '')}" placeholder="3"></label><label class="field"><span>Risk per trade</span><input class="in" id="o_rp" type="number" value="${esc(ob.risk.perTrade ?? '')}" placeholder="150"></label><label class="field"><span>Stop after N losses</span><input class="in" id="o_rl" type="number" value="${esc(ob.risk.stopAfterLosses ?? '')}" placeholder="2"></label></div>
-      <div class="field"><span>Rules to check every trade against</span>${chipRow('o_ru', ob.allRules, ob.rules)}</div></div>`,
+      <div class="field"><span>Setups in your playbook</span>${chipRow('o_su', ob.allSetups, ob.setups)}</div></div>`,
     () => {
-      const items = [
-        [`Hi ${esc(ob.name || 'trader')}`, `${ob.currency}${ob.localCode && ob.localCode !== ob.currency ? ` → ${ob.localCode}${ob.rate ? ' at ' + ob.rate : ''}` : ''}`],
-        ['Markets', ob.markets.map((m) => MARKETS[m].label).join(', ') || 'Futures'], ['Instruments', ob.instruments.join(', ') || '—'],
-        ['Accounts', ob.accounts.length ? ob.accounts.map((a) => a.name).join(', ') : 'One personal account'],
-        ['Goal', ob.hasGoal !== false && ob.mission.name ? `${ob.mission.name}: ${money(num(ob.mission.target), { c: ob.currency })} by ${fmtDate(ob.mission.end)}` : 'None'],
-        ['Playbook', `${ob.setups.length} setups · ${ob.rules.length} rules`], ['Risk', ob.risk.maxDailyLoss ? `max ${money(num(ob.risk.maxDailyLoss), { c: ob.currency })}/day${ob.risk.maxTrades ? `, ${ob.risk.maxTrades} trades` : ''}` : 'Not set'],
-      ];
-      return `<p class="ob-q">Here's your journal</p><p class="ob-sub">Everything can be changed later in Settings, Accounts and Playbook.</p><div class="txlist">${items.map(([a, b]) => `<div class="txrow" style="cursor:default"><span class="prodico">${icon('check')}</span><span class="cell__text"><b>${a}</b><small>${esc(b)}</small></span></div>`).join('')}</div>`;
+      const base = num(ob.maxDailyLoss) || dailyBase(); const g = ob.grades || gradeDefaults(base); const c = sym2(ob.currency);
+      return `<p class="ob-q">Your risk, your way</p><p class="ob-sub">The journal compares every trade with these, and the coach flags when you drift.</p>
+      <div class="stack">
+      <div class="riskbox"><div class="row row--between" style="flex-wrap:wrap;gap:10px"><b>How do you size trades?</b><div class="seg seg--accent" id="o_rm"><button data-v="grade" class="${ob.riskMode === 'grade' ? 'is-on' : ''}">By setup quality</button><button data-v="fixed" class="${ob.riskMode === 'fixed' ? 'is-on' : ''}">Same every trade</button><button data-v="none" class="${ob.riskMode === 'none' ? 'is-on' : ''}">I'll decide each time</button></div></div>
+        <div id="o_rbox">${riskBox(g, base, c)}</div></div>
+      <div class="grid g-2" style="gap:14px">${slider({ name: 'o_md', label: 'Max loss per day (all accounts)', value: base, min: 50, max: Math.max(base * 2, 1000), step: 25, prefix: c, hint: ob.accounts.length ? 'starts at your tightest daily stop' : '' })}${slider({ name: 'o_mt', label: 'Max trades per day', value: ob.maxTrades ?? 3, min: 0, max: 15, step: 1, zero: 'No limit' })}</div>
+      <div class="field"><span>Rules to check every trade against</span>${chipRow('o_ru', ob.allRules, ob.rules)}</div></div>`;
     },
+    () => summary(),
   ];
   body.innerHTML = screens[s]();
   if (window.gsap && !reduced.matches) {
     window.gsap.fromTo(body, { opacity: 0, x: 26 * (dir || 1) }, { opacity: 1, x: 0, duration: 0.6, ease: 'expo.out' });
-    window.gsap.fromTo(body.querySelectorAll('.ob-q, .ob-sub, .chip, .field, .drop, .txrow, .seg'), { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out', stagger: 0.012, delay: 0.05, clearProps: 'transform,opacity' });
+    window.gsap.fromTo(body.querySelectorAll('.ob-q, .ob-sub, .chip, .field, .drop, .seg, .sl, .explain, .fcard, .riskbox, .bento > *'), { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.014, delay: 0.05, clearProps: 'transform,opacity' });
   }
   $$('.seg', body).forEach(segInit);
-  // chip toggles
-  const toggle = (id, single = false) => $$(`#${id} .chip:not(.chip--add)`, body).forEach((c) => c.onclick = () => { if (single) $$(`#${id} .chip`, body).forEach((x) => x !== c && x.classList.remove('is-on')); c.classList.toggle('is-on'); pop(c); if (id === 'o_mk' || id === 'o_fd') { obCollect(); obRender(0); } });
-  ['o_mk', 'o_in', 'o_fd', 'o_fm', 'o_ss', 'o_su', 'o_ru'].forEach((id) => toggle(id)); toggle('o_st', true);
+  const toggle = (id, single = false) => $$(`#${id} .chip:not(.chip--add)`, body).forEach((c) => c.onclick = () => { if (single) $$(`#${id} .chip`, body).forEach((x) => x !== c && x.classList.remove('is-on')); c.classList.toggle('is-on'); pop(c); if (id === 'o_mk') { obCollect(); obRender(0); } });
+  ['o_mk', 'o_in', 'o_ss', 'o_su', 'o_ru'].forEach((id) => toggle(id)); toggle('o_st', true);
   $$('[data-add]', body).forEach((b) => b.onclick = () => {
-    const id = b.dataset.add; const input = document.createElement('input'); input.className = 'in'; input.style.cssText = 'width:180px;height:34px;border-radius:99px';
+    const id = b.dataset.add; const input = document.createElement('input'); input.className = 'in'; input.style.cssText = 'width:200px;height:36px;border-radius:99px';
     input.placeholder = 'Type and press Enter'; b.replaceWith(input); input.focus();
-    input.onkeydown = (e) => { if (e.key === 'Enter' && input.value.trim()) { e.preventDefault(); const v = id === 'o_in' ? input.value.trim().toUpperCase() : input.value.trim(); obCollect(); ({ o_in: () => ob.instruments.push(v), o_fm: () => ob.firms.push(v), o_su: () => { ob.allSetups.push(v); ob.setups.push(v); }, o_ru: () => { ob.allRules.push(v); ob.rules.push(v); } })[id]?.(); obRender(0); } if (e.key === 'Escape') obRender(0); };
+    input.onkeydown = (e) => { if (e.key === 'Enter' && input.value.trim()) { e.preventDefault(); const v = id === 'o_in' ? input.value.trim().toUpperCase() : input.value.trim(); obCollect(); ({ o_in: () => ob.instruments.push(v), o_su: () => { ob.allSetups.push(v); ob.setups.push(v); }, o_ru: () => { ob.allRules.push(v); ob.rules.push(v); } })[id]?.(); obRender(0); } if (e.key === 'Escape') obRender(0); };
   });
-  if (s === 3) obAccounts();
-  if (s === 4) $$('#o_goalSeg button', body).forEach((b) => b.onclick = () => { segSelect($('#o_goalSeg'), b); ob.hasGoal = b.dataset.v === 'yes'; const g = $('#o_goal'); g.hidden = !ob.hasGoal; if (ob.hasGoal && window.gsap) window.gsap.fromTo(g.children, { opacity: 0, y: 10 }, { opacity: 1, y: 0, stagger: 0.04, duration: 0.45, ease: 'power3.out' }); });
-  if (s === 5) $$('#o_tz button', body).forEach((b) => b.onclick = () => { segSelect($('#o_tz'), b); ob.sessionTz = b.dataset.v; });
+  if (s === 0) {
+    bindRate(); obFetchRate();
+    const recur = () => { obCollect(); ob.rateMeta = null; $('#o_fxbox').innerHTML = rateLine(); bindRate(); obFetchRate(); };
+    $('#o_cur').onchange = recur; $('#o_loc').onchange = recur;
+  }
+  if (s === 2) obAccounts();
+  if (s === 3) $$('#o_goalSeg button', body).forEach((b) => b.onclick = () => { segSelect($('#o_goalSeg'), b); ob.hasGoal = b.dataset.v === 'yes'; const g = $('#o_goal'); g.hidden = !ob.hasGoal; if (ob.hasGoal && window.gsap) window.gsap.fromTo(g.children, { opacity: 0, y: 10 }, { opacity: 1, y: 0, stagger: 0.04, duration: 0.45, ease: 'power3.out' }); });
+  if (s === 4) $$('#o_tz button', body).forEach((b) => b.onclick = () => { segSelect($('#o_tz'), b); ob.sessionTz = b.dataset.v; });
+  if (s === 5) {
+    $$('#o_rm button', body).forEach((b) => b.onclick = () => {
+      obCollect(); segSelect($('#o_rm'), b); ob.riskMode = b.dataset.v;
+      const base = num(ob.maxDailyLoss) || dailyBase(); const box = $('#o_rbox'); box.innerHTML = riskBox(ob.grades || gradeDefaults(base), base, sym2(ob.currency));
+      if (window.gsap) window.gsap.fromTo(box.children, { opacity: 0, y: 8 }, { opacity: 1, y: 0, stagger: 0.05, duration: 0.4, ease: 'power3.out' });
+    });
+  }
+  if (s === 6) animateSummary(body);
+}
+function riskBox(g, base, c) {
+  if (ob.riskMode === 'none') return `<p class="muted" style="margin:12px 0 0;font-size:var(--fs-md)">No preset sizes. Log the risk on each trade and the journal works out your R multiples.</p>`;
+  if (ob.riskMode === 'fixed') return `<div style="margin-top:12px">${slider({ name: 'o_rf', label: 'Risk per trade', value: ob.fixed || g.B, min: 25, max: Math.max(base, 100), step: 25, prefix: c })}</div>`;
+  return `<p class="muted" style="margin:10px 0 4px;font-size:var(--fs-md)">Tag each trade with its grade when you log it. Your stats show how each grade performs.</p>
+    <div class="grades">${GRADES.map(([k, t, d]) => `<div class="grade"><span class="grade__tag g-${k === 'A+' ? 'a' : k.toLowerCase()}">${k}</span><div class="grade__body">${slider({ name: 'o_g_' + k, label: `${t}`, value: g[k], min: 25, max: Math.max(base, 100), step: 25, prefix: c, hint: d })}</div></div>`).join('')}</div>`;
+}
+function summary() {
+  const c = sym2(ob.currency); const base = num(ob.maxDailyLoss) || dailyBase(); const g = ob.grades || gradeDefaults(base);
+  const goalOn = ob.hasGoal !== false && ob.mission.name;
+  const days = goalOn ? Math.max(0, Math.round((parseISO(ob.mission.end) - parseISO(ob.mission.start)) / 864e5)) : 0;
+  return `<div class="bento">
+    <div class="bt bt--hero"><small>${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</small><h2>You're set, ${esc((ob.name || 'trader').split(' ')[0])}.</h2><p>Your journal is ready. Log your first trade from the <b>+</b> button, or import a CSV from your platform.</p>
+      ${ob.localCode && ob.localCode !== ob.currency ? `<span class="pill pill--accent"><span class="live"></span>${esc(ob.currency)} → ${esc(ob.localCode)} ${ob.rate ? `at ${c}1 = ${sym2(ob.localCode)}${Number(ob.rate).toFixed(2)}` : ''} ${ob.rateAuto ? '· live' : ''}</span>` : ''}</div>
+    <div class="bt bt--accs"><div class="bt__h">${icon('accounts')}<b>Accounts</b><span>${ob.accounts.length}</span></div>
+      <div class="minis">${ob.accounts.slice(0, 4).map((a, i) => `<div class="mini" style="--i:${i}"><span class="fmono fmono--sm">${esc(mono(a))}</span><div><b>${esc(a.name)}</b><small>${a.size ? short(a.size).replace(/^\$/, c) : ''} · ${a.type === 'personal' ? 'own capital' : a.stage === 'funded' || a.type === 'funded' ? 'funded' : 'challenge'}</small></div><em>stop ${c}${num(a.personalDaily).toLocaleString()}</em></div>`).join('')}${ob.accounts.length > 4 ? `<small class="muted">+${ob.accounts.length - 4} more</small>` : ''}</div></div>
+    <div class="bt bt--goal"><div class="bt__h">${icon('target')}<b>Goal</b></div>${goalOn ? `<div class="ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" class="ring__bg"/><circle cx="60" cy="60" r="50" class="ring__fg" pathLength="100" style="stroke-dasharray:100;stroke-dashoffset:96"/></svg><div><b>${c}${num(ob.mission.target).toLocaleString()}</b><small>${days} days</small></div></div><p class="bt__p">${esc(ob.mission.name)}</p>` : '<p class="bt__p muted">No goal yet. Add one any time in Settings.</p>'}</div>
+    <div class="bt bt--risk"><div class="bt__h">${icon('shield')}<b>Risk</b></div><div class="bt__big">${c}${base.toLocaleString()}<small> max loss / day</small></div>
+      ${ob.riskMode === 'grade' ? `<div class="gbars">${GRADES.map(([k]) => `<div><span class="grade__tag g-${k === 'A+' ? 'a' : k.toLowerCase()}">${k}</span><i style="--w:${Math.min(100, (num(g[k]) / base) * 100)}%"></i><b>${c}${num(g[k]).toLocaleString()}</b></div>`).join('')}</div>` : ob.riskMode === 'fixed' ? `<p class="bt__p">${c}${num(ob.fixed).toLocaleString()} per trade</p>` : '<p class="bt__p">Risk logged per trade</p>'}
+      <p class="bt__p muted">${num(ob.maxTrades) ? `Max ${ob.maxTrades} trades a day` : 'No trade-count limit'}</p></div>
+    <div class="bt bt--mk"><div class="bt__h">${icon('trades')}<b>Markets</b></div><div class="chips">${(ob.markets.length ? ob.markets : ['futures']).map((m) => `<span class="chip is-on">${esc(MARKETS[m].label)}</span>`).join('')}${ob.instruments.map((s) => `<span class="chip">${esc(s)}</span>`).join('')}</div></div>
+    <div class="bt bt--pb"><div class="bt__h">${icon('playbook')}<b>Playbook</b><span>${ob.setups.length} setups · ${ob.rules.length} rules</span></div><ul class="ticks">${ob.setups.slice(0, 4).map((s) => `<li>${icon('check')}${esc(s)}</li>`).join('')}${ob.rules.slice(0, 2).map((r) => `<li class="muted">${icon('flag')}${esc(r)}</li>`).join('')}</ul></div>
+  </div>`;
+}
+function animateSummary(body) {
+  const g = window.gsap; if (!g || reduced.matches) return;
+  g.fromTo($$('.bt', body), { opacity: 0, y: 24, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: 'expo.out', stagger: 0.07, clearProps: 'transform,opacity' });
+  g.fromTo($$('.mini', body), { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.5, stagger: 0.06, delay: 0.35, ease: 'power3.out', clearProps: 'transform,opacity' });
+  const r = $('.ring__fg', body); if (r) g.fromTo(r, { strokeDashoffset: 100 }, { strokeDashoffset: 96, duration: 1.4, delay: 0.5, ease: 'expo.out' });
+  g.fromTo($$('.gbars i', body), { scaleX: 0 }, { scaleX: 1, duration: 1, stagger: 0.08, delay: 0.5, ease: 'expo.out', transformOrigin: 'left' });
+  const h = $('.bt--hero h2', body); if (h) revealHeading(h, 0.15);
 }
 function obAccounts() {
-  const box = $('#o_accs');
-  const draw = () => {
-    box.innerHTML = ob.accounts.length ? `<div class="ob-acc muted" style="font-size:var(--fs-2xs);font-weight:700"><span>NAME</span><span>FIRM</span><span>TYPE</span><span>COST</span><span>STATUS</span><span></span></div>` + ob.accounts.map((a, i) => `<div class="ob-acc" data-i="${i}">
-      <input class="in" data-f="name" value="${esc(a.name)}" placeholder="Topstep 50K #1"><input class="in" data-f="firm" value="${esc(a.firm || '')}" list="obFirms" placeholder="Firm">
-      <select class="in" data-f="type">${[['challenge', 'Challenge'], ['funded', 'Funded'], ['personal', 'Own']].map(([v, l]) => `<option value="${v}" ${a.type === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
-      <input class="in" data-f="cost" type="number" step="any" value="${esc(a.cost ?? '')}" placeholder="Cost">
-      <select class="in" data-f="status">${[['active', 'Active'], ['funded', 'Funded'], ['passed', 'Passed'], ['failed', 'Failed']].map(([v, l]) => `<option value="${v}" ${a.status === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
-      <button type="button" class="ibtn" data-rm="${i}" aria-label="Remove">${icon('close')}</button></div>`).join('') + `<datalist id="obFirms">${[...FIRMS, ...ob.firms].map((f) => `<option value="${esc(f)}">`).join('')}</datalist>`
-      : `<div class="empty" style="padding:18px">${icon('accounts')}<b>No accounts yet</b>Add one, or import your sheet.</div>`;
-    $$('[data-f]', box).forEach((inp) => inp.oninput = inp.onchange = () => { const a = ob.accounts[+inp.closest('[data-i]').dataset.i]; a[inp.dataset.f] = inp.type === 'number' ? (inp.value === '' ? '' : num(inp.value)) : inp.value; if (inp.dataset.f === 'type' && inp.value === 'funded') a.status = 'funded'; });
-    $$('[data-rm]', box).forEach((b) => b.onclick = () => { ob.accounts.splice(+b.dataset.rm, 1); draw(); });
-  };
-  draw();
-  $('#o_addAcc').onclick = () => {
-    const firm = ob.firms[0] || ''; const n = ob.accounts.filter((a) => a.firm === firm).length + 1;
-    ob.accounts.push({ id: uid(), name: firm ? `${firm} 50K #${n}` : 'Personal', firm, type: ob.funding.includes('prop') ? 'challenge' : ob.funding.includes('funded') ? 'funded' : 'personal', status: ob.funding.includes('prop') ? 'active' : 'funded', cost: '', size: firm ? 50000 : '', purchaseDate: today(), ddType: 'trailing' });
-    draw(); const last = box.querySelector('.ob-acc:last-of-type'); if (window.gsap && last) window.gsap.fromTo(last, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.45, ease: 'back.out(1.6)' });
-  };
+  mountPicker($('#o_picker'), Object.assign(ob._pk ||= {}, { accounts: ob.accounts, markets: ob.markets, allowOwn: true, onChange: () => {} }));
   $('#o_pick').onclick = () => $('#o_file').click();
   const handle = async (file) => {
     if (!file) return;
     $('#o_dropInfo').textContent = 'Reading…';
     try {
       const res = await importWorkbook(file);
+      res.patch.accounts.forEach((a) => { a.personalDaily ||= defaultDaily(a) || 500; });
       Object.assign(ob, res.patch);
       ob.imported = `${file.name}: ${res.summary}`;
-      obRender(0); toast('Sheet imported', icon('check'));
+      obRender(0); $('details.imp')?.setAttribute('open', ''); toast('Sheet imported', icon('check'));
     } catch (e) { $('#o_dropInfo').textContent = e.message; shake($('#o_drop')); }
   };
   $('#o_file').onchange = (e) => handle(e.target.files[0]);
@@ -212,13 +261,18 @@ function obAccounts() {
 }
 function obCollect() {
   const v = (id) => $('#' + id)?.value;
+  const sv = (n) => { const el = $(`[name="${n}"]`); return el ? num(el.value) : undefined; };
   const on = (id) => $$(`#${id} .chip.is-on`).map((c) => c.dataset.v);
   switch (ob.step) {
-    case 0: ob.name = v('o_name') ?? ob.name; ob.currency = v('o_cur') || ob.currency; ob.localCode = v('o_loc') ?? ob.localCode; ob.rate = v('o_rate') ?? ob.rate; break;
+    case 0: ob.name = v('o_name') ?? ob.name; ob.currency = v('o_cur') || ob.currency; ob.localCode = v('o_loc') ?? ob.localCode; if (!ob.rateAuto && $('#o_rate')) ob.rate = v('o_rate'); break;
     case 1: ob.markets = on('o_mk'); ob.instruments = on('o_in'); break;
-    case 2: ob.funding = on('o_fd'); if ($('#o_fm')) ob.firms = on('o_fm'); break;
-    case 4: if (ob.hasGoal === null) ob.hasGoal = true; ob.mission = { ...ob.mission, name: v('o_gn') ?? ob.mission.name, target: v('o_gt') ?? ob.mission.target, start: v('o_gs') || ob.mission.start, end: v('o_ge') || ob.mission.end }; ob.monthEst = v('o_me') ?? ob.monthEst; break;
-    case 5: ob.style = on('o_st')[0] || ''; ob.sessions = on('o_ss'); ob.setups = on('o_su'); ob.rules = on('o_ru'); ob.risk = { maxDailyLoss: num(v('o_rd')) || '', maxTrades: num(v('o_rt')) || '', perTrade: num(v('o_rp')) || '', stopAfterLosses: num(v('o_rl')) || '' }; break;
+    case 3: if (ob.hasGoal === null) ob.hasGoal = true; ob.mission = { ...ob.mission, name: v('o_gn') ?? ob.mission.name, target: sv('o_gt') ?? ob.mission.target, start: v('o_gs') || ob.mission.start, end: v('o_ge') || ob.mission.end }; ob.monthEst = sv('o_me') ?? ob.monthEst; break;
+    case 4: ob.style = on('o_st')[0] || ''; ob.sessions = on('o_ss'); ob.setups = on('o_su'); break;
+    case 5:
+      ob.maxDailyLoss = sv('o_md') ?? ob.maxDailyLoss; ob.maxTrades = sv('o_mt') ?? ob.maxTrades; ob.rules = on('o_ru');
+      if (ob.riskMode === 'grade' && $('[name="o_g_B"]')) ob.grades = { 'A+': sv('o_g_A+'), B: sv('o_g_B'), C: sv('o_g_C') };
+      if (ob.riskMode === 'fixed' && $('[name="o_rf"]')) ob.fixed = sv('o_rf');
+      break;
     default:
   }
 }
@@ -227,22 +281,28 @@ function obGo(d) {
   if (d > 0) {
     if (ob.step === 0 && !ob.name.trim()) { shake($('#o_name')); $('#o_name').focus(); return; }
     if (ob.step === 1 && !ob.markets.length) { shake($('#o_mk')); toast('Pick at least one market', icon('info')); return; }
-    if (ob.step === 2 && !ob.funding.length) { shake($('#o_fd')); toast('Pick how you are funded', icon('info')); return; }
-    if (ob.step === 3 && !ob.accounts.length) ob.accounts.push({ id: uid(), name: ob.funding.includes('own') ? 'Personal' : `${ob.firms[0] || 'Prop'} account`, firm: ob.funding.includes('own') ? '' : ob.firms[0] || '', type: ob.funding.includes('own') ? 'personal' : 'challenge', status: ob.funding.includes('own') ? 'funded' : 'active', purchaseDate: today() });
-    if (ob.step === 6) return obFinish();
+    if (ob.step === 2 && !ob.accounts.length) { shake($('#o_picker')); toast('Add at least one account', icon('info')); return; }
+    if (ob.step === 2 && !ob.maxDailyLoss) ob.grades = null;
+    if (ob.step === STEPS.length - 1) return obFinish();
   }
-  ob.step = clamp(ob.step + d, 0, 6); obRender(d);
+  ob.step = clamp(ob.step + d, 0, STEPS.length - 1); obRender(d);
 }
 async function obFinish() {
   const btn = $('#obNext'); btn.disabled = true;
+  const base = num(ob.maxDailyLoss) || dailyBase();
   const prof = {
-    ...(S.profile || {}), name: ob.name.trim(), currency: ob.currency, local: ob.localCode && ob.localCode !== ob.currency ? { code: ob.localCode, rate: num(ob.rate) } : null,
-    markets: ob.markets, instruments: ob.instruments, funding: ob.funding, firms: ob.firms, style: ob.style, sessions: ob.sessions, sessionTz: ob.sessionTz, risk: ob.risk,
+    ...(S.profile || {}), name: ob.name.trim(), currency: ob.currency,
+    local: ob.localCode && ob.localCode !== ob.currency ? { code: ob.localCode, rate: num(ob.rate), auto: ob.rateAuto, at: ob.rateMeta?.at || Date.now() } : null,
+    markets: ob.markets, instruments: ob.instruments, funding: ob.accounts.some((a) => a.type !== 'personal') ? ['prop'] : ['own'], firms: [...new Set(ob.accounts.map((a) => a.firm).filter(Boolean))],
+    style: ob.style, sessions: ob.sessions, sessionTz: ob.sessionTz,
+    risk: { maxDailyLoss: base, maxTrades: num(ob.maxTrades) || '', mode: ob.riskMode, byGrade: ob.riskMode === 'grade' ? (ob.grades || gradeDefaults(base)) : null, perTrade: ob.riskMode === 'fixed' ? num(ob.fixed) : '' },
     mission: ob.hasGoal !== false && ob.mission.name ? { ...ob.mission, target: num(ob.mission.target) } : null,
-    monthlyTargets: { ...((S.profile || {}).monthlyTargets || {}), ...(ob.monthlyTargets || {}), ...(ob.monthEst ? { [today().slice(0, 7)]: num(ob.monthEst) } : {}) },
+    monthlyTargets: { ...((S.profile || {}).monthlyTargets || {}), ...(ob.monthlyTargets || {}), ...(num(ob.monthEst) ? { [today().slice(0, 7)]: num(ob.monthEst) } : {}) },
     onboardedAt: Date.now(),
   };
   saveProfile(prof);
+  const keep = new Set(ob.accounts.map((a) => a.id));
+  S.account.filter((a) => !keep.has(a.id)).forEach((a) => remove('account', a.id));
   ob.accounts.forEach((a) => save('account', { ddType: 'trailing', ...a, id: a.id || uid() }));
   const existing = new Set(S.setup.map((s) => s.name)); ob.setups.filter((n) => !existing.has(n)).forEach((name) => save('setup', { name }));
   const er = new Set(S.rule.map((r) => r.text)); ob.rules.filter((t) => !er.has(t)).forEach((text) => save('rule', { text }));
@@ -252,7 +312,7 @@ async function obFinish() {
   location.hash = '#overview'; shell(true);
 }
 
-// spreadsheet import (works with the "Mission No Debt" layout and similar)
+// spreadsheet import (an accounts table with Firm, Cost and Quantity columns, plus optional goal and plan blocks)
 async function importWorkbook(file) {
   if (!window.XLSX) throw new Error('Spreadsheet reader failed to load.');
   const wb = window.XLSX.read(await file.arrayBuffer(), { cellDates: true });
@@ -344,7 +404,7 @@ let current = null;
 function shell(first = false) {
   const p = P();
   app.innerHTML = `<div class="app"><div class="slab" id="slab">
-    <aside class="side"><div class="side__top"><span class="mark">${icon('logo')}</span><span class="side__name"><b>${APP.name}</b><small>${esc(p.mission?.name || (p.name ? p.name.split(' ')[0] + "'s journal" : APP.tagline))}</small></span><button class="side__fold" id="fold" aria-label="Collapse sidebar">${icon('fold')}</button></div>
+    <aside class="side"><div class="side__top"><span class="mark">${icon('logo')}</span><a class="side__name" href="index.html"><b>${APP.name}</b><small>${esc(p.mission?.name || (p.name ? p.name.split(' ')[0] + "'s journal" : APP.tagline))}</small></a><button class="side__fold" id="fold" aria-label="Collapse sidebar">${icon('fold')}</button></div>
       <nav class="nav" id="nav" aria-label="Sections"><span class="nav__pill"></span></nav>
       <div class="safe" id="safe"></div>
       <div class="side__me"><span class="av">${esc(initials())}<i class="av__dot"></i></span><span class="me__text"><b>${esc(p.name || 'Trader')}</b><small>${esc(S.local ? 'Local mode' : S.user?.email || '')}</small></span><button class="ibtn" id="meMore" aria-label="Account menu">${icon('more')}</button></div>
@@ -380,7 +440,12 @@ function shell(first = false) {
   };
   sync.onChange = () => { const d = $('.side__me .av__dot'); if (d) d.style.background = sync.state === 'error' ? 'var(--bad)' : sync.state === 'saving' ? 'var(--warn)' : 'var(--mint)'; };
   route(first);
-  if (first) bootShell(app);
+  if (first) { bootShell(app); refreshFx(); }
+}
+async function refreshFx() {
+  const L = P().local; if (!L || !L.code || L.auto === false) return;
+  const r = await liveRate(P().currency || 'USD', L.code); if (!r) return;
+  if (Math.abs((L.rate || 0) - r.rate) > 1e-4 || !L.at) saveProfile({ ...P(), local: { ...L, rate: +r.rate.toFixed(4), at: r.at } });
 }
 const initials = () => (P().name || S.user?.email || 'T').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 function buildNav() {

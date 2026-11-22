@@ -7,6 +7,8 @@ import {
 } from './core.js';
 import { enterPage, animateData, segInit, segSelect, openModal, closeModal, toast, flash, pop, shake, wobble, cardStack, countUp } from './motion.js';
 import { equityChart, tubes, hbars, bindTips } from './charts.js';
+import { slider, setSlider, liveRate, fxAgo } from './ui.js';
+import { catalog, firmById, planRules, defaultDaily, dailyCap, STAGE_LABEL, mono } from './firms.js';
 
 let H = { go: () => {}, refresh: () => {}, rerenderShell: () => {} };
 export const setHooks = (h) => (H = h);
@@ -154,21 +156,32 @@ const insightCache = (v) => { const k = 'ew_ins_' + today(); try { if (v) sessio
 
 function accountCard(a, i) {
   const x = accountMetrics(a);
+  const lo = x.buffer !== null ? x.pnl - x.buffer : -(num(a.maxLoss) || Math.max(1000, Math.abs(Math.min(0, x.pnl)) * 2));
+  const hi = x.target || Math.max(x.pnl, num(a.maxLoss) || 1000, 1);
+  const pos = clamp((x.pnl - lo) / ((hi - lo) || 1), 0, 1) * 100; const zero = clamp((0 - lo) / ((hi - lo) || 1), 0, 1) * 100;
+  // equity sparkline for the background
+  const days = groupBy(x.trades, (t) => t.date).sort((p, q) => p.key.localeCompare(q.key));
+  let eq = num(a.startPnl); const pts = [eq, ...days.map((d) => (eq += d.net))];
+  const mn = Math.min(...pts, lo); const mx = Math.max(...pts, hi);
+  const spark = pts.length > 1 ? pts.map((v, k) => `${k ? 'L' : 'M'}${(k / (pts.length - 1) * 300).toFixed(1)},${(90 - (v - mn) / ((mx - mn) || 1) * 70).toFixed(1)}`).join('') : '';
+  const stage = a.type === 'personal' ? 'Own capital' : a.status === 'failed' ? 'Breached' : a.status === 'passed' ? 'Passed' : a.type === 'funded' || a.stage === 'funded' ? 'Funded' : a.stage === 'verification' ? 'Verification' : 'Challenge';
+  const plan = [a.firm || 'Personal', a.programId ? (firmById(a.firmId)?.programs.find((p) => p.id === a.programId)?.name || '') : '', a.size ? short(a.size) : ''].filter(Boolean).join(' · ');
   return `<div class="vcard" data-tone="${(i % 4) + 1}"><div class="vcard__flip">
-    <div class="vcard__face"><i class="vcard__shine"></i>
-      <div class="vcard__top"><span class="vcard__name">${esc(a.name)}</span><span style="font-size:12px;opacity:.8">${esc(a.firm || 'Personal')}</span></div>
-      <div class="vcard__chip"></div>
-      <small style="opacity:.7;font-size:12px">${a.type === 'challenge' ? 'Challenge P&L' : a.type === 'funded' ? 'Funded P&L' : 'P&L'}</small>
-      <div class="vcard__num">${money(x.pnl, { sign: true })}</div>
-      <div class="vcard__bottom"><div><small>Size</small><b>${a.size ? short(a.size) : '—'}</b></div><div><small>${x.buffer !== null ? 'DD buffer' : 'Balance'}</small><b>${money(x.buffer !== null ? x.buffer : x.balance)}</b></div><div style="text-align:right"><small>Status</small><b style="text-transform:capitalize">${esc(a.status)}</b></div></div>
+    <div class="vcard__face">
+      ${spark ? `<svg class="vcard__spark" viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true"><path d="${spark}L300,100L0,100Z" class="vcard__area"/><path d="${spark}" class="vcard__line"/></svg>` : ''}
+      <div class="vcard__top"><span class="fmono">${esc(mono(a))}</span><div class="vcard__id"><b>${esc(a.name)}</b><small>${esc(plan)}</small></div><span class="vstage vstage--${stage.toLowerCase().replace(/\s/g, '')}">${stage}</span></div>
+      <div class="vcard__pnl"><small>Account P&amp;L</small><b>${money(x.pnl, { sign: true })}</b><em>${x.target ? `${pct(Math.max(0, x.pnl) / x.target)} of ${money(x.target)} target` : x.todayPnl ? `today ${money(x.todayPnl, { sign: true })}` : 'no target on this stage'}</em></div>
+      <div class="ladder"><div class="ladder__track"><i class="ladder__fill" style="left:${Math.min(zero, pos)}%;width:${Math.abs(pos - zero)}%" data-neg="${x.pnl < 0 ? 1 : 0}"></i><span class="ladder__zero" style="left:${zero}%"></span><span class="ladder__dot" style="left:${pos}%"></span></div>
+        <div class="ladder__lab"><span class="bad">${x.buffer !== null ? 'Breach ' + money(lo, { sign: true }) : '—'}</span><span>${x.target ? 'Target ' + money(hi, { sign: true }) : ''}</span></div></div>
+      <div class="vcard__stats"><div><small>Daily left</small><b>${x.dailyLeft !== null ? money(x.dailyLeft) : '—'}</b></div><div><small>DD buffer</small><b>${x.buffer !== null ? money(x.buffer) : '—'}</b></div><div><small>Days</small><b>${x.tradingDays}${num(a.minDays) ? '/' + a.minDays : ''}</b></div></div>
     </div>
     <div class="vcard__face vcard__back">
-      <div class="vcard__top" style="margin-bottom:6px"><span class="vcard__name">Rules</span><span style="font-size:12px;opacity:.8">${esc(a.firm || '')}</span></div>
-      <div class="vcard__row"><span>Profit target</span><b>${x.target ? money(x.target) : '—'}</b></div>
-      <div class="vcard__row"><span>Max loss (${a.ddType === 'static' ? 'static' : 'trailing'})</span><b>${a.maxLoss ? money(a.maxLoss) : '—'}</b></div>
-      <div class="vcard__row"><span>Daily loss limit</span><b>${a.dailyLimit ? money(a.dailyLimit) : '—'}</b></div>
-      <div class="vcard__row"><span>Min trading days</span><b>${a.minDays || '—'}</b></div>
-      <div class="vcard__row"><span>Cost</span><b>${money(num(a.cost))}</b></div>
+      <div class="vcard__top" style="margin-bottom:8px"><span class="fmono">${esc(mono(a))}</span><div class="vcard__id"><b>Rules</b><small>${esc(plan)}</small></div></div>
+      <div class="vcard__row"><span>Profit target</span><b>${num(a.target) ? money(a.target) : '—'}</b></div>
+      <div class="vcard__row"><span>Max loss (${a.ddType === 'static' ? 'static' : 'trailing'})</span><b>${num(a.maxLoss) ? money(a.maxLoss) : '—'}</b></div>
+      <div class="vcard__row"><span>Firm daily limit</span><b>${num(a.dailyLimit) ? money(a.dailyLimit) : 'None'}</b></div>
+      <div class="vcard__row"><span>Your daily stop</span><b>${num(a.personalDaily) ? money(a.personalDaily) : '—'}</b></div>
+      <div class="vcard__row"><span>Min days · consistency</span><b>${num(a.minDays) || '—'} · ${num(a.consistency) ? a.consistency + '%' : '—'}</b></div>
     </div></div></div>`;
 }
 function missionCard(m) {
@@ -226,9 +239,9 @@ export function trades(el) {
     $('#tSum', el).innerHTML = `<div class="grid g-4">${[['Net P&L', st.total, 'moneySign', tone(st.total)], ['Win rate', st.winRate, 'pct', ''], ['Profit factor', Number.isFinite(st.pf) ? st.pf : 99, 'dec', ''], ['Avg trade', st.expectancy, 'moneySign', tone(st.expectancy)]]
       .map(([l, v, f, c]) => `<div class="kpi"><small>${l}</small><b class="${c}">${cnt(v, f)}</b><em>${l === 'Win rate' ? `${st.wins}W · ${st.losses}L · ${st.be}BE` : l === 'Net P&L' ? `${st.n} trades · fees ${money(st.fees)}` : l === 'Profit factor' ? `avg win ${money(st.avgWin)} / loss ${money(st.avgLoss)}` : st.avgR !== null ? `avg ${st.avgR.toFixed(2)}R` : 'per trade'}</em></div>`).join('')}</div>`;
     const rows = list.slice().reverse();
-    $('#tTable', el).innerHTML = rows.length ? `<div class="tablewrap"><table class="t"><thead><tr><th>Date</th><th>Symbol</th><th>Side</th><th class="r">${esc(qty())}</th><th class="r">Entry</th><th class="r">Exit</th><th>Setup</th><th>Account</th><th>Emotion</th><th class="r">R</th><th class="r">Net</th></tr></thead><tbody>
-      ${rows.slice(0, 400).map((t) => { const n = net(t); const r = rMultiple(t); return `<tr data-trade="${t.id}"><td>${esc(fmtDate(t.date))} <span class="muted">${esc(t.time || '')}</span></td><td><b>${esc(t.symbol)}</b></td><td><span class="pill ${t.side === 'Short' ? 'pill--warn' : 'pill--info'}">${esc(t.side || '')}</span></td><td class="r">${esc(t.qty || '')}</td><td class="r">${esc(t.entry || '')}</td><td class="r">${esc(t.exit || '')}</td><td>${esc(t.setup || '—')}</td><td>${esc(accName(t.accountId))}</td><td>${esc(t.emotion || '—')}</td><td class="r">${r !== null ? r.toFixed(2) : '—'}</td><td class="r amt ${tone(n)}">${money(n, { sign: true })}</td></tr>`; }).join('')}
-      </tbody><tfoot><tr><td colspan="10">${rows.length} trades</td><td class="r ${tone(st.total)}">${money(st.total, { sign: true })}</td></tr></tfoot></table></div>`
+    $('#tTable', el).innerHTML = rows.length ? `<div class="tablewrap"><table class="t"><thead><tr><th>Date</th><th>Symbol</th><th>Side</th><th class="r">${esc(qty())}</th><th class="r">Entry</th><th class="r">Exit</th><th>Setup</th><th>Grade</th><th>Account</th><th>Emotion</th><th class="r">R</th><th class="r">Net</th></tr></thead><tbody>
+      ${rows.slice(0, 400).map((t) => { const n = net(t); const r = rMultiple(t); return `<tr data-trade="${t.id}"><td>${esc(fmtDate(t.date))} <span class="muted">${esc(t.time || '')}</span></td><td><b>${esc(t.symbol)}</b></td><td><span class="pill ${t.side === 'Short' ? 'pill--warn' : 'pill--info'}">${esc(t.side || '')}</span></td><td class="r">${esc(t.qty || '')}</td><td class="r">${esc(t.entry || '')}</td><td class="r">${esc(t.exit || '')}</td><td>${esc(t.setup || '—')}</td><td>${t.grade ? `<span class="gtag g-${t.grade === 'A+' ? 'a' : t.grade.toLowerCase()}">${esc(t.grade)}</span>` : '—'}</td><td>${esc(accName(t.accountId))}</td><td>${esc(t.emotion || '—')}</td><td class="r">${r !== null ? r.toFixed(2) : '—'}</td><td class="r amt ${tone(n)}">${money(n, { sign: true })}</td></tr>`; }).join('')}
+      </tbody><tfoot><tr><td colspan="11">${rows.length} trades</td><td class="r ${tone(st.total)}">${money(st.total, { sign: true })}</td></tr></tfoot></table></div>`
       : `<div class="empty">${icon('trades')}<b>No trades match</b>Change the filters or log a trade.</div>`;
     animateData(el); bindCommon(el);
   };
@@ -263,6 +276,7 @@ export function tradeModal(t0, preset = {}) {
     ${field('Side', `<div class="seg seg--accent" id="sideSeg"><button type="button" data-v="Long" class="${t.side !== 'Short' ? 'is-on' : ''}">Long</button><button type="button" data-v="Short" class="${t.side === 'Short' ? 'is-on' : ''}">Short</button></div>`)}
     ${field(esc(qty()), inp('qty', t.qty, 'type="number" step="any" inputmode="decimal"'))}
     ${field('Setup', `<select class="in" name="setup"><option value="">—</option>${optionList(setups, t.setup)}</select>`)}
+    ${field('Setup grade', `<div class="chips gradechips" id="gradeC">${['A+', 'B', 'C'].map((g) => `<button type="button" class="chip g-chip g-${g === 'A+' ? 'a' : g.toLowerCase()} ${t.grade === g ? 'is-on' : ''}" data-v="${g}">${g}</button>`).join('')}</div>`, 'half', '<span id="gradeHint"></span>')}
     ${field('Entry', inp('entry', t.entry, 'type="number" step="any" inputmode="decimal"'))}${field('Exit', inp('exit', t.exit, 'type="number" step="any" inputmode="decimal"'))}
     ${field('Stop', inp('stop', t.stop, 'type="number" step="any" inputmode="decimal"'))}${field('Target', inp('target', t.target, 'type="number" step="any" inputmode="decimal"'))}
     ${field(`P&amp;L (${esc(cur())})`, inp('pnl', t.pnl, 'type="number" step="any" inputmode="decimal" placeholder="auto"'), '', '<span id="pnlHint"></span>')}
@@ -296,6 +310,7 @@ export function tradeModal(t0, preset = {}) {
     Object.assign(t, f);
     t.side = $('#sideSeg .is-on', m.el)?.dataset.v || 'Long';
     t.emotion = $('#emo .is-on', m.el)?.dataset.v || '';
+    t.grade = $('#gradeC .is-on', m.el)?.dataset.v || '';
     t.mistakes = $$('#mis .is-on', m.el).map((b) => b.dataset.v);
     t.rulesOk = $$('#rulesChk .is-on', m.el).map((b) => b.dataset.v);
     t.followedPlan = $('#plan', m.el).classList.contains('is-on');
@@ -309,12 +324,15 @@ export function tradeModal(t0, preset = {}) {
     const f = formData(m.el); f.side = $('#sideSeg .is-on', m.el)?.dataset.v; f.symbol = (f.symbol || '').toUpperCase();
     const c = calcPnl(f); const pv = pointValue(f.symbol);
     $('#pnlHint', m.el).textContent = c !== null ? `auto: ${money(c, { sign: true })}` : pv ? '' : f.symbol ? 'enter P&L (unknown point value)' : '';
-    const tt = { ...f, pnl: f.pnl !== '' ? f.pnl : c ?? 0 }; const r = f.r === '' ? rMultiple({ ...tt, r: undefined }) : null;
+    const tt = { ...f, grade: $('#gradeC .is-on', m.el)?.dataset.v, pnl: f.pnl !== '' ? f.pnl : c ?? 0 }; const r = f.r === '' ? rMultiple({ ...tt, r: undefined }) : null;
     $('#rHint', m.el).textContent = r !== null && f.r === '' ? `auto: ${r.toFixed(2)}R` : '';
   };
   m.el.addEventListener('input', hint);
   segInit($('#sideSeg', m.el)); segBind(m.el, '#sideSeg', hint);
   $$('#tTabs button', m.el).forEach((b) => b.onclick = () => { $$('#tTabs button', m.el).forEach((x) => x.classList.toggle('is-on', x === b)); $$('[data-pane]', m.el).forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab)); const pane = $(`[data-pane="${b.dataset.tab}"]`, m.el); if (window.gsap) window.gsap.fromTo(pane, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }); });
+  const gHint = () => { const g = $('#gradeC .is-on', m.el)?.dataset.v; const bg = P().risk?.byGrade; $('#gradeHint', m.el).textContent = g && bg && num(bg[g]) ? `your ${g} risk: ${money(bg[g])}` : g ? '' : 'A+ high conviction · B normal · C low probability'; };
+  $$('#gradeC .chip', m.el).forEach((c) => c.onclick = () => { const on = c.classList.contains('is-on'); $$('#gradeC .chip', m.el).forEach((x) => x.classList.remove('is-on')); if (!on) c.classList.add('is-on'); pop(c); gHint(); hint(); });
+  gHint();
   $$('#emo .chip', m.el).forEach((c) => c.onclick = () => { $$('#emo .chip', m.el).forEach((x) => x.classList.toggle('is-on', x === c && !c.classList.contains('is-on'))); pop(c); });
   $$('#mis .chip, #rulesChk .chip', m.el).forEach((c) => c.onclick = () => { c.classList.toggle('is-on'); pop(c); if (c.dataset.v === 'None' && c.classList.contains('is-on')) $$('#mis .chip', m.el).forEach((x) => x !== c && x.classList.remove('is-on')); else if (c.closest('#mis')) $('#mis [data-v="None"]', m.el)?.classList.remove('is-on'); });
   $('#plan', m.el).onclick = (e) => e.currentTarget.classList.toggle('is-on');
@@ -488,26 +506,79 @@ export function accounts(el) {
   after(el);
 }
 export function accountModal(a0) {
-  const a = a0 ? { ...a0 } : { type: (P().funding || []).includes('prop') ? 'challenge' : 'personal', status: 'active', purchaseDate: today(), ddType: 'trailing' };
-  const m = modal(a0 ? a.name : 'Add account', `<div class="form">
-    ${field('Name', inp('name', a.name, 'placeholder="Topstep 50K #2"'), 'half')}${field('Firm / broker', inp('firm', a.firm, `list="firmList" placeholder="Topstep"`), 'half')}
-    ${field('Type', `<select class="in" name="type">${optionList([['challenge', 'Challenge / evaluation'], ['funded', 'Funded'], ['personal', 'Own capital']], a.type)}</select>`)}
-    ${field('Status', `<select class="in" name="status">${optionList([['active', 'Active challenge'], ['funded', 'Funded & live'], ['passed', 'Passed'], ['failed', 'Failed / blown'], ['closed', 'Closed']], a.status)}</select>`)}
-    ${field('Account size', inp('size', a.size, 'type="number" step="any" placeholder="50000"'))}${field('Cost paid', inp('cost', a.cost, 'type="number" step="any" placeholder="85"'))}
-    ${field('Bought on', inp('purchaseDate', a.purchaseDate, 'type="date"'))}${field('Reset / activation fees', inp('resetCost', a.resetCost, 'type="number" step="any" placeholder="0"'))}
-    ${field('Profit target', inp('target', a.target, 'type="number" step="any" placeholder="3000"'), '', 'P&L needed to pass')}
-    ${field('Max loss / drawdown', inp('maxLoss', a.maxLoss, 'type="number" step="any" placeholder="2000"'))}
-    ${field('Drawdown type', `<select class="in" name="ddType">${optionList([['trailing', 'Trailing (end of day)'], ['static', 'Static']], a.ddType)}</select>`)}
-    ${field('Daily loss limit', inp('dailyLimit', a.dailyLimit, 'type="number" step="any" placeholder="1000"'))}
-    ${field('Min trading days', inp('minDays', a.minDays, 'type="number" placeholder="5"'))}${field('Profit split %', inp('split', a.split, 'type="number" placeholder="90"'))}
-    ${field('P&L before journaling', inp('startPnl', a.startPnl, 'type="number" step="any" placeholder="0"'), 'half', 'Carry in the balance change from before you started logging here (e.g. −1000)')}
-    ${field('Days already traded', inp('startDays', a.startDays, 'type="number" placeholder="0"'), 'half')}
+  const a = a0 ? { ...a0 } : { type: 'challenge', stage: 'challenge', status: 'active', purchaseDate: today(), ddType: 'trailing', size: 50000, target: 3000, maxLoss: 2000, personalDaily: 1000 };
+  const firms = catalog().firms; const c = sym();
+  const progOpts = (fid) => (firmById(fid)?.programs || []).map((p) => [p.id, p.name]);
+  const sizeOpts = (fid, pid) => (firmById(fid)?.programs.find((p) => p.id === pid)?.sizes || []).map((s) => [s.size, short(s.size)]);
+  const stageOpts = (fid, pid) => (firmById(fid)?.programs.find((p) => p.id === pid)?.stages || ['challenge', 'funded']).map((s) => [s, STAGE_LABEL[s]]);
+  const m = modal(a0 ? a.name : 'Add account', `
+    <div class="firmbar"><span class="firmbar__t">${icon('bolt')}Fill rules from firm</span>
+      <select class="in" id="fbF"><option value="">Choose firm…</option>${optionList(firms.map((f) => [f.id, f.name]), a.firmId)}</select>
+      <select class="in" id="fbP">${optionList(progOpts(a.firmId), a.programId)}</select>
+      <select class="in" id="fbS">${optionList(sizeOpts(a.firmId, a.programId), a.size)}</select>
+      <select class="in" id="fbG">${optionList(stageOpts(a.firmId, a.programId), a.stage || (a.type === 'funded' ? 'funded' : 'challenge'))}</select></div>
+    <p class="firmnote" id="fbNote">${a.rulesFrom ? `${icon('check')}Rules from ${esc(a.rulesFrom)}. ` : ''}${firmById(a.firmId) ? `<a href="${esc(firmById(a.firmId).url)}" target="_blank" rel="noopener">Confirm on ${esc(firmById(a.firmId).name)}'s site ↗</a>` : 'Pick a firm to fill its published rules. Every value stays editable.'}${S.ai.configured ? ` <button type="button" class="linkbtn" id="aiRules">${icon('coach')}Re-check with AI</button>` : ''}</p>
+    <div class="form">
+    ${field('Name', inp('name', a.name, 'placeholder="e.g. 50K Evaluation #1"'), 'half')}${field('Firm / broker', inp('firm', a.firm, 'placeholder="Firm name"'), 'half')}
+    ${field('Status', `<select class="in" name="status">${optionList([['active', 'Challenge in progress'], ['funded', 'Funded & trading'], ['passed', 'Passed (waiting)'], ['failed', 'Breached'], ['closed', 'Closed']], a.status)}</select>`, 'half')}
+    ${field('Bought on', inp('purchaseDate', a.purchaseDate, 'type="date"'), 'half')}
+    <div class="half">${slider({ name: 'size', label: 'Account size', value: num(a.size) || 0, min: 0, max: 300000, step: 5000, prefix: c, zero: '—' })}</div>
+    <div class="half">${slider({ name: 'target', label: 'Profit target', value: num(a.target), min: 0, max: 30000, step: 250, prefix: c, zero: 'None' })}</div>
+    <div class="half">${slider({ name: 'maxLoss', label: 'Max loss / drawdown', value: num(a.maxLoss), min: 0, max: 20000, step: 250, prefix: c, zero: 'None' })}</div>
+    ${field('Drawdown type', `<select class="in" name="ddType">${optionList([['trailing', 'Trailing'], ['static', 'Static']], a.ddType)}</select>`, 'half')}
+    <div class="half">${slider({ name: 'dailyLimit', label: 'Firm daily loss limit', value: num(a.dailyLimit), min: 0, max: 10000, step: 50, prefix: c, zero: 'None' })}</div>
+    <div class="half" id="pdBox">${slider({ name: 'personalDaily', label: 'Your daily stop', value: num(a.personalDaily) || defaultDaily(a) || 50, min: 50, max: dailyCap(a), step: 25, prefix: c, hint: 'tighter than the firm, if you like' })}</div>
+    <div class="half">${slider({ name: 'minDays', label: 'Min trading days', value: num(a.minDays), min: 0, max: 30, step: 1, zero: 'None' })}</div>
+    <div class="half">${slider({ name: 'consistency', label: 'Consistency rule', value: num(a.consistency), min: 0, max: 100, step: 5, suffix: '%', zero: 'None' })}</div>
+    ${field(`Cost paid (${esc(cur())})`, inp('cost', a.cost, 'type="number" step="any" placeholder="0"'))}${field('Resets / activation', inp('resetCost', a.resetCost, 'type="number" step="any" placeholder="0"'))}
+    ${field('P&amp;L before journaling', inp('startPnl', a.startPnl, 'type="number" step="any" placeholder="0"'), '', 'e.g. −1000 if already down')}${field('Days already traded', inp('startDays', a.startDays, 'type="number" placeholder="0"'))}
     ${field('Notes', `<textarea class="in" name="notes" rows="2">${esc(a.notes || '')}</textarea>`, 'full')}
-  </div><datalist id="firmList">${['Topstep', 'TopOne Futures', 'Apex Trader Funding', 'Tradeify', 'MyFundedFutures', 'Lucid Trading', 'Take Profit Trader', 'FTMO', 'The5ers', 'FundingPips', 'Alpha Capital', ...(P().firms || [])].map((f) => `<option value="${esc(f)}">`).join('')}</datalist>`,
+  </div>`,
   `${a0 ? `<button class="btn btn--ghost btn--danger" data-act="del">${icon('trash')}Delete</button><span style="flex:1"></span>` : ''}<button class="btn" data-act="cancel">Cancel</button><button class="btn btn--primary" data-act="save">${icon('check')}Save</button>`, 'modal');
+  const F = (id) => $(id, m.el);
+  const setSel = (sel, opts, v) => { sel.innerHTML = optionList(opts, v); };
+  const sl = (n) => $(`[name="${n}"]`, m.el).closest('.sl');
+  const fixCap = () => { const cap = dailyCap({ dailyLimit: num($('[name=dailyLimit]', m.el).value), maxLoss: num($('[name=maxLoss]', m.el).value), size: num($('[name=size]', m.el).value) }); const pd = sl('personalDaily'); const cur2 = num($('[name=personalDaily]', m.el).value); setSlider(pd, Math.min(cur2, cap), { max: cap }); };
+  const apply = () => {
+    const f = firmById(F('#fbF').value); if (!f) return;
+    const p = f.programs.find((x) => x.id === F('#fbP').value) || f.programs[0]; const size = +F('#fbS').value || p.sizes[0].size; const stage = F('#fbG').value || 'challenge';
+    const r = planRules(f, p, size, stage);
+    a.firmId = f.id; a.programId = p.id; a.stage = stage; a.rulesFrom = `${f.name} ${p.name}, catalog ${catalog().verified}`;
+    setSlider(sl('size'), r.size); setSlider(sl('target'), num(r.target)); setSlider(sl('maxLoss'), num(r.maxLoss)); setSlider(sl('dailyLimit'), num(r.dailyLimit)); setSlider(sl('minDays'), num(r.minDays)); setSlider(sl('consistency'), num(r.consistency));
+    $('[name=ddType]', m.el).value = r.ddType; $('[name=firm]', m.el).value = f.name;
+    if (!$('[name=name]', m.el).value.trim()) $('[name=name]', m.el).value = `${f.name.split(' ')[0]} ${Math.round(size / 1000)}K ${p.name}`;
+    if (stage !== 'funded' && !$('[name=cost]', m.el).value) $('[name=cost]', m.el).value = r.cost;
+    $('[name=status]', m.el).value = stage === 'funded' ? 'funded' : $('[name=status]', m.el).value === 'funded' ? 'active' : $('[name=status]', m.el).value;
+    const cap = dailyCap(r); setSlider(sl('personalDaily'), Math.min(num($('[name=personalDaily]', m.el).value) || defaultDaily(r), cap) || defaultDaily(r), { max: cap });
+    F('#fbNote').innerHTML = `${icon('check')}Filled from ${esc(f.name)} ${esc(p.name)} (checked ${esc(catalog().verified)}). <a href="${esc(f.url)}" target="_blank" rel="noopener">Confirm on their site ↗</a>${S.ai.configured ? ` <button type="button" class="linkbtn" id="aiRules">${icon('coach')}Re-check with AI</button>` : ''}`;
+    bindAI();
+    if (window.gsap) window.gsap.fromTo($$('.sl', m.el), { backgroundColor: 'rgba(110,224,161,.18)' }, { backgroundColor: 'rgba(110,224,161,0)', duration: 1.2, stagger: 0.03 });
+  };
+  F('#fbF').onchange = () => { const fid = F('#fbF').value; setSel(F('#fbP'), progOpts(fid)); setSel(F('#fbS'), sizeOpts(fid, F('#fbP').value), 50000); setSel(F('#fbG'), stageOpts(fid, F('#fbP').value), 'challenge'); apply(); };
+  F('#fbP').onchange = () => { const fid = F('#fbF').value; setSel(F('#fbS'), sizeOpts(fid, F('#fbP').value), +F('#fbS').value); setSel(F('#fbG'), stageOpts(fid, F('#fbP').value), F('#fbG').value); apply(); };
+  F('#fbS').onchange = apply; F('#fbG').onchange = apply;
+  ['dailyLimit', 'maxLoss'].forEach((n) => $(`[name=${n}]`, m.el).addEventListener('input', fixCap));
+  const bindAI = () => {
+    const b = $('#aiRules', m.el); if (!b) return;
+    b.onclick = async () => {
+      b.disabled = true; b.innerHTML = '<span class="typing"><i></i><i></i><i></i></span> checking the firm\'s site…';
+      try {
+        const r = await API.ai({ mode: 'firmrules', messages: [{ role: 'user', content: `Firm: ${$('[name=firm]', m.el).value}. Plan: ${firmById(a.firmId)?.programs.find((p) => p.id === a.programId)?.name || ''}. Account size: ${$('[name=size]', m.el).value}. Stage: ${a.stage || 'challenge'}.` }] });
+        const j = JSON.parse((r.text.match(/\{[\s\S]*\}/) || ['{}'])[0]);
+        ['target', 'maxLoss', 'dailyLimit', 'minDays', 'consistency'].forEach((kk) => { if (j[kk] !== undefined && j[kk] !== null) setSlider(sl(kk), num(j[kk])); });
+        if (j.ddType) $('[name=ddType]', m.el).value = j.ddType; fixCap();
+        F('#fbNote').innerHTML = `${icon('check')}Checked live${j.source ? ` against <a href="${esc(j.source)}" target="_blank" rel="noopener">${esc(new URL(j.source).hostname)}</a>` : ''}. ${esc(j.notes || '')}`;
+        a.rulesFrom = `AI check ${today()}`;
+      } catch (e) { toast(e.message || 'Couldn\'t check right now', icon('info')); b.disabled = false; b.textContent = 'Re-check with AI'; }
+    };
+  };
+  bindAI();
   m.on('save', () => {
     const f = formData(m.el); if (!f.name.trim()) { shake($('[name=name]', m.el)); return; }
-    ['size', 'cost', 'resetCost', 'target', 'maxLoss', 'dailyLimit', 'minDays', 'split', 'startPnl', 'startDays'].forEach((k) => (f[k] = f[k] === '' ? '' : num(f[k])));
+    ['size', 'cost', 'resetCost', 'target', 'maxLoss', 'dailyLimit', 'personalDaily', 'minDays', 'consistency', 'startPnl', 'startDays'].forEach((kk) => (f[kk] = f[kk] === '' || f[kk] === undefined ? '' : num(f[kk])));
+    ['target', 'dailyLimit', 'minDays', 'consistency', 'maxLoss'].forEach((kk) => { if (f[kk] === 0) f[kk] = ''; });
+    f.type = f.status === 'funded' ? 'funded' : !f.firm ? 'personal' : 'challenge';
+    if (f.status === 'funded') a.stage = 'funded';
     save('account', { ...a, ...f }); m.close(); H.refresh(); toast('Account saved', icon('check'));
   });
   m.on('del', () => confirmBox(`Delete ${a.name}?`, 'Its trades stay in your log but lose the account link.', () => { remove('account', a.id); m.close(); H.refresh(); }));
@@ -543,7 +614,7 @@ function payoutModal(p0) {
     ${field('Account', `<select class="in" name="accountId">${optionList(S.account.map((a) => [a.id, a.name]), p.accountId)}</select>`, 'half')}
     ${field('Status', `<select class="in" name="status">${optionList([['planned', 'Planned'], ['requested', 'Requested / pending'], ['credited', 'Credited'], ['rejected', 'Rejected']], p.status)}</select>`, 'half')}
     ${field(`Amount received (${esc(cur())})`, inp('amount', p.amount, 'type="number" step="any"'), 'half', 'What landed after the split')}
-    ${field(`Amount in ${esc(L?.code || 'local')} `, inp('amountLocal', p.amountLocal, `type="number" step="any" placeholder="${L?.rate ? 'auto at ' + L.rate : ''}"`), 'half', 'What hit your bank account')}
+    ${field(`Amount in ${esc(L?.code || 'local')} `, inp('amountLocal', p.amountLocal, `type="number" step="any" placeholder="${L?.rate ? 'auto at ' + Number(L.rate).toFixed(2) : ''}"`), 'half', 'What hit your bank account')}
     ${field('Gross withdrawn from account', inp('gross', p.gross, 'type="number" step="any" placeholder="same as amount"'), 'half')}
     ${field('Estimate', inp('estimate', p.estimate, 'type="number" step="any"'), 'half')}
     ${field('Requested on', inp('reqDate', p.reqDate, 'type="date"'), 'half')}${field('Credited on', inp('creditDate', p.creditDate, 'type="date"'), 'half')}
@@ -560,8 +631,8 @@ function payoutModal(p0) {
 function targetsModal(focus) {
   const t = { ...(P().monthlyTargets || {}) }; const base = focus || today().slice(0, 7);
   const months = [...new Set([...Object.keys(t), base, ...[0, 1, 2].map((i) => { const d = parseISO(today().slice(0, 8) + '01'); d.setMonth(d.getMonth() + i); return iso(d).slice(0, 7); })])].sort();
-  const m = modal('Monthly payout targets', `<div class="form">${months.map((k) => field(parseISO(k + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }), inp('m_' + k, t[k], 'type="number" step="any" placeholder="0"'), 'half')).join('')}</div>`, `<button class="btn" data-act="cancel">Cancel</button><button class="btn btn--primary" data-act="save">Save</button>`, 'modal modal--sm');
-  m.on('save', () => { const f = formData(m.el); const out = {}; Object.entries(f).forEach(([k, v]) => { if (v !== '') out[k.slice(2)] = num(v); }); saveProfile({ ...P(), monthlyTargets: out }); m.close(); H.refresh(); });
+  const m = modal('Monthly payout targets', `<div class="form">${months.map((k) => `<div class="full">${slider({ name: 'm_' + k, label: parseISO(k + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }), value: num(t[k]), min: 0, max: Math.max(10000, num(t[k])), step: 100, prefix: sym(), zero: 'No target' })}</div>`).join('')}</div>`, `<button class="btn" data-act="cancel">Cancel</button><button class="btn btn--primary" data-act="save">Save</button>`, 'modal modal--sm');
+  m.on('save', () => { const f = formData(m.el); const out = {}; Object.entries(f).forEach(([k, v]) => { if (num(v)) out[k.slice(2)] = num(v); }); saveProfile({ ...P(), monthlyTargets: out }); m.close(); H.refresh(); });
 }
 
 // ======================================================================= WEEKLY PLAN
@@ -609,6 +680,7 @@ export function analytics(el) {
     ${card('Equity curve', 'Closed P&L, by day', equityChart(st.curve, { h: 220, id: 'an' }))}
     ${card('Rules kept vs broken', 'What discipline is worth to you', `<div class="grid g-2"><div class="kpi"><small>Followed plan</small><b class="${tone(sum(kept, net))}">${cnt(sum(kept, net), 'moneySign')}</b><em>${kept.length} trades · ${pct(kept.filter((t) => net(t) > 0).length / (kept.length || 1))} win</em></div><div class="kpi"><small>Broke a rule</small><b class="${tone(sum(broke, net))}">${cnt(sum(broke, net), 'moneySign')}</b><em>${broke.length} trades · ${pct(broke.filter((t) => net(t) > 0).length / (broke.length || 1))} win</em></div></div><h4 style="margin:18px 0 10px">Cost of mistakes</h4>${hbars(mis.slice(0, 6))}`)}
     ${card('By setup', 'Which playbook plays pay', hbars(groupBy(list, (t) => t.setup || 'No setup')))}
+    ${card('By setup grade', 'Does your conviction match your results?', hbars(groupBy(list, (t) => (t.grade ? t.grade + ' grade' : 'Not graded')).sort((a, b) => a.key.localeCompare(b.key))))}
     ${card('By symbol', '', hbars(groupBy(list, (t) => t.symbol).slice(0, 10)))}
     ${card('By weekday', '', tubes(byWd, { h: 170 }))}
     ${card('By hour', `Entry time${P().sessionTz ? ' (' + esc(P().sessionTz) + ')' : ''}`, tubes(byHr, { h: 170 }))}
@@ -666,13 +738,19 @@ export function playbook(el) {
   <div class="grid g-3">${S.setup.map((s, i) => { const l = S.trade.filter((t) => t.setup === s.name); const st = stats(l); return `<section class="card" data-setup="${s.id}" style="cursor:pointer"><div class="chead"><span class="prodico t${(i % 4) + 1}">${icon(setupIcons[i % setupIcons.length])}</span><div class="chead__text"><h3>${esc(s.name)}</h3><p>${l.length} trades</p></div><span class="amt ${tone(st.total)}">${money(st.total, { sign: true })}</span></div><p class="muted" style="margin:0 0 12px;font-size:var(--fs-md);min-height:20px">${esc(s.criteria || 'Add entry criteria, invalidation and targets.')}</p><div class="pace" style="grid-template-columns:repeat(3,1fr)"><div class="pace__item"><small>Win rate</small><b>${pct(st.winRate)}</b></div><div class="pace__item"><small>Avg R</small><b>${st.avgR !== null ? st.avgR.toFixed(2) : '—'}</b></div><div class="pace__item"><small>Per trade</small><b class="${tone(st.expectancy)}">${short(st.expectancy)}</b></div></div></section>`; }).join('')}</div>
   <div class="grid g-2" style="margin-top:var(--gap)">
     ${card('Trading rules', 'Ticked off on every trade', `<div class="txlist">${S.rule.map((x) => `<div class="txrow" style="cursor:default"><span class="prodico">${icon('check')}</span><span class="cell__text"><b style="white-space:normal">${esc(x.text)}</b></span><button class="ibtn" data-del-rule="${x.id}" aria-label="Delete">${icon('trash')}</button></div>`).join('') || '<div class="empty">No rules yet.</div>'}</div>`)}
-    ${card('Risk limits', 'Drive the “Safe to risk today” card', `<div class="form" style="grid-template-columns:1fr 1fr" id="riskF">${field('Max daily loss', inp('maxDailyLoss', r.maxDailyLoss, 'type="number" step="any"'))}${field('Max trades / day', inp('maxTrades', r.maxTrades, 'type="number"'))}${field('Risk per trade', inp('perTrade', r.perTrade, 'type="number" step="any"'))}${field('Stop after N losses in a row', inp('stopAfterLosses', r.stopAfterLosses, 'type="number"'))}</div><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn btn--primary btn--sm" id="riskSave">Save limits</button></div>`)}
+    ${card('Risk limits', 'Drive the “Safe to risk today” card and trade checks', `<div class="stack" id="riskF">
+      <div class="grid g-2" style="gap:12px">${slider({ name: 'maxDailyLoss', label: 'Max loss per day', value: num(r.maxDailyLoss) || 500, min: 50, max: Math.max(5000, num(r.maxDailyLoss)), step: 25, prefix: sym() })}${slider({ name: 'maxTrades', label: 'Max trades per day', value: num(r.maxTrades), min: 0, max: 15, step: 1, zero: 'No limit' })}</div>
+      <div class="row row--between" style="flex-wrap:wrap;gap:8px"><b style="font-size:var(--fs-md)">Sizing</b><div class="seg seg--accent" id="rmSeg">${[['grade', 'By setup grade'], ['fixed', 'Fixed'], ['none', 'Per trade']].map(([v, l]) => `<button type="button" data-v="${v}" class="${(r.mode || 'none') === v ? 'is-on' : ''}">${l}</button>`).join('')}</div></div>
+      <div id="rmBox"></div></div><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn btn--primary btn--sm" id="riskSave">Save limits</button></div>`)}
   </div></div>`;
   el.querySelector('[data-act="setup"]').onclick = () => setupModal();
   el.querySelector('[data-act="rule"]').onclick = () => { const m = modal('Add rule', field('Rule', inp('text', '', 'placeholder="No trades in the first 5 minutes"')), '<button class="btn" data-act="cancel">Cancel</button><button class="btn btn--primary" data-act="save">Add</button>', 'modal modal--sm'); m.on('save', () => { const v = $('[name=text]', m.el).value.trim(); if (v) save('rule', { text: v }); m.close(); H.refresh(); }); };
   $$('[data-setup]', el).forEach((c) => c.onclick = () => setupModal(S.setup.find((s) => s.id === c.dataset.setup)));
   $$('[data-del-rule]', el).forEach((b) => b.onclick = () => { remove('rule', b.dataset.delRule); H.refresh(); });
-  $('#riskSave', el).onclick = () => { const f = formData($('#riskF', el)); Object.keys(f).forEach((k) => (f[k] = f[k] === '' ? '' : num(f[k]))); saveProfile({ ...P(), risk: f }); toast('Limits saved', icon('check')); H.rerenderShell(); };
+  let mode = r.mode || 'none';
+  const drawRm = () => { const bg = r.byGrade || { 'A+': 250, B: 150, C: 75 }; const mx = Math.max(500, num(r.maxDailyLoss)); $('#rmBox', el).innerHTML = mode === 'grade' ? ['A+', 'B', 'C'].map((g) => `<div class="grade"><span class="grade__tag g-${g === 'A+' ? 'a' : g.toLowerCase()}">${g}</span><div class="grade__body">${slider({ name: 'g_' + g, label: { 'A+': 'High conviction', B: 'Normal', C: 'Low probability' }[g], value: num(bg[g]), min: 25, max: mx, step: 25, prefix: sym() })}</div></div>`).join('') : mode === 'fixed' ? slider({ name: 'perTrade', label: 'Risk per trade', value: num(r.perTrade) || 150, min: 25, max: mx, step: 25, prefix: sym() }) : '<p class="muted" style="margin:0;font-size:var(--fs-md)">You log the risk on each trade; R multiples use it.</p>'; if (window.gsap) window.gsap.fromTo($('#rmBox', el).children, { opacity: 0, y: 8 }, { opacity: 1, y: 0, stagger: 0.05, duration: 0.4 }); };
+  drawRm(); segBind(el, '#rmSeg', (v) => { mode = v; drawRm(); });
+  $('#riskSave', el).onclick = () => { const f = formData($('#riskF', el)); const risk = { ...r, maxDailyLoss: num(f.maxDailyLoss), maxTrades: num(f.maxTrades) || '', mode, byGrade: mode === 'grade' ? { 'A+': num(f['g_A+']), B: num(f.g_B), C: num(f.g_C) } : r.byGrade || null, perTrade: mode === 'fixed' ? num(f.perTrade) : '' }; saveProfile({ ...P(), risk }); toast('Limits saved', icon('check')); H.rerenderShell(); };
   after(el);
 }
 function setupModal(s0) {
@@ -736,14 +814,15 @@ export function settings(el) {
   const p = P(); const L = p.local || {};
   el.innerHTML = `<div class="page">${phead('Make it yours', 'Settings', '', '')}
   <div class="grid g-2">
-    ${card('Profile', '', `<div class="form" style="grid-template-columns:1fr 1fr" id="sP">${field('Your name', inp('name', p.name), 'full')}${field('Display currency', `<select class="in" name="currency">${optionList(['USD', 'EUR', 'GBP', 'INR', 'AUD', 'CAD'], p.currency || 'USD')}</select>`)}${field('Local currency', `<select class="in" name="localCode"><option value="">None</option>${optionList(['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD'], L.code)}</select>`)}${field(`1 ${esc(p.currency || 'USD')} =`, inp('rate', L.rate, 'type="number" step="any" placeholder="84.5"'), '', 'Used to convert payouts')}${field('Times are logged in', `<select class="in" name="sessionTz">${optionList([['ET', 'New York (ET)'], ['IST', 'India (IST)']], p.sessionTz || 'ET')}</select>`)}</div><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn btn--primary btn--sm" id="sPSave">Save</button></div>`)}
-    ${card('Goal', 'Powers the mission card and forecast', `<div class="form" style="grid-template-columns:1fr 1fr" id="sM">${field('Goal name', inp('name', p.mission?.name, 'placeholder="Mission No Debt"'), 'full')}${field('Payout target', inp('target', p.mission?.target, 'type="number" step="any"'))}${field('Start', inp('start', p.mission?.start, 'type="date"'))}${field('End', inp('end', p.mission?.end, 'type="date"'))}</div><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn btn--sm btn--ghost btn--danger" id="sMDel">Remove goal</button><button class="btn btn--primary btn--sm" id="sMSave">Save</button></div>`)}
+    ${card('Profile', '', `<div class="form" style="grid-template-columns:1fr 1fr" id="sP">${field('Your name', inp('name', p.name), 'full')}${field('Display currency', `<select class="in" name="currency">${optionList(['USD', 'EUR', 'GBP', 'INR', 'AUD', 'CAD'], p.currency || 'USD')}</select>`)}${field('Local currency', `<select class="in" name="localCode"><option value="">None</option>${optionList(['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD'], L.code)}</select>`)}<div class="field full" id="fxSet"><span>Conversion rate</span><div class="fxline">${L.auto !== false && L.code ? `<span class="live"></span><span>1 ${esc(p.currency || 'USD')} = <b>${L.rate ? Number(L.rate).toFixed(2) : '…'} ${esc(L.code)}</b></span><small id="fxAgo">live${L.at ? ' · ' + fxAgo(L.at) : ''}</small>` : `<input class="in" name="rate" type="number" step="any" value="${esc(L.rate || '')}" style="width:140px">`}<button type="button" class="linkbtn" id="fxToggle">${L.auto !== false && L.code ? 'Set my own' : 'Use live rate'}</button></div><em>Rates by <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">ExchangeRate-API</a>, refreshed every few hours</em></div>${field('Times are logged in', `<select class="in" name="sessionTz">${optionList([['ET', 'New York (ET)'], ['IST', 'India (IST)']], p.sessionTz || 'ET')}</select>`)}</div><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn btn--primary btn--sm" id="sPSave">Save</button></div>`)}
+    ${card('Goal', 'Powers the goal card and forecast', `<div class="form" style="grid-template-columns:1fr 1fr" id="sM">${field('Goal name', inp('name', p.mission?.name, 'placeholder="e.g. Clear my credit card"'), 'full')}<div class="full">${slider({ name: 'target', label: 'Payout target', value: num(p.mission?.target) || 2000, min: 0, max: 50000, step: 100, prefix: sym() })}</div>${field('Start', inp('start', p.mission?.start, 'type="date"'))}${field('End', inp('end', p.mission?.end, 'type="date"'))}</div><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn btn--sm btn--ghost btn--danger" id="sMDel">Remove goal</button><button class="btn btn--primary btn--sm" id="sMSave">Save</button></div>`)}
     ${card('Markets &amp; instruments', 'Changes units and auto P&amp;L', `<div class="chips" id="sMk">${Object.entries(MARKETS).map(([k, v]) => `<button class="chip ${(p.markets || []).includes(k) ? 'is-on' : ''}" data-v="${k}">${v.label}</button>`).join('')}</div><div style="margin-top:14px">${field('Instruments (comma separated)', inp('inst', (p.instruments || []).join(', ')))}</div><div style="margin-top:14px">${field('Custom point values', inp('pv', Object.entries(p.pointValues || {}).map(([k, v]) => `${k}=${v}`).join(', '), 'placeholder="NIFTY=75, BANKNIFTY=30"'), '', 'Money per 1.0 price move per contract/lot, e.g. lot sizes for Indian F&amp;O')}</div><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn btn--primary btn--sm" id="sMkSave">Save</button></div>`)}
     ${card('Appearance', '', `<div class="stack"><div class="row row--between"><span>Theme</span><div class="seg" id="sTheme"><button data-v="light" class="${document.documentElement.dataset.theme !== 'dark' ? 'is-on' : ''}">Smoke</button><button data-v="dark" class="${document.documentElement.dataset.theme === 'dark' ? 'is-on' : ''}">Night</button></div></div><div class="row row--between"><span>Glass frost</span><input type="range" min="0" max="1" step="0.05" value="${getComputedStyle(document.documentElement).getPropertyValue('--frost').trim() || 0.5}" id="sFrost" style="width:180px;accent-color:var(--accent)"></div><div class="row row--between"><span>Reduce motion</span><button class="switch ${localStorage.getItem('ew_rm') === '1' ? 'is-on' : ''}" id="sRM"></button></div></div>`)}
     ${card('AI', '', `<p class="muted" style="margin:0 0 10px;font-size:var(--fs-md)">Status: ${S.ai.configured ? '<b class="good">connected</b>' : '<b class="bad">no key</b>'} · model <b>${esc(S.ai.model || '—')}</b>. The key lives only on the server as the Cloudflare secret <code>ANTHROPIC_API_KEY</code>; it is never sent to the browser.</p>`)}
     ${card('Your data', S.local ? 'Stored in this browser (local mode)' : 'Synced to your account', `<div class="chips"><button class="chip" id="sExp">${icon('download')} Export JSON</button><button class="chip" id="sImp">${icon('upload')} Import JSON</button><button class="chip" id="sOb">${icon('refresh')} Re-run onboarding</button><button class="chip" id="sWipe" style="color:var(--bad)">${icon('trash')} Delete all data</button>${S.local ? '' : `<button class="chip" id="sOut">${icon('logout')} Sign out</button>`}</div><input type="file" id="sImpF" accept=".json" hidden>`)}
   </div></div>`;
-  $('#sPSave', el).onclick = () => { const f = formData($('#sP', el)); saveProfile({ ...P(), name: f.name, currency: f.currency, sessionTz: f.sessionTz, local: f.localCode ? { code: f.localCode, rate: num(f.rate) } : null }); toast('Saved', icon('check')); H.rerenderShell(); };
+  const fxt = $('#fxToggle', el); if (fxt) fxt.onclick = async () => { const Lc = P().local || {}; const auto = !(Lc.auto !== false && Lc.code); const code = $('[name=localCode]', el).value; let rate = Lc.rate; let at = Lc.at; if (auto && code) { const r = await liveRate(P().currency || 'USD', code, { force: true }); if (r) { rate = +r.rate.toFixed(4); at = r.at; } } saveProfile({ ...P(), local: code ? { code, rate, at, auto } : null }); H.refresh(); };
+  $('#sPSave', el).onclick = async () => { const f = formData($('#sP', el)); const Lc = P().local || {}; const auto = Lc.auto !== false; let rate = f.rate !== undefined ? num(f.rate) : Lc.rate; let at = Lc.at; if (f.localCode && auto && (f.localCode !== Lc.code || f.currency !== P().currency)) { const r = await liveRate(f.currency, f.localCode, { force: true }); if (r) { rate = +r.rate.toFixed(4); at = r.at; } } saveProfile({ ...P(), name: f.name, currency: f.currency, sessionTz: f.sessionTz, local: f.localCode ? { code: f.localCode, rate, at, auto } : null }); toast('Saved', icon('check')); H.rerenderShell(); };
   $('#sMSave', el).onclick = () => { const f = formData($('#sM', el)); saveProfile({ ...P(), mission: { ...(P().mission || {}), ...f, target: num(f.target) } }); toast('Goal saved', icon('check')); };
   $('#sMDel', el).onclick = () => { saveProfile({ ...P(), mission: null }); H.refresh(); };
   $$('#sMk .chip', el).forEach((c) => c.onclick = () => { c.classList.toggle('is-on'); pop(c); });

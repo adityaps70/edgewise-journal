@@ -17,3 +17,9 @@ On GitHub Pages, every push to `main` redeploys through `.github/workflows/pages
 For the full SaaS deploy on Cloudflare (accounts, sync, Claude), see [SETUP.txt](SETUP.txt).
 
 > Never commit your Anthropic API key. On Cloudflare it's set with `npx wrangler pages secret put ANTHROPIC_API_KEY`.
+
+## Pages
+
+- `index.html`: landing page
+- `app.html`: the journal
+- `data/firms.json`: prop firm rules catalog (sizes, targets, drawdown, daily limits, prices), checked Nov 2026. Edit this file to update rules without touching code.

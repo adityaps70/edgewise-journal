@@ -221,6 +221,7 @@ export function rMultiple(t) {
 }
 export function riskAmount(t) {
   if (num(t.risk)) return num(t.risk);
+  const byGrade = P().risk?.byGrade; if (t.grade && byGrade && num(byGrade[t.grade])) return num(byGrade[t.grade]);
   const pv = pointValue(t.symbol);
   if (!pv || !num(t.stop) || !num(t.entry) || !num(t.qty)) return 0;
   return Math.abs(num(t.entry) - num(t.stop)) * num(t.qty) * pv;
@@ -308,12 +309,13 @@ export function accountMetrics(a) {
     }
   }
   const todayLoss = Math.min(0, sum(trades.filter((t) => t.date === today()), net));
-  const dailyLeft = num(a.dailyLimit) ? num(a.dailyLimit) + todayLoss : null;
+  const stop = num(a.personalDaily) && num(a.dailyLimit) ? Math.min(num(a.personalDaily), num(a.dailyLimit)) : num(a.personalDaily) || num(a.dailyLimit);
+  const dailyLeft = stop ? stop + todayLoss : null;
   const target = num(a.target);
   const progress = target ? clamp(pnl / target, 0, 1) : null;
   const balance = num(a.size) + pnl - withdrawn;
   const tradingDays = new Set(trades.map((t) => t.date)).size + num(a.startDays);
-  return { trades, tradePnl, pnl, withdrawn, buffer, maxLoss, dailyLeft, target, progress, balance, peak, tradingDays, todayPnl: sum(trades.filter((t) => t.date === today()), net) };
+  return { trades, tradePnl, pnl, withdrawn, buffer, maxLoss, dailyLeft, stop, target, progress, balance, peak, tradingDays, todayPnl: sum(trades.filter((t) => t.date === today()), net) };
 }
 export function safeToRisk() {
   const live = S.account.filter(isLive);
@@ -363,14 +365,14 @@ export function aiContext({ trades, focus } = {}) {
   const last30 = stats(inRange(all, ...rangeFor('30d')));
   const lines = [];
   lines.push(`Trader: ${p.name || 'Trader'} | markets: ${(p.markets || []).join(', ')} | instruments: ${(p.instruments || []).join(', ')} | style: ${p.style || '-'} | display currency: ${cur()} | today: ${today()}`);
-  if (p.risk) lines.push(`Personal risk rules: max daily loss ${p.risk.maxDailyLoss || '-'}, max trades/day ${p.risk.maxTrades || '-'}, risk per trade ${p.risk.perTrade || '-'}, stop after ${p.risk.stopAfterLosses || '-'} losses in a row`);
+  if (p.risk) lines.push(`Personal risk rules: max daily loss ${p.risk.maxDailyLoss || '-'}, max trades/day ${p.risk.maxTrades || 'no limit'}, sizing: ${p.risk.mode === 'grade' && p.risk.byGrade ? 'by setup grade (' + Object.entries(p.risk.byGrade).map(([k, v]) => k + ' ' + v).join(', ') + ')' : p.risk.mode === 'fixed' ? 'fixed ' + p.risk.perTrade + ' per trade' : 'decided per trade'}`);
   if (S.rule.length) lines.push('Rules: ' + S.rule.map((r) => r.text).join(' | '));
   if (S.setup.length) lines.push('Playbook setups: ' + S.setup.map((s) => `${s.name}${s.criteria ? ' (' + s.criteria + ')' : ''}`).join(' | '));
   const m = missionMetrics();
   if (m) lines.push(`Goal "${m.name}": payout target ${money(m.target)} from ${m.start} to ${m.end}; credited ${money(m.actual)}, pending ${money(m.pending)}, account costs ${money(m.costs)}, net ${money(m.net)}; ${m.tdLeft} trading days left.`);
   S.account.forEach((a) => {
     const x = accountMetrics(a);
-    lines.push(`Account ${a.name} [${a.firm || 'own'} ${a.type} ${a.size ? money(a.size) : ''}] status ${a.status}; P&L ${money(x.pnl)}${x.target ? `, target ${money(x.target)} (${pct(x.progress)})` : ''}${x.buffer !== null ? `, drawdown buffer left ${money(x.buffer)}` : ''}${x.dailyLeft !== null ? `, daily loss left ${money(x.dailyLeft)}` : ''}; cost ${money(a.cost || 0)}; trading days ${x.tradingDays}${a.minDays ? '/' + a.minDays : ''}`);
+    lines.push(`Account ${a.name} [${a.firm || 'own'} ${a.type} ${a.size ? money(a.size) : ''}${a.ddType ? ', ' + a.ddType + ' drawdown' : ''}${num(a.dailyLimit) ? ', firm daily limit ' + money(a.dailyLimit) : ''}${num(a.personalDaily) ? ', trader\'s own daily stop ' + money(a.personalDaily) : ''}${num(a.consistency) ? ', ' + a.consistency + '% consistency rule' : ''}] status ${a.status}; P&L ${money(x.pnl)}${x.target ? `, target ${money(x.target)} (${pct(x.progress)})` : ''}${x.buffer !== null ? `, drawdown buffer left ${money(x.buffer)}` : ''}${x.dailyLeft !== null ? `, daily loss left ${money(x.dailyLeft)}` : ''}; cost ${money(a.cost || 0)}; trading days ${x.tradingDays}${a.minDays ? '/' + a.minDays : ''}`);
   });
   S.payout.forEach((p2) => lines.push(`Payout ${accName(p2.accountId)} ${money(p2.amount || p2.estimate)} status ${p2.status} req ${p2.reqDate || '-'} credited ${p2.creditDate || '-'}`));
   lines.push(`All-time: ${st.n} trades, net ${money(st.total)}, win rate ${pct(st.winRate)}, PF ${Number.isFinite(st.pf) ? st.pf.toFixed(2) : '∞'}, expectancy ${money(st.expectancy)}, avg win ${money(st.avgWin)}, avg loss ${money(st.avgLoss)}, max DD ${money(st.maxDD)}, avg R ${st.avgR?.toFixed(2) ?? '-'}`);
@@ -378,10 +380,10 @@ export function aiContext({ trades, focus } = {}) {
   const g = (label, fn) => { const rows = groupBy(all, fn).slice(0, 12); if (rows.length) lines.push(`${label}: ` + rows.map((r) => `${r.key} ${money(r.net)} (${r.n}t, ${pct(r.winRate)})`).join('; ')); };
   g('By setup', (t) => t.setup); g('By symbol', (t) => t.symbol); g('By session', (t) => t.session); g('By emotion', (t) => t.emotion);
   g('By mistake', (t) => (t.mistakes || []).filter((x) => x !== 'None')); g('By weekday', (t) => parseISO(t.date).toLocaleDateString('en-US', { weekday: 'short' }));
-  g('By side', (t) => t.side);
+  g('By side', (t) => t.side); g('By setup grade', (t) => t.grade);
   const rows = (trades || all.slice(-60));
-  lines.push(`\nTrades (${focus || 'most recent'}):\ndate,time,account,symbol,side,qty,entry,exit,stop,net,R,setup,session,emotion,mistakes,rules_followed,rating,notes`);
-  rows.forEach((t) => lines.push([t.date, t.time, accName(t.accountId), t.symbol, t.side, t.qty, t.entry, t.exit, t.stop, net(t).toFixed(2), rMultiple(t)?.toFixed(2) ?? '', t.setup, t.session, t.emotion, (t.mistakes || []).join('/'), t.followedPlan === false ? 'no' : 'yes', t.rating || '', (t.notes || '').replace(/\s+/g, ' ').slice(0, 160)].map((v) => String(v ?? '').replace(/,/g, ';')).join(',')));
+  lines.push(`\nTrades (${focus || 'most recent'}):\ndate,time,account,symbol,side,qty,entry,exit,stop,net,R,setup,grade,session,emotion,mistakes,rules_followed,rating,notes`);
+  rows.forEach((t) => lines.push([t.date, t.time, accName(t.accountId), t.symbol, t.side, t.qty, t.entry, t.exit, t.stop, net(t).toFixed(2), rMultiple(t)?.toFixed(2) ?? '', t.setup, t.grade, t.session, t.emotion, (t.mistakes || []).join('/'), t.followedPlan === false ? 'no' : 'yes', t.rating || '', (t.notes || '').replace(/\s+/g, ' ').slice(0, 160)].map((v) => String(v ?? '').replace(/,/g, ';')).join(',')));
   const js = S.journal.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
   if (js.length) lines.push('\nRecent daily journal:\n' + js.map((j) => `${j.date} mood ${j.mood || '-'}/5, followed plan: ${j.followedPlan ? 'yes' : 'no'}. Pre: ${(j.pre || '').slice(0, 200)} Post: ${(j.post || '').slice(0, 300)}`).join('\n'));
   return lines.join('\n');
