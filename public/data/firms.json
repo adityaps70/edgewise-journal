@@ -230,6 +230,110 @@
       }
      ],
      "note": "No daily loss limit in the evaluation; a daily limit applies once funded. Set it on the account."
+    },
+    {
+     "id": "ignite",
+     "name": "Ignite Instant Funding",
+     "billing": "one-time",
+     "ddType": "trailing",
+     "ddNote": "Trailing with a fixed dollar buffer",
+     "consistency": null,
+     "minDays": null,
+     "activation": 0,
+     "split": 90,
+     "stages": [
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 25000,
+       "maxLoss": 1000
+      },
+      {
+       "size": 50000,
+       "maxLoss": 2000,
+       "price": 398
+      },
+      {
+       "size": 100000,
+       "maxLoss": 4000
+      },
+      {
+       "size": 150000,
+       "maxLoss": 6000
+      }
+     ],
+     "note": "Instant funding, no evaluation. Sources disagree on a soft daily limit and on prices for sizes other than 50K, so set those on the account after checking your dashboard."
+    },
+    {
+     "id": "instant",
+     "name": "Instant Sim Funded",
+     "billing": "one-time",
+     "ddType": "trailing",
+     "ddNote": "End-of-day trailing; daily drawdown 2.5% of end-of-day balance",
+     "consistency": 20,
+     "minDays": null,
+     "activation": 0,
+     "split": 90,
+     "stages": [
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 25000,
+       "maxLoss": 1000,
+       "daily": 625
+      },
+      {
+       "size": 50000,
+       "maxLoss": 2000,
+       "daily": 1250,
+       "price": 679
+      },
+      {
+       "size": 100000,
+       "maxLoss": 3000,
+       "daily": 2500
+      },
+      {
+       "size": 150000,
+       "maxLoss": 4500,
+       "daily": 3750
+      }
+     ]
+    },
+    {
+     "id": "s2f",
+     "name": "S2F Sim PRO",
+     "billing": "one-time",
+     "ddType": "trailing",
+     "ddNote": "Intraday trailing",
+     "consistency": null,
+     "minDays": 10,
+     "activation": 0,
+     "split": 90,
+     "stages": [
+      "funded"
+     ],
+     "sizes": [
+      {
+       "size": 25000,
+       "maxLoss": 1000
+      },
+      {
+       "size": 50000,
+       "maxLoss": 1625
+      },
+      {
+       "size": 100000,
+       "maxLoss": 3250
+      },
+      {
+       "size": 150000,
+       "maxLoss": 4500
+      }
+     ],
+     "note": "Instant account with intraday trailing drawdown. Price varies; enter what you paid."
     }
    ],
    "mono": "T1"

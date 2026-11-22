@@ -468,7 +468,7 @@ function updateSide() {
   const r = safeToRisk(); const box = $('#safe'); if (!box) return;
   const m = missionMetrics();
   if (r.amount !== null) {
-    box.innerHTML = `<small>Safe to risk today</small><b>${money(r.amount)}</b><p>${r.tradesLeft !== null ? `${r.tradesLeft} trade${r.tradesLeft === 1 ? '' : 's'} left · ` : ''}${r.todayNet ? `today ${money(r.todayNet, { sign: true })}` : 'no trades yet today'}</p>${r.rule ? `<div class="meter ${r.amount < r.rule * 0.3 ? 'meter--bad' : ''}"><i style="width:${clamp(r.amount / r.rule, 0, 1) * 100}%"></i></div>` : ''}`;
+    box.innerHTML = `<small>Safe to risk today</small><b>${money(r.amount)}</b><p>${r.tradesLeft !== null ? `${r.tradesLeft} trade${r.tradesLeft === 1 ? '' : 's'} left · ` : ''}${r.todayNet ? `today ${money(r.todayNet, { sign: true })}` : 'no trades yet today'}${r.limitBy ? `<br>capped by ${esc(r.limitBy)}` : ''}</p>${r.rule ? `<div class="meter ${r.amount < r.rule * 0.3 ? 'meter--bad' : ''}"><i style="width:${clamp(r.amount / r.rule, 0, 1) * 100}%"></i></div>` : ''}`;
   } else if (m) {
     box.innerHTML = `<small>${esc(m.name)}</small><b>${money(m.actual)}</b><p>of ${money(m.target)} · ${m.tdLeft} trading days left</p><div class="meter"><i style="width:${m.progress * 100}%"></i></div>`;
   } else box.innerHTML = `<small>Today</small><b>${money(r.todayNet, { sign: true })}</b><p>${r.tradesToday} trades · set limits in Playbook</p>`;
@@ -532,7 +532,7 @@ function refresh() {
 }
 function rerenderShell() { shell(false); }
 
-V.setHooks({ go, refresh, rerenderShell, onboard: () => onboarding() });
+V.setHooks({ go, refresh, rerenderShell, updateSide, onboard: () => onboarding() });
 if (window.gsap) window.gsap.config({ nullTargetWarn: false });
 installGlint(); installPress();
 boot();

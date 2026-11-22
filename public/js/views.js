@@ -10,7 +10,7 @@ import { enterPage, animateData, segInit, segSelect, openModal, closeModal, toas
 import { equityChart, tubes, hbars, bindTips, drill as drillStore, radar, reg } from './charts.js';
 const drillMap = () => drillStore;
 import { slider, setSlider, liveRate, fxAgo } from './ui.js';
-import { catalog, firmById, planRules, defaultDaily, dailyCap, STAGE_LABEL, mono } from './firms.js';
+import { catalog, firmById, planRules, defaultDaily, dailyCap, STAGE_LABEL, mono, firstStage, isInstant } from './firms.js';
 
 let H = { go: () => {}, refresh: () => {}, rerenderShell: () => {} };
 export const setHooks = (h) => (H = h);
@@ -543,15 +543,73 @@ export function accounts(el) {
   $$('[data-acc]', el).forEach((r) => r.onclick = () => accountModal(S.account.find((a) => a.id === r.dataset.acc)));
   after(el);
 }
+// ------------------------------------------------------------------ missing firm / plan
+// Saved as a 'firm' doc so it appears in every firm list from then on (and syncs once logins are on).
+export function planModal({ firm = null, size = 50000, onSave } = {}) {
+  const c = '$';
+  const m = modal(firm ? `Add a ${firm.name} account type` : 'Add a firm that isn\'t listed', `
+    <p class="muted" style="margin:0 0 14px;font-size:var(--fs-md);line-height:1.5">Enter the rules once from the firm's site or your dashboard. It's saved to your list, so next time you just pick it.</p>
+    ${S.ai.configured ? `<div class="row" style="margin-bottom:14px"><button type="button" class="btn btn--sm" id="pmAI">${icon('coach')}Look it up with AI</button><span class="muted fine" id="pmNote" style="font-size:var(--fs-sm)">Fill the firm and plan name first.</span></div>` : ''}
+    <div class="form">
+      ${firm ? '' : field('Firm name', inp('firmName', '', 'placeholder="e.g. Bulenox"'), 'half') + field('Firm website', inp('url', '', 'placeholder="https://… (optional)"'), 'half')}
+      ${field('Account type / plan', inp('planName', '', 'placeholder="e.g. Ignite Instant Funding"'), 'half')}
+      ${field('How it works', `<select class="in" name="kind">${optionList([['eval', 'Challenge first, then funded'], ['instant', 'Instant funding, no challenge']], 'eval')}</select>`, 'half')}
+      <div class="half">${slider({ name: 'size', label: 'Account size', value: size, min: 5000, max: 300000, step: 5000, prefix: c })}</div>
+      <div class="half" id="pmTarget">${slider({ name: 'target', label: 'Profit target', value: Math.round(size * 0.06), min: 0, max: 30000, step: 250, prefix: c, zero: 'None' })}</div>
+      <div class="half">${slider({ name: 'maxLoss', label: 'Max loss / drawdown', value: Math.round(size * 0.04), min: 0, max: 20000, step: 250, prefix: c, zero: 'None' })}</div>
+      ${field('Drawdown type', `<select class="in" name="dd">${optionList([['eod', 'Trailing, end of day'], ['intraday', 'Trailing, intraday'], ['static', 'Static']], 'eod')}</select>`, 'half')}
+      <div class="half">${slider({ name: 'daily', label: 'Firm daily loss limit', value: 0, min: 0, max: 10000, step: 50, prefix: c, zero: 'None' })}</div>
+      <div class="half">${slider({ name: 'consistency', label: 'Consistency rule', value: 0, min: 0, max: 100, step: 5, suffix: '%', zero: 'None' })}</div>
+      <div class="half">${slider({ name: 'minDays', label: 'Min trading days', value: 0, min: 0, max: 30, step: 1, zero: 'None' })}</div>
+      ${field('Price you paid', inp('price', '', 'type="number" step="any" placeholder="0"'), 'half', 'one-time or per month')}
+    </div>`,
+    `<button class="btn" data-act="cancel">Cancel</button><button class="btn btn--primary" data-act="save">${icon('check')}Save to my list</button>`, 'modal');
+  const V = (n) => $(`[name="${n}"]`, m.el); const SL = (n) => V(n).closest('.sl');
+  const kindSync = () => { $('#pmTarget', m.el).style.display = V('kind').value === 'instant' ? 'none' : ''; };
+  V('kind').onchange = kindSync;
+  const ai = $('#pmAI', m.el);
+  if (ai) ai.onclick = async () => {
+    const fname = firm ? firm.name : V('firmName').value.trim(); const pname = V('planName').value.trim();
+    if (!fname || !pname) { shake(firm ? V('planName') : (!fname ? V('firmName') : V('planName'))); return; }
+    ai.disabled = true; $('#pmNote', m.el).innerHTML = '<span class="typing"><i></i><i></i><i></i></span> checking the firm\'s site…';
+    try {
+      const r = await API.ai({ mode: 'firmrules', messages: [{ role: 'user', content: `Firm: ${fname}. Plan: ${pname}. Account size: ${V('size').value}.` }] });
+      const j = JSON.parse((r.text.match(/\{[\s\S]*\}/) || ['{}'])[0]);
+      if (j.target === null) V('kind').value = 'instant';
+      [['target', 'target'], ['maxLoss', 'maxLoss'], ['dailyLimit', 'daily'], ['minDays', 'minDays'], ['consistency', 'consistency']].forEach(([from, to]) => { if (j[from] !== undefined) setSlider(SL(to), num(j[from])); });
+      if (j.ddType === 'static') V('dd').value = 'static';
+      if (num(j.price)) V('price').value = num(j.price);
+      if (!firm && j.source && !V('url').value) { try { V('url').value = new URL(j.source).origin; } catch (e) {} }
+      kindSync(); $('#pmNote', m.el).innerHTML = `${icon('check')}Filled from ${j.source ? `<a href="${esc(j.source)}" target="_blank" rel="noopener">${esc(new URL(j.source).hostname)}</a>` : 'a web search'}. ${esc(j.notes || '')} Check before saving.`;
+    } catch (e) { $('#pmNote', m.el).textContent = e.message || 'Couldn\'t check right now.'; }
+    ai.disabled = false;
+  };
+  m.on('save', () => {
+    const fname = firm ? firm.name : V('firmName').value.trim(); const pname = V('planName').value.trim();
+    if (!fname) { shake(V('firmName')); return; } if (!pname) { shake(V('planName')); return; }
+    const instant = V('kind').value === 'instant'; const dd = V('dd').value; const sz = num(V('size').value) || 50000;
+    const fid = firm ? firm.id : 'u-' + fname.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const doc = { ...(S.firm.find((x) => x.id === fid) || { id: fid, name: fname, url: firm ? '' : V('url').value.trim(), mono: fname.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(), market: 'futures', programs: [] }) };
+    doc.programs = [...(doc.programs || [])];
+    let prog = doc.programs.find((p) => p.name.toLowerCase() === pname.toLowerCase());
+    if (!prog) { prog = { id: 'u' + uid().slice(0, 8), name: pname, custom: true, sizes: [] }; doc.programs.push(prog); } else prog = doc.programs[doc.programs.indexOf(prog)] = { ...prog, sizes: [...prog.sizes] };
+    Object.assign(prog, { billing: 'one-time', ddType: dd === 'static' ? 'static' : 'trailing', ddNote: { eod: 'End-of-day trailing', intraday: 'Intraday trailing', static: 'Static' }[dd], consistency: num(V('consistency').value) || null, minDays: num(V('minDays').value) || null, activation: 0, split: '', stages: instant ? ['funded'] : ['challenge', 'funded'] });
+    const row = { size: sz, target: instant ? '' : num(V('target').value) || '', maxLoss: num(V('maxLoss').value), daily: num(V('daily').value) || '', price: num(V('price').value) || '' };
+    prog.sizes = prog.sizes.filter((x) => x.size !== sz).concat(row).sort((a, b) => a.size - b.size);
+    save('firm', doc); m.close(); toast(`${fname} ${pname} saved to your list`, icon('check'));
+    onSave?.({ firmId: fid, programId: prog.id, size: sz });
+  });
+}
+
 export function accountModal(a0) {
   const a = a0 ? { ...a0 } : { type: 'challenge', stage: 'challenge', status: 'active', purchaseDate: today(), ddType: 'trailing', size: 50000, target: 3000, maxLoss: 2000, personalDaily: 1000 };
   const firms = catalog().firms; const c = sym();
-  const progOpts = (fid) => (firmById(fid)?.programs || []).map((p) => [p.id, p.name]);
+  const progOpts = (fid) => (firmById(fid)?.programs || []).map((p) => [p.id, p.name + (isInstant(p) ? ' (instant)' : '')]).concat(fid ? [['__add', '+ Account type not listed…']] : []);
   const sizeOpts = (fid, pid) => (firmById(fid)?.programs.find((p) => p.id === pid)?.sizes || []).map((s) => [s.size, short(s.size)]);
   const stageOpts = (fid, pid) => (firmById(fid)?.programs.find((p) => p.id === pid)?.stages || ['challenge', 'funded']).map((s) => [s, STAGE_LABEL[s]]);
   const m = modal(a0 ? a.name : 'Add account', `
     <div class="firmbar"><span class="firmbar__t">${icon('bolt')}Fill rules from firm</span>
-      <select class="in" id="fbF"><option value="">Choose firm…</option>${optionList(firms.map((f) => [f.id, f.name]), a.firmId)}</select>
+      <select class="in" id="fbF"><option value="">Choose firm…</option>${optionList(firms.map((f) => [f.id, f.name]).concat([['__add', '+ Firm not listed…']]), a.firmId)}</select>
       <select class="in" id="fbP">${optionList(progOpts(a.firmId), a.programId)}</select>
       <select class="in" id="fbS">${optionList(sizeOpts(a.firmId, a.programId), a.size)}</select>
       <select class="in" id="fbG">${optionList(stageOpts(a.firmId, a.programId), a.stage || (a.type === 'funded' ? 'funded' : 'challenge'))}</select></div>
@@ -579,21 +637,25 @@ export function accountModal(a0) {
   const fixCap = () => { const cap = dailyCap({ dailyLimit: num($('[name=dailyLimit]', m.el).value), maxLoss: num($('[name=maxLoss]', m.el).value), size: num($('[name=size]', m.el).value) }); const pd = sl('personalDaily'); const cur2 = num($('[name=personalDaily]', m.el).value); setSlider(pd, Math.min(cur2, cap), { max: cap }); };
   const apply = () => {
     const f = firmById(F('#fbF').value); if (!f) return;
-    const p = f.programs.find((x) => x.id === F('#fbP').value) || f.programs[0]; const size = +F('#fbS').value || p.sizes[0].size; const stage = F('#fbG').value || 'challenge';
+    const p = f.programs.find((x) => x.id === F('#fbP').value) || f.programs[0]; const size = +F('#fbS').value || p.sizes[0].size; const stage = firstStage(p, F('#fbG').value || 'challenge');
     const r = planRules(f, p, size, stage);
-    a.firmId = f.id; a.programId = p.id; a.stage = stage; a.rulesFrom = `${f.name} ${p.name}, catalog ${catalog().verified}`;
+    a.firmId = f.id; a.programId = p.id; a.stage = stage; a.rulesFrom = p.custom ? `${f.name} ${p.name}, added by you` : `${f.name} ${p.name}, catalog ${catalog().verified}`;
     setSlider(sl('size'), r.size); setSlider(sl('target'), num(r.target)); setSlider(sl('maxLoss'), num(r.maxLoss)); setSlider(sl('dailyLimit'), num(r.dailyLimit)); setSlider(sl('minDays'), num(r.minDays)); setSlider(sl('consistency'), num(r.consistency));
     $('[name=ddType]', m.el).value = r.ddType; $('[name=firm]', m.el).value = f.name;
     if (!$('[name=name]', m.el).value.trim()) $('[name=name]', m.el).value = `${f.name.split(' ')[0]} ${Math.round(size / 1000)}K ${p.name}`;
-    if (stage !== 'funded' && !$('[name=cost]', m.el).value) $('[name=cost]', m.el).value = r.cost;
+    { const ci = $('[name=cost]', m.el); if (!ci.value || ci.value === String(ci.dataset.auto || '')) { ci.value = r.cost || ''; ci.dataset.auto = r.cost || ''; } }
     $('[name=status]', m.el).value = stage === 'funded' ? 'funded' : $('[name=status]', m.el).value === 'funded' ? 'active' : $('[name=status]', m.el).value;
     const cap = dailyCap(r); setSlider(sl('personalDaily'), Math.min(num($('[name=personalDaily]', m.el).value) || defaultDaily(r), cap) || defaultDaily(r), { max: cap });
     F('#fbNote').innerHTML = `${icon('check')}Filled from ${esc(f.name)} ${esc(p.name)} (checked ${esc(catalog().verified)}). <a href="${esc(f.url)}" target="_blank" rel="noopener">Confirm on their site ↗</a>${S.ai.configured ? ` <button type="button" class="linkbtn" id="aiRules">${icon('coach')}Re-check with AI</button>` : ''}`;
     bindAI();
     if (window.gsap) window.gsap.fromTo($$('.sl', m.el), { backgroundColor: 'rgba(110,224,161,.18)' }, { backgroundColor: 'rgba(110,224,161,0)', duration: 1.2, stagger: 0.03 });
   };
-  F('#fbF').onchange = () => { const fid = F('#fbF').value; setSel(F('#fbP'), progOpts(fid)); setSel(F('#fbS'), sizeOpts(fid, F('#fbP').value), 50000); setSel(F('#fbG'), stageOpts(fid, F('#fbP').value), 'challenge'); apply(); };
-  F('#fbP').onchange = () => { const fid = F('#fbF').value; setSel(F('#fbS'), sizeOpts(fid, F('#fbP').value), +F('#fbS').value); setSel(F('#fbG'), stageOpts(fid, F('#fbP').value), F('#fbG').value); apply(); };
+  const missing = (firm) => { const prevF = a.firmId || ''; planModal({ firm, size: num($('[name=size]', m.el).value) || 50000, onSave: ({ firmId, programId, size }) => {
+      setSel(F('#fbF'), catalog().firms.map((f) => [f.id, f.name]).concat([['__add', '+ Firm not listed…']]), firmId); F('#fbF').insertAdjacentHTML('afterbegin', '<option value="">Choose firm…</option>');
+      setSel(F('#fbP'), progOpts(firmId), programId); setSel(F('#fbS'), sizeOpts(firmId, programId), size); setSel(F('#fbG'), stageOpts(firmId, programId)); apply(); } });
+    F('#fbF').value = prevF; if (firm) F('#fbP').value = a.programId || F('#fbP').options[0]?.value; };
+  F('#fbF').onchange = () => { const fid = F('#fbF').value; if (fid === '__add') { missing(null); return; } setSel(F('#fbP'), progOpts(fid)); setSel(F('#fbS'), sizeOpts(fid, F('#fbP').value), 50000); setSel(F('#fbG'), stageOpts(fid, F('#fbP').value), 'challenge'); apply(); };
+  F('#fbP').onchange = () => { const fid = F('#fbF').value; if (F('#fbP').value === '__add') { missing(firmById(fid)); return; } setSel(F('#fbS'), sizeOpts(fid, F('#fbP').value), +F('#fbS').value); setSel(F('#fbG'), stageOpts(fid, F('#fbP').value), F('#fbG').value); apply(); };
   F('#fbS').onchange = apply; F('#fbG').onchange = apply;
   ['dailyLimit', 'maxLoss'].forEach((n) => $(`[name=${n}]`, m.el).addEventListener('input', fixCap));
   const bindAI = () => {
@@ -790,20 +852,35 @@ export function playbook(el) {
       ${l.length ? `<div class="pbmini">${mini('Trend', (t) => t.trend, { with: 'With trend', counter: 'Counter', range: 'Range' })}${mini('Timeframe', (t) => t.tf)}${mini('Session', (t) => t.session)}${mini('Grade', (t) => t.grade && t.grade + ' grade')}</div>` : '<p class="muted" style="margin:6px 0 0;font-size:var(--fs-md)">No trades tagged with this setup yet.</p>'}
       <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn btn--sm btn--ghost" data-edit-setup="${s.id}">${icon('edit')}Edit rules</button></div></section>`; }).join('')}</div>
   <div class="grid g-2" style="margin-top:var(--gap)">
-    ${card('Trading rules', 'Ticked off on every trade', `<div class="txlist">${S.rule.map((x) => `<div class="txrow" style="cursor:default"><span class="prodico">${icon('check')}</span><span class="cell__text"><b style="white-space:normal">${esc(x.text)}</b></span><button class="ibtn" data-del-rule="${x.id}" aria-label="Delete">${icon('trash')}</button></div>`).join('') || '<div class="empty">No rules yet.</div>'}</div>`)}
+    ${card('Trading rules', 'Ticked off on every trade. Click a rule to edit it.', `<div class="txlist" id="ruleList">${S.rule.map((x) => `<div class="txrow" style="cursor:default" data-rule="${x.id}"><span class="prodico">${icon('check')}</span><span class="cell__text"><input class="rule__in" value="${esc(x.text)}" aria-label="Rule"></span><button class="ibtn" data-del-rule="${x.id}" aria-label="Delete">${icon('trash')}</button></div>`).join('') || '<div class="empty">No rules yet.</div>'}</div>
+      <form class="rule__add" id="ruleAdd"><input class="in" name="newRule" placeholder="Add a rule, e.g. No trades after 2 losses" autocomplete="off"><button class="btn btn--primary btn--sm" type="submit">${icon('plus')}Add rule</button></form>`)}
     ${card('Risk limits', 'Drive the “Safe to risk today” card and trade checks', `<div class="stack" id="riskF">
       <div class="grid g-2" style="gap:12px">${slider({ name: 'maxDailyLoss', label: 'Max loss per day', value: num(r.maxDailyLoss) || 500, min: 50, max: Math.max(5000, num(r.maxDailyLoss)), step: 25, prefix: sym() })}${slider({ name: 'maxTrades', label: 'Max trades per day', value: num(r.maxTrades), min: 0, max: 15, step: 1, zero: 'No limit' })}</div>
       <div class="row row--between" style="flex-wrap:wrap;gap:8px"><b style="font-size:var(--fs-md)">Sizing</b><div class="seg seg--accent" id="rmSeg">${[['grade', 'By setup grade'], ['fixed', 'Fixed'], ['none', 'Per trade']].map(([v, l]) => `<button type="button" data-v="${v}" class="${(r.mode || 'none') === v ? 'is-on' : ''}">${l}</button>`).join('')}</div></div>
-      <div id="rmBox"></div></div><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn btn--primary btn--sm" id="riskSave">Save limits</button></div>`)}
+      <div id="rmBox"></div></div><p class="muted fine" id="riskState" style="margin:12px 0 0;font-size:var(--fs-sm)">Changes apply instantly. A single trade can risk up to your max loss per day.</p>`)}
   </div></div>`;
   el.querySelector('[data-act="setup"]').onclick = () => setupModal();
   el.querySelector('[data-act="rule"]').onclick = () => { const m = modal('Add rule', field('Rule', inp('text', '', 'placeholder="No trades in the first 5 minutes"')), '<button class="btn" data-act="cancel">Cancel</button><button class="btn btn--primary" data-act="save">Add</button>', 'modal modal--sm'); m.on('save', () => { const v = $('[name=text]', m.el).value.trim(); if (v) save('rule', { text: v }); m.close(); H.refresh(); }); };
   $$('[data-edit-setup]', el).forEach((c) => c.onclick = () => setupModal(S.setup.find((s) => s.id === c.dataset.editSetup)));
   $$('[data-del-rule]', el).forEach((b) => b.onclick = () => { remove('rule', b.dataset.delRule); H.refresh(); });
+  $('#ruleAdd', el).onsubmit = (e) => { e.preventDefault(); const i = $('[name=newRule]', el); const v = i.value.trim(); if (!v) { i.focus(); return; } save('rule', { text: v }); H.refresh(); requestAnimationFrame(() => $('#ruleAdd [name=newRule]')?.focus()); };
+  $$('.rule__in', el).forEach((i) => { const commit = () => { const r0 = S.rule.find((x) => x.id === i.closest('[data-rule]').dataset.rule); const v = i.value.trim(); if (!r0) return; if (!v) { i.value = r0.text; return; } if (v !== r0.text) { save('rule', { ...r0, text: v }); toast('Rule updated', icon('check')); } }; i.addEventListener('blur', commit); i.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); i.blur(); } if (e.key === 'Escape') { i.value = S.rule.find((x) => x.id === i.closest('[data-rule]').dataset.rule)?.text || i.value; i.blur(); } }); });
   let mode = r.mode || 'none';
-  const drawRm = () => { const bg = r.byGrade || { 'A+': 250, B: 150, C: 75 }; const mx = Math.max(500, num(r.maxDailyLoss)); $('#rmBox', el).innerHTML = mode === 'grade' ? ['A+', 'B', 'C'].map((g) => `<div class="grade"><span class="grade__tag g-${g === 'A+' ? 'a' : g.toLowerCase()}">${g}</span><div class="grade__body">${slider({ name: 'g_' + g, label: { 'A+': 'High conviction', B: 'Normal', C: 'Low probability' }[g], value: num(bg[g]), min: 25, max: mx, step: 25, prefix: sym() })}</div></div>`).join('') : mode === 'fixed' ? slider({ name: 'perTrade', label: 'Risk per trade', value: num(r.perTrade) || 150, min: 25, max: mx, step: 25, prefix: sym() }) : '<p class="muted" style="margin:0;font-size:var(--fs-md)">You log the risk on each trade; R multiples use it.</p>'; if (window.gsap) window.gsap.fromTo($('#rmBox', el).children, { opacity: 0, y: 8 }, { opacity: 1, y: 0, stagger: 0.05, duration: 0.4 }); };
-  drawRm(); segBind(el, '#rmSeg', (v) => { mode = v; drawRm(); });
-  $('#riskSave', el).onclick = () => { const f = formData($('#riskF', el)); const risk = { ...r, maxDailyLoss: num(f.maxDailyLoss), maxTrades: num(f.maxTrades) || '', mode, byGrade: mode === 'grade' ? { 'A+': num(f['g_A+']), B: num(f.g_B), C: num(f.g_C) } : r.byGrade || null, perTrade: mode === 'fixed' ? num(f.perTrade) : '' }; saveProfile({ ...P(), risk }); toast('Limits saved', icon('check')); H.rerenderShell(); };
+  const mxOf = () => Math.max(50, num($('[name=maxDailyLoss]', el).value) || 50);
+  const drawRm = () => { const cur = P().risk || r; const bg = cur.byGrade || { 'A+': 250, B: 150, C: 75 }; const mx = mxOf(); $('#rmBox', el).innerHTML = mode === 'grade' ? ['A+', 'B', 'C'].map((g) => `<div class="grade"><span class="grade__tag g-${g === 'A+' ? 'a' : g.toLowerCase()}">${g}</span><div class="grade__body">${slider({ name: 'g_' + g, label: { 'A+': 'High conviction', B: 'Normal', C: 'Low probability' }[g], value: Math.min(num(bg[g]) || 25, mx), min: 25, max: mx, step: 25, prefix: sym() })}</div></div>`).join('') : mode === 'fixed' ? slider({ name: 'perTrade', label: 'Risk per trade', value: Math.min(num(cur.perTrade) || 150, mx), min: 25, max: mx, step: 25, prefix: sym() }) : '<p class="muted" style="margin:0;font-size:var(--fs-md)">You log the risk on each trade; R multiples use it.</p>'; if (window.gsap) window.gsap.fromTo($('#rmBox', el).children, { opacity: 0, y: 8 }, { opacity: 1, y: 0, stagger: 0.05, duration: 0.4 }); };
+  // per-trade risk can go up to the daily max; rescale those sliders whenever the daily max moves
+  const rescale = () => { const mx = mxOf(); $$('#rmBox .sl', el).forEach((sl) => setSlider(sl, Math.min(num($('.sl__num', sl).value), mx), { max: mx })); };
+  let tmr;
+  const persist = () => { clearTimeout(tmr); tmr = setTimeout(() => {
+    const f = formData($('#riskF', el)); const prev = P().risk || {};
+    const risk = { ...prev, maxDailyLoss: num(f.maxDailyLoss), maxTrades: num(f.maxTrades) || '', mode, byGrade: mode === 'grade' ? { 'A+': num(f['g_A+']), B: num(f.g_B), C: num(f.g_C) } : prev.byGrade || null, perTrade: mode === 'fixed' ? num(f.perTrade) : '' };
+    saveProfile({ ...P(), risk }); H.updateSide && H.updateSide();
+    const st = $('#riskState', el); if (st) { st.textContent = 'Saved'; clearTimeout(st._t); st._t = setTimeout(() => (st.textContent = 'Changes apply instantly. A single trade can risk up to your max loss per day.'), 1400); }
+  }, 250); };
+  drawRm(); segBind(el, '#rmSeg', (v) => { mode = v; drawRm(); persist(); });
+  const form = $('#riskF', el);
+  form.addEventListener('input', (e) => { if (e.target.name === 'maxDailyLoss' && !e.isTrusted) rescale(); persist(); });
+  form.addEventListener('change', (e) => { if (e.target.name === 'maxDailyLoss') rescale(); persist(); });
   after(el);
 }
 function setupModal(s0) {

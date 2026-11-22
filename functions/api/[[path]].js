@@ -2,7 +2,7 @@
 // Bindings: DB (D1). Secrets: ANTHROPIC_API_KEY. Vars: CLAUDE_MODEL, AI_DAILY_LIMIT, ALLOW_SIGNUP.
 
 const SESSION_DAYS = 30;
-const KINDS = new Set(['profile', 'account', 'trade', 'payout', 'plan', 'journal', 'setup', 'rule', 'chat']);
+const KINDS = new Set(['profile', 'account', 'trade', 'payout', 'plan', 'journal', 'setup', 'rule', 'chat', 'firm']);
 const MAX_DOC = 200_000;      // bytes per record
 const MAX_IMAGE = 450_000;    // bytes per screenshot data URL
 

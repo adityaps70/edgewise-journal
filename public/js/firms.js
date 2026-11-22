@@ -8,7 +8,16 @@ export async function loadFirms() {
   try { CAT = await (await fetch(new URL('data/firms.json', document.baseURI))).json(); } catch (e) { CAT = { firms: [], verified: '' }; }
   return CAT;
 }
-export const catalog = () => CAT || { firms: [] };
+// built-in catalog + firms/plans the user added themselves (stored as 'firm' docs, synced like everything else)
+export const catalog = () => {
+  const base = CAT || { firms: [], verified: '' }; const cus = S.firm || [];
+  if (!cus.length) return base;
+  const firms = base.firms.map((f) => { const c = cus.find((x) => x.id === f.id); return c ? { ...f, programs: [...f.programs, ...c.programs] } : f; })
+    .concat(cus.filter((c) => !base.firms.some((f) => f.id === c.id)));
+  return { ...base, firms };
+};
+export const firstStage = (program, want) => (program.stages.includes(want) ? want : program.stages[0]);
+export const isInstant = (program) => program && !program.stages.includes('challenge');
 export const firmById = (id) => catalog().firms.find((f) => f.id === id);
 export const mono = (a) => firmById(a?.firmId)?.mono || (catalog().firms.find((f) => f.name === a?.firm)?.mono) || (a?.firm ? a.firm.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() : 'ME');
 export const STAGE_LABEL = { challenge: 'Challenge', verification: 'Verification', funded: 'Funded' };
@@ -27,7 +36,7 @@ export function planRules(firm, program, size, stage) {
     minDays: funded ? '' : program.minDays || '',
     consistency: program.consistency || '',
     split: program.split || '',
-    cost: s.price || '',
+    cost: funded && !isInstant(program) ? '' : s.price || '',
     priceCurrency: program.priceCurrency || 'USD',
     activation: program.activation || '',
     note: program.note || '',
@@ -39,9 +48,9 @@ export function accountFromPlan(firm, program, size, stage, n = 1) {
     id: uid(), name: `${firm.name.split(' ')[0]} ${k(size)} ${program.name}${n > 1 ? ' #' + n : ''}`,
     firm: firm.name, firmId: firm.id, programId: program.id, stage,
     type: stage === 'funded' ? 'funded' : 'challenge', status: stage === 'funded' ? 'funded' : 'active',
-    size: r.size, cost: stage === 'funded' ? '' : r.cost, target: r.target, maxLoss: r.maxLoss, ddType: r.ddType,
+    size: r.size, cost: r.cost, target: r.target, maxLoss: r.maxLoss, ddType: r.ddType,
     dailyLimit: r.dailyLimit, personalDaily: defaultDaily(r), minDays: r.minDays, consistency: r.consistency, split: r.split,
-    purchaseDate: today(), startPnl: '', rulesFrom: `${firm.name} ${program.name}, catalog ${catalog().verified}`,
+    purchaseDate: today(), startPnl: '', rulesFrom: program.custom ? `${firm.name} ${program.name}, added by you` : `${firm.name} ${program.name}, catalog ${catalog().verified}`,
   };
 }
 export const defaultDaily = (a) => num(a.dailyLimit) || Math.round(num(a.maxLoss) * 0.5 / 50) * 50 || '';
@@ -60,24 +69,25 @@ export function rulePills(a) {
 // ------------------------------------------------------------------ picker
 // mount(container, { accounts, markets, onChange }) renders firm cards → plan config → added accounts with daily-stop sliders.
 export function mountPicker(box, state) {
-  const firms = catalog().firms.filter((f) => !state.markets?.length || state.markets.some((m) => (f.market === 'forex' ? ['forex', 'crypto', 'stocks'].includes(m) : ['futures', 'options', 'indian'].includes(m)))).concat(catalog().firms.filter(() => false));
-  const shown = firms.length ? firms : catalog().firms;
+  const shownF = () => { const firms = catalog().firms.filter((f) => !state.markets?.length || state.markets.some((m) => (f.market === 'forex' ? ['forex', 'crypto', 'stocks'].includes(m) : ['futures', 'options', 'indian'].includes(m)))).concat(catalog().firms.filter(() => false));
+  return firms.length ? firms : catalog().firms; };
+  let shown = shownF();
   let sel = null; // {firm, program, size, stage, qty}
   const draw = () => {
     const cfg = sel ? (() => {
       const { firm, program, size, stage, qty } = sel; const r = planRules(firm, program, size, stage);
       return `<div class="fp__cfg">
-        <div class="fp__cfghead"><span class="fmono">${esc(firm.mono || firm.name.slice(0, 2))}</span><div><b>${esc(firm.name)}</b><small>Rules as published · checked ${esc(catalog().verified)} · <a href="${esc(firm.url)}" target="_blank" rel="noopener">confirm on site ↗</a></small></div><button type="button" class="ibtn" data-x aria-label="Close">${icon('close')}</button></div>
-        ${firm.programs.length > 1 ? `<div class="fp__row"><span>Plan</span><div class="seg seg--accent fp__seg" data-k="program">${firm.programs.map((p) => `<button type="button" data-v="${p.id}" class="${p.id === program.id ? 'is-on' : ''}">${esc(p.name)}</button>`).join('')}</div></div>` : ''}
+        <div class="fp__cfghead"><span class="fmono">${esc(firm.mono || firm.name.slice(0, 2))}</span><div><b>${esc(firm.name)}</b><small>${program.custom ? 'Added by you' : `Rules as published · checked ${esc(catalog().verified)}`}${firm.url ? ` · <a href="${esc(firm.url)}" target="_blank" rel="noopener">confirm on site ↗</a>` : ''}</small></div><button type="button" class="ibtn" data-x aria-label="Close">${icon('close')}</button></div>
+        <div class="fp__row fp__row--plans"><span>Account type</span><div class="fp__plans">${firm.programs.map((p) => `<button type="button" data-plan="${p.id}" class="chip ${p.id === program.id ? 'is-on' : ''}">${esc(p.name)}${isInstant(p) ? '<em>instant</em>' : ''}${p.custom ? '<em>yours</em>' : ''}</button>`).join('')}<button type="button" class="chip chip--ghost" data-missing>${icon('plus')}Not listed?</button></div></div>
         <div class="fp__row"><span>Size</span><div class="seg seg--accent fp__seg" data-k="size">${program.sizes.map((s) => `<button type="button" data-v="${s.size}" class="${s.size === size ? 'is-on' : ''}">${k(s.size)}</button>`).join('')}</div></div>
-        <div class="fp__row"><span>Stage</span><div class="seg fp__seg" data-k="stage">${program.stages.map((s) => `<button type="button" data-v="${s}" class="${s === stage ? 'is-on' : ''}">${STAGE_LABEL[s]}</button>`).join('')}</div></div>
-        <div class="fp__rules">${rulePills(r)}${r.cost && stage !== 'funded' ? `<span class="rp">${icon('payouts')}${r.priceCurrency === 'EUR' ? '€' : '$'}${r.cost}${program.billing === 'monthly' ? '/mo' : ''}</span>` : ''}</div>
+        <div class="fp__row"><span>Stage</span>${isInstant(program) ? '<span class="rp">Instant funding · no challenge</span>' : `<div class="seg fp__seg" data-k="stage">${program.stages.map((s) => `<button type="button" data-v="${s}" class="${s === stage ? 'is-on' : ''}">${STAGE_LABEL[s]}</button>`).join('')}</div>`}</div>
+        <div class="fp__rules">${rulePills(r)}${r.cost ? `<span class="rp">${icon('payouts')}${r.priceCurrency === 'EUR' ? '€' : '$'}${r.cost}${program.billing === 'monthly' ? '/mo' : ''}</span>` : ''}</div>
         ${r.note ? `<p class="fp__note">${icon('info')}${esc(r.note)}</p>` : ''}
         <div class="fp__row fp__row--end"><span>How many?</span><div class="stepper"><button type="button" data-q="-1">−</button><b>${qty}</b><button type="button" data-q="1">+</button></div><button type="button" class="btn btn--primary btn--sm" data-add>${icon('plus')}Add ${qty > 1 ? qty + ' accounts' : 'account'}</button></div>
       </div>`;
     })() : '';
     box.innerHTML = `<div class="fp__grid">${shown.map((f) => `<button type="button" class="fcard ${sel?.firm.id === f.id ? 'is-on' : ''}" data-f="${f.id}"><span class="fmono">${esc(f.mono || f.name.slice(0, 2))}</span><b>${esc(f.name)}</b><small>${f.market === 'forex' ? 'Forex / CFD' : 'Futures'} · ${f.programs.length} plan${f.programs.length > 1 ? 's' : ''}</small></button>`).join('')}
-      <button type="button" class="fcard fcard--other" data-f="_other"><span class="fmono">${icon('plus')}</span><b>Other firm</b><small>Enter rules yourself</small></button>
+      <button type="button" class="fcard fcard--other" data-f="_other"><span class="fmono">${icon('plus')}</span><b>Firm not listed?</b><small>Add it once, reuse it</small></button>
       ${state.allowOwn ? `<button type="button" class="fcard fcard--other" data-f="_own"><span class="fmono">${icon('payouts')}</span><b>Own capital</b><small>Personal broker account</small></button>` : ''}</div>
       ${cfg}
       <div class="fp__list">${state.accounts.map((a, i) => accRow(a, i)).join('')}</div>`;
@@ -93,19 +103,21 @@ export function mountPicker(box, state) {
   const bind = () => {
     $$('.fcard', box).forEach((c) => (c.onclick = () => {
       const id = c.dataset.f;
-      if (id === '_other') { state.accounts.push({ id: uid(), name: 'Prop account', firm: '', firmId: '_other', stage: 'challenge', type: 'challenge', status: 'active', size: 50000, target: 3000, maxLoss: 2000, ddType: 'trailing', dailyLimit: '', personalDaily: 1000, purchaseDate: today() }); sel = null; done(); return; }
+      if (id === '_other') { addMissing(null); return; }
       if (id === '_own') { state.accounts.push({ id: uid(), name: 'Personal account', firm: '', firmId: '_own', type: 'personal', status: 'funded', size: 10000, maxLoss: '', dailyLimit: '', personalDaily: 300, purchaseDate: today() }); sel = null; done(); return; }
       const f = firmById(id); const p = f.programs[0];
-      sel = sel?.firm.id === id ? null : { firm: f, program: p, size: (p.sizes.find((s) => s.size === 50000) || p.sizes[0]).size, stage: 'challenge', qty: 1 };
+      sel = sel?.firm.id === id ? null : { firm: f, program: p, size: (p.sizes.find((s) => s.size === 50000) || p.sizes[0]).size, stage: firstStage(p, 'challenge'), qty: 1 };
       draw(); anim();
     }));
     $$('.fp__seg button', box).forEach((b) => (b.onclick = () => {
       const kk = b.parentElement.dataset.k; window.__segSelect?.(b.parentElement, b);
-      if (kk === 'program') { sel.program = sel.firm.programs.find((p) => p.id === b.dataset.v); if (!sel.program.sizes.some((s) => s.size === sel.size)) sel.size = sel.program.sizes[0].size; if (!sel.program.stages.includes(sel.stage)) sel.stage = 'challenge'; }
+      if (kk === 'program') { sel.program = sel.firm.programs.find((p) => p.id === b.dataset.v); if (!sel.program.sizes.some((s) => s.size === sel.size)) sel.size = sel.program.sizes[0].size; sel.stage = firstStage(sel.program, sel.stage); }
       if (kk === 'size') sel.size = +b.dataset.v;
       if (kk === 'stage') sel.stage = b.dataset.v;
       setTimeout(() => { draw(); const r = $('.fp__rules', box); if (r && window.gsap) window.gsap.fromTo(r.children, { opacity: 0, y: 6 }, { opacity: 1, y: 0, stagger: 0.03, duration: 0.35 }); }, kk === 'program' ? 0 : 120);
     }));
+    $$('[data-plan]', box).forEach((b) => (b.onclick = () => { sel.program = sel.firm.programs.find((p) => p.id === b.dataset.plan); if (!sel.program.sizes.some((s) => s.size === sel.size)) sel.size = (sel.program.sizes.find((s) => s.size === 50000) || sel.program.sizes[0]).size; sel.stage = firstStage(sel.program, sel.stage); draw(); const r = $('.fp__rules', box); if (r && window.gsap) window.gsap.fromTo(r.children, { opacity: 0, y: 6 }, { opacity: 1, y: 0, stagger: 0.03, duration: 0.35 }); }));
+    const ms = $('[data-missing]', box); if (ms) ms.onclick = () => addMissing(sel.firm);
     const x = $('[data-x]', box); if (x) x.onclick = () => { sel = null; draw(); };
     $$('[data-q]', box).forEach((b) => (b.onclick = () => { sel.qty = Math.max(1, Math.min(20, sel.qty + +b.dataset.q)); draw(); }));
     const add = $('[data-add]', box);
@@ -122,6 +134,11 @@ export function mountPicker(box, state) {
     });
     $$('[data-rm]', box).forEach((b) => (b.onclick = () => { state.accounts.splice(+b.dataset.rm, 1); draw(); state.onChange?.(); }));
   };
+  // user-added firm or plan: saved once, then it's in the list like any other
+  const addMissing = (firm) => import('./views.js').then((V) => V.planModal({ firm, size: sel?.size || 50000, onSave: ({ firmId, programId, size }) => {
+    shown = shownF(); const f = firmById(firmId); const p = f.programs.find((x) => x.id === programId);
+    sel = { firm: f, program: p, size, stage: firstStage(p, 'challenge'), qty: 1 }; draw(); anim();
+  } }));
   const anim = () => { const c = $('.fp__cfg', box); if (c && window.gsap) { window.gsap.fromTo(c, { opacity: 0, y: -10, scale: 0.98 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: 'back.out(1.5)' }); window.gsap.fromTo(c.querySelectorAll('.fp__row, .rp'), { opacity: 0, y: 8 }, { opacity: 1, y: 0, stagger: 0.025, duration: 0.4, delay: 0.1, clearProps: 'transform,opacity' }); } };
   const done = () => { draw(); state.onChange?.(); const last = box.querySelector('.facc:last-child'); if (last && window.gsap) window.gsap.fromTo(last, { opacity: 0, y: 14, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.55, ease: 'back.out(1.6)' }); };
   draw();

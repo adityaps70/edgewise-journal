@@ -91,7 +91,8 @@ async function demo() {
     const prog = firm.programs.find((p) => p.id === progId) || firm.programs[0]; progId = prog.id;
     $('#dProgs').innerHTML = firm.programs.map((p) => `<button data-v="${p.id}" class="${p.id === prog.id ? 'is-on' : ''}">${p.name}</button>`).join('');
     if (!prog.sizes.some((s) => s.size === size)) size = prog.sizes[Math.min(1, prog.sizes.length - 1)].size;
-    const r = planRules(firm, prog, size, stage);
+    const st = prog.stages.includes(stage) ? stage : prog.stages[0]; $('#dStage').style.display = prog.stages.length > 1 ? '' : 'none';
+    const r = planRules(firm, prog, size, st);
     $('#dFirms').innerHTML = cat.firms.map((f) => `<button type="button" class="fcard ${f.id === firm.id ? 'is-on' : ''}" data-f="${f.id}"><span class="fmono fmono--sm">${f.mono}</span><b>${f.name}</b></button>`).join('');
     $('#dSizes').innerHTML = prog.sizes.map((s) => `<button data-v="${s.size}" class="${s.size === size ? 'is-on' : ''}">${s.size / 1000}K</button>`).join('');
     $('#dRules').innerHTML = [r.target ? `<span class="rp rp--good">${icon('target')}Target $${r.target.toLocaleString()}</span>` : '<span class="rp">No target once funded</span>', `<span class="rp rp--bad">${icon('shield')}Max loss $${r.maxLoss.toLocaleString()} <i>${r.ddType}</i></span>`, r.dailyLimit ? `<span class="rp rp--warn">${icon('flag')}Firm daily $${r.dailyLimit.toLocaleString()}</span>` : `<span class="rp">${icon('flag')}No firm daily limit</span>`, r.minDays ? `<span class="rp">${icon('calendar')}Min ${r.minDays} trading day${r.minDays > 1 ? 's' : ''}</span>` : '', r.consistency ? `<span class="rp">${r.consistency}% consistency</span>` : ''].join('');

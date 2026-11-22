@@ -38,7 +38,7 @@ export const S = {
   user: null, ai: { configured: false }, local: false,
   profile: null, account: [], trade: [], payout: [], plan: [], journal: [], setup: [], rule: [], chat: [],
 };
-const KINDS = ['account', 'trade', 'payout', 'plan', 'journal', 'setup', 'rule', 'chat'];
+const KINDS = ['account', 'trade', 'payout', 'plan', 'journal', 'setup', 'rule', 'chat', 'firm'];
 
 async function api(path, opts = {}) {
   const res = await fetch(new URL('api' + path, document.baseURI), {
@@ -324,11 +324,12 @@ export function safeToRisk() {
   const rule = num(P().risk?.maxDailyLoss);
   const todayNet = sum(S.trade.filter((t) => t.date === today()), net);
   const candidates = [];
-  if (rule) candidates.push(rule + Math.min(0, todayNet));
-  live.forEach((a) => { const m = accountMetrics(a); if (m.dailyLeft !== null) candidates.push(m.dailyLeft); if (m.buffer !== null) candidates.push(m.buffer); });
+  if (rule) candidates.push([rule + Math.min(0, todayNet), 'your max loss per day']);
+  live.forEach((a) => { const m = accountMetrics(a); if (m.dailyLeft !== null) candidates.push([m.dailyLeft, `${a.name || 'account'} daily stop`]); if (m.buffer !== null) candidates.push([m.buffer, `${a.name || 'account'} drawdown buffer`]); });
+  const lowest = candidates.reduce((x, y) => (!x || y[0] < x[0] ? y : x), null);
   const maxTrades = num(P().risk?.maxTrades);
   const tradesToday = S.trade.filter((t) => t.date === today()).length;
-  return { amount: candidates.length ? Math.max(0, Math.min(...candidates)) : null, rule, todayNet, tradesLeft: maxTrades ? Math.max(0, maxTrades - tradesToday) : null, tradesToday, maxTrades };
+  return { amount: lowest ? Math.max(0, lowest[0]) : null, limitBy: lowest && rule && lowest[1] !== 'your max loss per day' ? lowest[1] : '', rule, todayNet, tradesLeft: maxTrades ? Math.max(0, maxTrades - tradesToday) : null, tradesToday, maxTrades };
 }
 export function missionMetrics() {
   const m = P().mission;
