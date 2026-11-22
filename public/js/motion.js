@@ -64,6 +64,7 @@ export function animateData(root, delay = 0) {
     g.fromTo(p, { strokeDasharray: L, strokeDashoffset: L }, { strokeDashoffset: 0, duration: 1.6, delay, ease: 'power3.out', clearProps: 'strokeDasharray,strokeDashoffset' });
   });
   $$('[data-fade]', root).forEach((p) => g.fromTo(p, { opacity: 0 }, { opacity: 1, duration: 1.2, delay: delay + 0.4, ease: 'power2.out' }));
+  $$('.radar__shape', root).forEach((r) => g.fromTo(r, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 1.1, ease: 'back.out(1.4)', delay: delay + 0.2 }));
   $$('[data-pop]', root).forEach((p, i) => g.fromTo(p, { scale: 0, opacity: 0, transformOrigin: 'center' }, { scale: 1, opacity: 1, duration: 0.6, ease: 'back.out(3)', delay: delay + 0.6 + i * 0.04, clearProps: 'transform,opacity' }));
 }
 function finalize(root) { $$('.meter i[data-w]', root).forEach((el) => (el.style.width = el.dataset.w)); }

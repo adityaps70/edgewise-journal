@@ -1,10 +1,10 @@
 {
-  "name": "edgewise-journal",
+  "name": "thesmarttrade",
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "db:local": "wrangler d1 execute edgewise-db --local --file=./schema.sql",
-    "db:remote": "wrangler d1 execute edgewise-db --remote --file=./schema.sql",
+    "db:local": "wrangler d1 execute smarttrade-db --local --file=./schema.sql",
+    "db:remote": "wrangler d1 execute smarttrade-db --remote --file=./schema.sql",
     "dev": "wrangler pages dev",
     "deploy": "wrangler pages deploy"
   },

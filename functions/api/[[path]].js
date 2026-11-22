@@ -1,4 +1,4 @@
-// Edgewise — Cloudflare Pages Function: auth, journal storage, images and the Claude proxy.
+// The Smart Trade — Cloudflare Pages Function: auth, journal storage, images and the Claude proxy.
 // Bindings: DB (D1). Secrets: ANTHROPIC_API_KEY. Vars: CLAUDE_MODEL, AI_DAILY_LIMIT, ALLOW_SIGNUP.
 
 const SESSION_DAYS = 30;
@@ -56,7 +56,7 @@ async function startSession(env, request, user) {
 
 // ---------------------------------------------------------------- AI
 
-const COACH = `You are Edgewise Coach, a blunt, numbers-first trading performance coach inside a trading journal app.
+const COACH = `You are the Smart Trade Coach, a blunt, numbers-first trading performance coach inside a trading journal app.
 You see the trader's own journal data (stats, accounts, prop-firm rules, payouts, trades, notes, emotions, mistakes).
 Rules:
 - Ground every claim in the data provided; quote the actual numbers (P&L, win rate, R, dates, setups). If data is thin, say so.

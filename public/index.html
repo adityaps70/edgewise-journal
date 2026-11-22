@@ -3,10 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Edgewise · The trading journal built for prop firm traders</title>
+  <title>The Smart Trade · Trading journal for prop firm traders</title>
+  <meta property="og:title" content="The Smart Trade"><meta property="og:description" content="The trading journal built for prop firm traders."><meta property="og:image" content="brand/brand-sheet.png">
   <meta name="description" content="Log trades, guard every prop account's drawdown, track payouts in your own currency and get an AI coach that reads your whole journal.">
   <meta name="theme-color" content="#050608">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23ff4d5e'/><stop offset='.55' stop-color='%23e3122d'/><stop offset='1' stop-color='%234d7dff'/></linearGradient></defs><rect width='24' height='24' rx='6' fill='url(%23g)'/><path d='M5 17 9 11l4 4 6-9' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+  <link rel="icon" type="image/svg+xml" href="brand/mark.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="brand/mark-32.png">
+  <link rel="apple-touch-icon" href="brand/mark-180.png">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="landing.css">
   <script src="vendor/gsap.min.js" defer></script>
@@ -15,7 +19,7 @@
 </head>
 <body class="lp">
   <header class="lnav" id="lnav">
-    <a class="lnav__brand" href="#top"><span class="mark" data-ico="logo"></span><b>Edgewise</b></a>
+    <a class="lnav__brand" href="#top"><span class="mark mark--img"><img src="brand/mark.svg" alt=""></span><span class="wm"><small>THE</small><b>Smart<i>Trade</i></b></span></a>
     <nav class="lnav__links"><a href="#features">Features</a><a href="#firms">Prop firms</a><a href="#coach">AI coach</a><a href="#faq">FAQ</a></nav>
     <button class="rbtn rbtn--plain" id="lTheme" aria-label="Switch theme"></button>
     <a class="btn btn--primary" href="app.html" data-cta>Open journal</a>
@@ -27,7 +31,7 @@
       <div class="hero__copy">
         <span class="eyebrow"><span class="live"></span>Built for prop firm traders</span>
         <h1 class="hsplit">Trade the plan. Keep the payout.</h1>
-        <p class="hero__sub">Edgewise knows your firm's rules, watches every account's drawdown, and tells you where your money actually leaks. Log a trade in seconds; the journal does the maths.</p>
+        <p class="hero__sub">The Smart Trade knows your firm's rules, watches every account's drawdown, and tells you where your money actually leaks. Log a trade in seconds; the journal does the maths.</p>
         <div class="hero__cta"><a class="btn btn--primary btn--lg" href="app.html" data-cta data-ico-r="right">Start journaling free</a><a class="btn btn--lg" href="#how">See how it works</a></div>
         <p class="hero__fine">No sign-up needed to try it. Your journal stays in your browser.</p>
       </div>
@@ -64,7 +68,10 @@
         <article class="card feat"><span class="prodico t2" data-ico="bolt"></span><h3>Firm rules built in</h3><p>Pick your firm, plan and size. Target, max loss, daily limit and consistency rules fill themselves in.</p></article>
         <article class="card feat"><span class="prodico t3" data-ico="target"></span><h3>Risk by setup grade</h3><p>Size A+ setups bigger and C setups smaller. Tag each trade and see whether your conviction actually pays.</p><div class="feat__grades"><span class="gtag g-a">A+</span><span class="gtag g-b">B</span><span class="gtag g-c">C</span></div></article>
         <article class="card feat"><span class="prodico t4" data-ico="payouts"></span><h3>Payouts in your currency</h3><p>Track estimated vs actual payouts by month, converted at today's live exchange rate.</p></article>
-        <article class="card feat"><span class="prodico" data-ico="calendar"></span><h3>Calendar &amp; analytics</h3><p>Winning and losing days at a glance, plus your edge by setup, session, weekday, hour and emotion.</p></article>
+        <article class="card feat"><span class="prodico" data-ico="calendar"></span><h3>Calendar &amp; analytics</h3><p>Winning and losing days at a glance, plus your edge by setup, timeframe, trend, session, hold time and emotion. Click any bar to see the trades behind it.</p></article>
+        <article class="card feat"><span class="prodico t3" data-ico="brain"></span><h3>Mindset score</h3><p>Every trade gets a 0–10 score from how you felt, whether you stayed detached and how you exited. See which states cost you money.</p></article>
+        <article class="card feat"><span class="prodico t4" data-ico="shield"></span><h3>Prop firm ROI</h3><p>Evaluation, activation, subscriptions and data fees per firm against the payouts each one sent you. Breached accounts show the true sunk cost.</p></article>
+        <article class="card feat"><span class="prodico" data-ico="sheet"></span><h3>Reports &amp; exports</h3><p>Monthly, quarterly and yearly reports. Download as CSV or save as PDF in one click.</p></article>
         <article class="card feat"><span class="prodico t2" data-ico="coach"></span><h3>AI coach</h3><p>Grades trades, reads chart screenshots, writes your weekly review and plans tomorrow from your own numbers.</p></article>
       </div>
     </section>
@@ -112,7 +119,7 @@
         <details class="card"><summary>Where is my data stored?<span data-ico="plus"></span></summary><p>On this version, everything stays in your own browser. Nothing is uploaded. Use Settings → Export to keep a backup or move to another device.</p></details>
         <details class="card"><summary>Which prop firms are included?<span data-ico="plus"></span></summary><p>Topstep, Apex Trader Funding, TopOne Futures, Tradeify, MyFundedFutures, Lucid Trading, Take Profit Trader, FTMO and FundingPips, plus any other firm whose rules you enter yourself.</p></details>
         <details class="card"><summary>Are the firm rules always current?<span data-ico="plus"></span></summary><p>They were checked against public sources in November 2026, but firms change rules often. Each account links to the firm's site and every value can be edited.</p></details>
-        <details class="card"><summary>Is Edgewise affiliated with any prop firm?<span data-ico="plus"></span></summary><p>No. Edgewise is an independent journal and doesn't sell or promote any firm's accounts.</p></details>
+        <details class="card"><summary>Is The Smart Trade affiliated with any prop firm?<span data-ico="plus"></span></summary><p>No. The Smart Trade is an independent journal and doesn't sell or promote any firm's accounts.</p></details>
       </div>
     </section>
 
@@ -126,8 +133,8 @@
   </main>
 
   <footer class="lfoot">
-    <span class="lnav__brand"><span class="mark" data-ico="logo"></span><b>Edgewise</b></span>
-    <p>Edgewise is a journaling tool, not financial advice. It is not affiliated with any prop firm; firm names belong to their owners and rules are summarised from public sources. Exchange rates by <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">ExchangeRate-API</a>.</p>
+    <span class="lnav__brand"><span class="mark mark--img"><img src="brand/mark.svg" alt=""></span><span class="wm"><small>THE</small><b>Smart<i>Trade</i></b></span></span>
+    <p>The Smart Trade (thesmarttrade.in) is a journaling tool, not financial advice. It is not affiliated with any prop firm; firm names belong to their owners and rules are summarised from public sources. Exchange rates by <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">ExchangeRate-API</a>.</p>
   </footer>
 </body>
 </html>

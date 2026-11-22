@@ -1,5 +1,7 @@
 // Core: API, store + sync, formatting, stats, icons.
-export const APP = { name: 'Edgewise', tagline: 'Trading journal' };
+export const APP = { name: 'The Smart Trade', short: 'SmartTrade', domain: 'thesmarttrade.in', tagline: 'Trading journal' };
+export const LOGO = '<span class="mark mark--img"><img src="brand/mark.svg" alt=""></span>';
+export const WORDMARK = '<span class="wm"><small>THE</small><b>Smart<i>Trade</i></b></span>';
 
 // ------------------------------------------------------------------ helpers
 export const $ = (s, el = document) => el.querySelector(s);
@@ -337,7 +339,7 @@ export function missionMetrics() {
   const actual = sum(payouts, (p) => p.amount);
   const actualLocal = sum(payouts, (p) => p.amountLocal || 0);
   const pending = sum(S.payout.filter((p) => p.status === 'requested'), (p) => p.amount);
-  const costs = sum(S.account.filter((a) => !a.purchaseDate || inWin(a.purchaseDate) || m.countAllCosts !== false), (a) => num(a.cost) + num(a.resetCost));
+  const costs = sum(S.account.filter((a) => !a.purchaseDate || inWin(a.purchaseDate) || m.countAllCosts !== false), (a) => accCost(a));
   const total = Math.max(1, daysBetween(start, end));
   const elapsed = clamp(daysBetween(start, today()) / total, 0, 1);
   const daysLeft = Math.max(0, daysBetween(today(), end));
@@ -380,10 +382,10 @@ export function aiContext({ trades, focus } = {}) {
   const g = (label, fn) => { const rows = groupBy(all, fn).slice(0, 12); if (rows.length) lines.push(`${label}: ` + rows.map((r) => `${r.key} ${money(r.net)} (${r.n}t, ${pct(r.winRate)})`).join('; ')); };
   g('By setup', (t) => t.setup); g('By symbol', (t) => t.symbol); g('By session', (t) => t.session); g('By emotion', (t) => t.emotion);
   g('By mistake', (t) => (t.mistakes || []).filter((x) => x !== 'None')); g('By weekday', (t) => parseISO(t.date).toLocaleDateString('en-US', { weekday: 'short' }));
-  g('By side', (t) => t.side); g('By setup grade', (t) => t.grade);
+  g('By side', (t) => t.side); g('By setup grade', (t) => t.grade); g('By entry timeframe', (t) => t.tf); g('By trend alignment', (t) => t.trend); g('By exit behaviour', (t) => t.exitBehavior); g('By outcome detachment', (t) => (t.neutral === true ? 'detached' : t.neutral === false ? 'attached' : undefined)); g('By hold time', (t) => durationBucket(t));
   const rows = (trades || all.slice(-60));
-  lines.push(`\nTrades (${focus || 'most recent'}):\ndate,time,account,symbol,side,qty,entry,exit,stop,net,R,setup,grade,session,emotion,mistakes,rules_followed,rating,notes`);
-  rows.forEach((t) => lines.push([t.date, t.time, accName(t.accountId), t.symbol, t.side, t.qty, t.entry, t.exit, t.stop, net(t).toFixed(2), rMultiple(t)?.toFixed(2) ?? '', t.setup, t.grade, t.session, t.emotion, (t.mistakes || []).join('/'), t.followedPlan === false ? 'no' : 'yes', t.rating || '', (t.notes || '').replace(/\s+/g, ' ').slice(0, 160)].map((v) => String(v ?? '').replace(/,/g, ';')).join(',')));
+  lines.push(`\nTrades (${focus || 'most recent'}):\ndate,time,exit_time,account,symbol,side,qty,entry,exit,stop,net,R,setups,grade,timeframe,trend,session,emotion,exit_behaviour,detachment,mindset_score,mistakes,rules_followed,rating,notes`);
+  rows.forEach((t) => lines.push([t.date, t.time, t.exitTime, accName(t.accountId), t.symbol, t.side, t.qty, t.entry, t.exit, t.stop, net(t).toFixed(2), rMultiple(t)?.toFixed(2) ?? '', setupsOf(t).join('+'), t.grade, t.tf, t.trend, t.session, t.emotion, t.exitBehavior, t.neutral === undefined ? '' : t.neutral ? 'detached' : 'attached', edgeScore(t) ?? '', (t.mistakes || []).join('/'), t.followedPlan === false ? 'no' : 'yes', t.rating || '', [t.notePlan, t.noteExec, t.noteLesson, t.notes].filter(Boolean).join(' | ').replace(/\s+/g, ' ').slice(0, 200)].map((v) => String(v ?? '').replace(/,/g, ';')).join(',')));
   const js = S.journal.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
   if (js.length) lines.push('\nRecent daily journal:\n' + js.map((j) => `${j.date} mood ${j.mood || '-'}/5, followed plan: ${j.followedPlan ? 'yes' : 'no'}. Pre: ${(j.pre || '').slice(0, 200)} Post: ${(j.post || '').slice(0, 300)}`).join('\n'));
   return lines.join('\n');
@@ -451,3 +453,57 @@ const I = {
   coffee: '<path d="M17 8h1a4 4 0 0 1 0 8h-1M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4zM7 2v3M11 2v3M15 2v3"/>',
 };
 export const icon = (name, cls = '') => `<svg class="ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${I[name] || I.info}</svg>`;
+
+// ------------------------------------------------------------------ behaviour / mindset
+export const TIMEFRAMES = ['1m', '5m', '15m', '30m', '1h', '4h', 'D'];
+export const EXIT_BEHAVIOR = [['planned', 'As planned'], ['early', 'Exited early'], ['late', 'Exited late']];
+const EMO_MOD = { Calm: 1, Focused: 1, Confident: 0.8, Bored: -0.5, Tired: -0.6, Anxious: -0.7, FOMO: -1.2, Greedy: -1.2, Frustrated: -1.4, Revenge: -1.6 };
+export const HOT = ['FOMO', 'Greedy', 'Revenge', 'Frustrated'];
+export const lateLoss = (t) => t.exitBehavior === 'late' && net(t) < 0;
+export function edgeScore(t) {
+  if (!t.emotion && !t.exitBehavior && t.neutral === undefined) return null;
+  let s = 7;
+  s += EMO_MOD[t.emotion] || 0;
+  if (t.neutral === true) s += 0.8; else if (t.neutral === false) s -= 0.8;
+  if (t.exitBehavior === 'planned') s += 1;
+  else if (t.exitBehavior === 'early') s -= 0.4;
+  else if (t.exitBehavior === 'late') s -= net(t) < 0 ? 1.5 : 0.3;
+  if (t.followedPlan === false) s -= 1;
+  s -= Math.min(1.8, 0.6 * (t.mistakes || []).filter((m) => m !== 'None').length);
+  if (HOT.includes(t.emotion) && lateLoss(t)) s -= 1;
+  return Math.round(clamp(s, 0, 10) * 10) / 10;
+}
+export const severeCombo = (t) => HOT.includes(t.emotion) && lateLoss(t);
+export const zoneOf = (s) => (s >= 7 ? ['green', 'Process-led', 'Stable, plan-first execution.'] : s >= 4 ? ['amber', 'Mixed', 'Some trades driven by emotion; execution varies.'] : ['red', 'Under pressure', 'Emotion is steering entries and exits.']);
+export function durationMin(t) {
+  if (!t.time || !t.exitTime) return null;
+  const [h1, m1] = t.time.split(':').map(Number); const [h2, m2] = t.exitTime.split(':').map(Number);
+  let d = (h2 * 60 + m2) - (h1 * 60 + m1);
+  if (d < 0) d += 1440; // closed after midnight
+  return d;
+}
+export function durationBucket(t) {
+  const d = durationMin(t); if (d === null) return null;
+  return d < 5 ? '< 5 min' : d < 15 ? '5–15 min' : d < 30 ? '15–30 min' : d < 60 ? '30–60 min' : d < 240 ? '1–4 h' : '4 h +';
+}
+export const setupsOf = (t) => (t.setups && t.setups.length ? t.setups : t.setup ? [t.setup] : []);
+
+// Mastery: five 0–100 axes from your own data
+export function mastery(trades) {
+  if (trades.length < 3) return null;
+  const st = stats(trades);
+  const winA = clamp(st.winRate / 0.6, 0, 1) * 100;
+  const pfA = clamp((Number.isFinite(st.pf) ? st.pf : 3) / 2.5, 0, 1) * 100;
+  const stop = num(P().risk?.maxDailyLoss);
+  const riskA = stop ? (st.days.filter((d) => d.net > -stop).length / (st.days.length || 1)) * 100 : clamp(1 - st.maxDD / (Math.abs(st.total) + st.maxDD || 1), 0, 1) * 100;
+  const discA = (trades.filter((t) => t.followedPlan !== false && !(t.mistakes || []).some((m) => m !== 'None') && !(t.exitBehavior === 'late')).length / trades.length) * 100;
+  let afterLoss = []; for (let i = 1; i < trades.length; i++) if (net(trades[i - 1]) < 0) afterLoss.push(trades[i]);
+  const wrAfter = afterLoss.length ? afterLoss.filter((t) => net(t) > 0).length / afterLoss.length : st.winRate;
+  const resA = clamp(st.winRate ? wrAfter / st.winRate : 0, 0, 1) * 100;
+  const axes = [['Win rate', winA], ['Profit factor', pfA], ['Risk', riskA], ['Discipline', discA], ['Resilience', resA]].map(([k, v]) => [k, Math.round(v)]);
+  return { axes, score: Math.round(sum(axes, (a) => a[1]) / axes.length) };
+}
+
+// ------------------------------------------------------------------ account costs
+export const COST_FIELDS = [['cost', 'Evaluation'], ['activationFee', 'Activation'], ['subscriptionFees', 'Subscriptions'], ['platformFees', 'Platform / data'], ['resetCost', 'Resets'], ['otherFees', 'Other']];
+export const accCost = (a) => sum(COST_FIELDS, ([k]) => num(a[k]));

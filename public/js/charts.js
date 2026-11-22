@@ -1,5 +1,10 @@
 // Charts as SVG/HTML strings; motion.js animates [data-draw], [data-fade], [data-grow], [data-pop].
-import { esc, money, short, fmtDate, $$ } from './core.js';
+import { esc, money, short, fmtDate, $$, icon } from './core.js';
+
+// drill-down registry: any element with data-drill opens the trades behind it
+export const drill = new Map(); let dn = 0;
+export function reg(list, label = '') { const id = 'd' + (++dn); drill.set(id, { list, label }); if (drill.size > 4000) drill.delete(drill.keys().next().value); return id; }
+
 
 const niceStep = (range, ticks = 4) => {
   const raw = range / ticks; const p = Math.pow(10, Math.floor(Math.log10(raw || 1)));
@@ -60,7 +65,7 @@ export function tubes(items, { h = 210 } = {}) {
   const cols = items.map((d) => {
     const ph = d.value > 0 ? Math.max(6, (d.value / top) * posH) : 0;
     const nh = d.value < 0 ? Math.max(6, (Math.abs(d.value) / top) * posH) : 0;
-    return `<div class="tube" data-tip="${esc(d.tip || d.label)}|${esc(money(d.value, { sign: true }))}${d.sub ? '|' + esc(d.sub) : ''}">
+    return `<div class="tube" ${d.trades ? `data-drill="${reg(d.trades, d.tip || d.label)}"` : ''} data-tip="${esc(d.tip || d.label)}|${esc(money(d.value, { sign: true }))}${d.sub ? '|' + esc(d.sub) : ''}">
       <div class="tube__pos" style="height:${posH}px"><i class="tube__sleeve"></i>${ph ? `<i class="tube__fill" data-grow style="height:${ph}px"></i>` : ''}</div>
       ${hasNeg ? `<div class="tube__neg" style="height:${negH}px"><i class="tube__sleeve"></i>${nh ? `<i class="tube__fill is-neg" data-grow="down" style="height:${Math.min(nh, negH)}px"></i>` : ''}</div>` : ''}
       <span class="tube__label${d.on ? ' is-on' : ''}">${esc(d.label)}</span></div>`;
@@ -72,7 +77,7 @@ export function tubes(items, { h = 210 } = {}) {
 export function hbars(rows, { fmt = (v) => money(v, { sign: true }) } = {}) {
   if (!rows.length) return '<div class="empty">Not enough data yet.</div>';
   const max = Math.max(1, ...rows.map((r) => Math.abs(r.net)));
-  return `<div class="hbars">${rows.map((r) => `<div class="hbar">
+  return `<div class="hbars">${rows.map((r) => `<div class="hbar" ${r.list ? `data-drill="${reg(r.list, r.key)}"` : ''}>
       <div class="hbar__top"><b>${esc(r.key)}</b><span class="muted">${r.n} trade${r.n === 1 ? '' : 's'} · ${(r.winRate * 100).toFixed(0)}% win</span><span class="amt ${r.net >= 0 ? 'good' : 'bad'}">${esc(fmt(r.net))}</span></div>
       <div class="meter ${r.net < 0 ? 'meter--bad' : ''}"><i data-w="${(Math.abs(r.net) / max * 100).toFixed(1)}%"></i></div></div>`).join('')}</div>`;
 }
@@ -97,3 +102,21 @@ export function bindTips(root) {
     wrap.addEventListener('pointerleave', hide);
   });
 }
+
+// ======================================================================= radar
+export function radar(m, { size = 240 } = {}) {
+  if (!m) return `<div class="empty">${icon('target')}<b>Log a few trades</b>Your mastery score appears after 3 trades.</div>`;
+  const c = size / 2; const R = size / 2 - 34; const n = m.axes.length;
+  const pt = (i, v) => { const a = -Math.PI / 2 + (i * 2 * Math.PI) / n; return [c + Math.cos(a) * R * v, c + Math.sin(a) * R * v]; };
+  const ring = (v) => m.axes.map((_, i) => pt(i, v).join(',')).join(' ');
+  const poly = m.axes.map(([, v], i) => pt(i, v / 100).join(',')).join(' ');
+  return `<div class="radar"><svg viewBox="0 0 ${size} ${size}" width="100%" style="max-width:${size}px">
+    <defs><linearGradient id="rdg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--blue)" stop-opacity=".45"/><stop offset="1" stop-color="var(--accent)" stop-opacity=".35"/></linearGradient></defs>
+    ${[0.25, 0.5, 0.75, 1].map((v) => `<polygon points="${ring(v)}" fill="none" stroke="var(--line-2)" stroke-dasharray="${v === 1 ? '' : '2 4'}"/>`).join('')}
+    ${m.axes.map((_, i) => { const [x, y] = pt(i, 1); return `<line x1="${c}" y1="${c}" x2="${x}" y2="${y}" stroke="var(--line)"/>`; }).join('')}
+    <g class="radar__shape" style="transform-origin:${c}px ${c}px"><polygon points="${poly}" fill="url(#rdg)" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+    ${m.axes.map(([, v], i) => { const [x, y] = pt(i, v / 100); return `<circle cx="${x}" cy="${y}" r="3.5" fill="var(--accent)"/>`; }).join('')}</g>
+    ${m.axes.map(([k, v], i) => { const [x, y] = pt(i, 1.2); return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" class="radar__lab">${k}<tspan x="${x}" dy="13" class="radar__v">${v}</tspan></text>`; }).join('')}
+  </svg></div>`;
+}
+

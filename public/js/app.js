@@ -1,6 +1,6 @@
 // App shell: boot, auth, onboarding, sidebar + router, header tools.
 import {
-  APP, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
+  APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net,
 } from './core.js';
 import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js';
@@ -8,11 +8,12 @@ import { slider, liveRate, fxAgo } from './ui.js';
 import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js';
 window.__segInit = segInit; window.__segSelect = segSelect;
 import * as V from './views.js';
+import * as V2 from './views2.js';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
   money: (v) => money(v), moneySign: (v) => money(v, { sign: true }), moneyShort: (v) => (v > 0.5 ? '+' : '') + short(v),
-  pct: (v) => pct(v), int: (v) => String(Math.round(v)), dec: (v) => (v >= 99 ? '∞' : v.toFixed(2)), r: (v) => (v >= 0 ? '+' : '') + v.toFixed(2) + 'R',
+  pct: (v) => pct(v), int: (v) => String(Math.round(v)), mins: (v) => (v ? (v < 60 ? Math.round(v) + ' min' : (v / 60).toFixed(1) + ' h') : '—'), dec: (v) => (v >= 99 ? '∞' : v.toFixed(2)), r: (v) => (v >= 0 ? '+' : '') + v.toFixed(2) + 'R',
 };
 
 // ---------------------------------------------------------------- theme
@@ -28,7 +29,7 @@ const app = $('#app');
 
 // ---------------------------------------------------------------- boot
 async function boot() {
-  app.innerHTML = `<div class="boot"><span class="mark">${icon('logo')}</span></div>`;
+  app.innerHTML = `<div class="boot">${LOGO}</div>`;
   try {
     const me = await API.me();
     S.user = me.user; S.ai = me.ai || {};
@@ -50,7 +51,7 @@ async function boot() {
 // ---------------------------------------------------------------- auth
 function auth(mode = 'login') {
   app.innerHTML = `<div class="solo"><div class="solo__card" id="authCard">
-    <span class="mark">${icon('logo')}</span>
+    ${LOGO}
     <h1>Your trading journal,<br>with a coach built in.</h1>
     <p>Track every trade, prop account and payout. Claude reads it all and tells you where the money leaks.</p>
     <div class="seg seg--accent" id="authSeg" style="margin-bottom:18px"><button data-v="login" class="${mode === 'login' ? 'is-on' : ''}">Sign in</button><button data-v="signup" class="${mode === 'signup' ? 'is-on' : ''}">Create account</button></div>
@@ -100,7 +101,7 @@ async function onboarding() {
     imported: null,
   };
   app.innerHTML = `<div class="solo"><div class="solo__card solo__card--wide" id="ob">
-    <div class="row row--between"><a class="row" href="index.html" style="gap:10px"><span class="mark">${icon('logo')}</span><b style="font-size:var(--fs-2xl)">${APP.name}</b></a><span class="ob-count" id="obCount"></span></div>
+    <div class="row row--between"><a class="row" href="index.html" style="gap:10px">${LOGO}${WORDMARK}</a><span class="ob-count" id="obCount"></span></div>
     <ol class="steps" style="margin-top:22px">${STEPS.map((s) => `<li title="${s}"><i></i></li>`).join('')}</ol>
     <div id="obBody"></div>
     <div class="row row--between ob-nav"><button class="btn btn--ghost" id="obBack">${icon('left')}Back</button><button class="btn btn--primary btn--lg" id="obNext">Continue${icon('right')}</button></div>
@@ -389,22 +390,24 @@ const VIEWS = {
   overview: ['Overview', 'overview', V.overview], trades: ['Trades', 'trades', V.trades], calendar: ['Calendar', 'calendar', V.calendar],
   accounts: ['Accounts', 'accounts', V.accounts], payouts: ['Payouts', 'payouts', V.payouts], plan: ['Weekly plan', 'plan', V.plan],
   analytics: ['Analytics', 'analytics', V.analytics], journal: ['Journal', 'journal', V.journal], playbook: ['Playbook', 'playbook', V.playbook],
+  mindset: ['Mindset', 'brain', V2.mindset], firms: ['Prop firms', 'shield', V2.firms], reports: ['Reports', 'sheet', V2.reports],
   coach: ['AI coach', 'coach', V.coach], settings: ['Settings', 'settings', V.settings],
 };
 function navItems() {
   const p = P(); const prop = (p.funding || []).some((f) => f !== 'own') || S.account.some((a) => a.type !== 'personal');
-  const list = ['overview', 'trades', 'calendar'];
+  const list = ['overview', 'trades', 'calendar', 'analytics', 'mindset', 'playbook', 'journal'];
   if (S.account.length) list.push('accounts');
+  if (prop) list.push('firms');
   if (prop || S.payout.length) list.push('payouts');
   if (prop || p.mission || S.plan.length) list.push('plan');
-  list.push('analytics', 'journal', 'playbook', 'coach');
+  list.push('reports', 'coach');
   return list;
 }
 let current = null;
 function shell(first = false) {
   const p = P();
   app.innerHTML = `<div class="app"><div class="slab" id="slab">
-    <aside class="side"><div class="side__top"><span class="mark">${icon('logo')}</span><a class="side__name" href="index.html"><b>${APP.name}</b><small>${esc(p.mission?.name || (p.name ? p.name.split(' ')[0] + "'s journal" : APP.tagline))}</small></a><button class="side__fold" id="fold" aria-label="Collapse sidebar">${icon('fold')}</button></div>
+    <aside class="side"><div class="side__top">${LOGO}<a class="side__name" href="index.html" aria-label="${APP.name} home">${WORDMARK}</a><button class="side__fold" id="fold" aria-label="Collapse sidebar">${icon('fold')}</button></div>
       <nav class="nav" id="nav" aria-label="Sections"><span class="nav__pill"></span></nav>
       <div class="safe" id="safe"></div>
       <div class="side__me"><span class="av">${esc(initials())}<i class="av__dot"></i></span><span class="me__text"><b>${esc(p.name || 'Trader')}</b><small>${esc(S.local ? 'Local mode' : S.user?.email || '')}</small></span><button class="ibtn" id="meMore" aria-label="Account menu">${icon('more')}</button></div>

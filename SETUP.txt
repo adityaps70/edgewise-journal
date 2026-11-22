@@ -1,4 +1,4 @@
-EDGEWISE: TRADING JOURNAL WITH AN AI COACH
+THE SMART TRADE (thesmarttrade.in): TRADING JOURNAL WITH AN AI COACH
 Cloudflare Pages + Pages Functions + D1. No build step.
 
 WHAT'S IN HERE
@@ -10,15 +10,15 @@ WHAT'S IN HERE
 DEPLOY (about 10 minutes)
 1. Install Node 18+ and run:   npm install
 2. Log in to Cloudflare:       npx wrangler login
-3. Create the database:        npx wrangler d1 create edgewise-db
+3. Create the database:        npx wrangler d1 create smarttrade-db
    Copy the "database_id" it prints into wrangler.toml (replace REPLACE_WITH_YOUR_D1_DATABASE_ID).
 4. Create the tables:          npm run db:remote
-5. Create the Pages project:   npx wrangler pages project create edgewise-journal
+5. Create the Pages project:   npx wrangler pages project create thesmarttrade
 6. Deploy:                     npm run deploy
 7. Add your Claude API key as a SECRET (never in code):
        npx wrangler pages secret put ANTHROPIC_API_KEY
    Paste your key when asked, then run "npm run deploy" once more.
-8. Optional: in the Cloudflare dashboard > Pages > edgewise-journal > Custom domains, add your domain.
+8. In the Cloudflare dashboard > Pages > thesmarttrade > Custom domains, add thesmarttrade.in (and www.thesmarttrade.in).
 
 RUN IT LOCALLY
   npm run db:local

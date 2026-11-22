@@ -4,9 +4,11 @@ import {
   money, short, local, pct, tone, cur, sym, save, remove, saveProfile, MARKETS, EMOTIONS, MISTAKES, SESSIONS, DEFAULT_SETUPS,
   net, stats, groupBy, inRange, rangeFor, rMultiple, calcPnl, pointValue, sessionFromTime, accName, accById, isLive, accountMetrics,
   safeToRisk, missionMetrics, planMetrics, aiContext, md, icon, API, flush, wipeAll, tradingDaysBetween,
+  accCost, COST_FIELDS, TIMEFRAMES, EXIT_BEHAVIOR, edgeScore, zoneOf, durationMin, durationBucket, setupsOf, severeCombo, lateLoss, mastery, HOT,
 } from './core.js';
 import { enterPage, animateData, segInit, segSelect, openModal, closeModal, toast, flash, pop, shake, wobble, cardStack, countUp } from './motion.js';
-import { equityChart, tubes, hbars, bindTips } from './charts.js';
+import { equityChart, tubes, hbars, bindTips, drill as drillStore, radar, reg } from './charts.js';
+const drillMap = () => drillStore;
 import { slider, setSlider, liveRate, fxAgo } from './ui.js';
 import { catalog, firmById, planRules, defaultDaily, dailyCap, STAGE_LABEL, mono } from './firms.js';
 
@@ -66,7 +68,7 @@ export function overview(el) {
   st.days.filter((d) => d.net === st.worstDay && d.net < 0).slice(0, 1).forEach((d) => events.push({ date: d.date, label: `Worst day ${money(d.net)}`, color: 'var(--warn)' }));
 
   // contributions by setup
-  const bySetup = groupBy(inRange(all, ...rangeFor('month')).length ? inRange(all, ...rangeFor('month')) : all, (t) => t.setup || 'No setup');
+  const bySetup = groupBy(inRange(all, ...rangeFor('month')).length ? inRange(all, ...rangeFor('month')) : all, (t) => setupsOf(t)[0] || 'No setup');
   const pos = bySetup.filter((r) => r.net > 0); const posTotal = sum(pos, (r) => r.net) || 1;
   const colors = ['var(--c2)', 'var(--c1)', 'var(--c6)', 'var(--c4)', 'var(--c3)', 'var(--c5)'];
   const totalN = sum(bySetup, (r) => r.n) || 1;
@@ -96,13 +98,23 @@ export function overview(el) {
       `<button class="rbtn rbtn--plain" data-act="hide" aria-label="Hide numbers">${icon('shield')}</button>`)}
   </div>
   <div class="grid g-ov2" style="margin-top:var(--gap)">
+    ${(() => { const ms = mastery(all); const sc = all.filter((t) => edgeScore(t) !== null); const avgE = sc.length ? sum(sc, edgeScore) / sc.length : null; const ex = all.filter((t) => t.exitBehavior); const planned = ex.length ? ex.filter((t) => t.exitBehavior === 'planned').length / ex.length : null; const wl = st.avgLoss ? st.avgWin / st.avgLoss : null;
+      return `<section class="card"><div class="chead"><div class="chead__text"><h3>Trading mastery</h3><p>Five skills, each scored 0–100 from your own trades</p></div>${ms ? `<span class="mastery__score"><b>${cnt(ms.score, 'int')}</b><small>/100</small></span>` : ''}</div>
+        <div class="mastery">${radar(ms)}<div class="mastery__tiles">
+          <div class="pace__item"><small>Day win %</small><b>${cnt(st.dayWinRate, 'pct')}</b><em>${st.tradingDays} days</em></div>
+          <div class="pace__item"><small>Avg win / loss</small><b>${wl ? wl.toFixed(2) : '—'}</b><em>${money(st.avgWin)} / ${money(st.avgLoss)}</em></div>
+          <div class="pace__item" data-go="mindset" style="cursor:pointer"><small>Mindset score</small><b class="z-${avgE !== null ? zoneOf(avgE)[0] : ''}">${avgE !== null ? avgE.toFixed(1) : '—'}</b><em>${avgE !== null ? zoneOf(avgE)[1] : 'log emotions'}</em></div>
+          <div class="pace__item"><small>Exits as planned</small><b>${planned !== null ? pct(planned) : '—'}</b><em>${ex.filter(lateLoss).length} late losses</em></div>
+        </div></div></section>`; })()}
     ${m ? missionCard(m) : card('Risk today', 'Your personal limits', riskBody())}
-    ${card('Daily P&amp;L', 'Winning days pull up, losing days pull down', `<div id="tubesBox"></div>`, `<div class="seg seg--accent" id="tubeSeg"><button data-v="10" class="is-on">2 weeks</button><button data-v="22">Month</button><button data-v="q">Quarter</button></div>`)}
+  </div>
+  <div class="grid" style="margin-top:var(--gap)">
+    ${card('Daily P&amp;L', 'Winning days pull up, losing days pull down. Click a bar for its trades.', `<div id="tubesBox"></div>`, `<div class="seg seg--accent" id="tubeSeg"><button data-v="10" class="is-on">2 weeks</button><button data-v="22">Month</button><button data-v="q">Quarter</button></div>`)}
   </div>
   <div class="grid g-ov2" style="margin-top:var(--gap)">
     ${card(`Where ${new Date().toLocaleDateString('en-GB', { month: 'long' })}'s P&amp;L came from`, `${sum(bySetup, (r) => r.n)} trades by setup`, bySetup.length ? `
       <div class="split">${pos.map((r, i) => `<i class="split__seg" style="flex:${r.net / posTotal};background:${colors[i % colors.length]}" title="${esc(r.key)}"></i>`).join('') || '<i class="split__seg" style="flex:1;background:var(--card-3)"></i>'}</div>
-      <div class="cats">${bySetup.slice(0, 6).map((r, i) => `<div class="cat"><span class="prodico t${(i % 4) + 1} ${r.net < 0 ? 'is-loss' : ''}">${icon(setupIcons[i % setupIcons.length])}</span><span class="cat__name">${esc(r.key)}</span><span class="cat__pct">${pct(r.n / totalN)}</span><span class="cat__amt ${tone(r.net)}">${money(r.net, { sign: true })}</span></div>`).join('')}</div>
+      <div class="cats">${bySetup.slice(0, 6).map((r, i) => `<div class="cat" data-drill="${reg(r.list, r.key)}" style="cursor:pointer"><span class="prodico t${(i % 4) + 1} ${r.net < 0 ? 'is-loss' : ''}">${icon(setupIcons[i % setupIcons.length])}</span><span class="cat__name">${esc(r.key)}</span><span class="cat__pct">${pct(r.n / totalN)}</span><span class="cat__amt ${tone(r.net)}">${money(r.net, { sign: true })}</span></div>`).join('')}</div>
       <div style="margin-top:12px">${pace}</div>` : `<div class="empty">${icon('playbook')}<b>Tag trades with a setup</b>to see which ones pay you.</div>`, `<button class="linkbtn" data-go="analytics">Details</button>`)}
     ${card('Latest trades', 'Every account, newest first', tradeList(all.slice(-7).reverse()), `<button class="linkbtn" data-go="trades">See all</button>`)}
   </div>
@@ -115,9 +127,9 @@ export function overview(el) {
     let items;
     if (v === 'q') {
       const wk = groupBy(inRange(all, addDays(today(), -91), today()), (t) => weekStart(t.date)).sort((a, b) => a.key.localeCompare(b.key));
-      items = wk.map((w) => ({ label: fmtDate(w.key), value: w.net, tip: 'Week of ' + fmtDate(w.key), sub: `${w.n} trades` }));
+      items = wk.map((w) => ({ label: fmtDate(w.key), value: w.net, tip: 'Week of ' + fmtDate(w.key), sub: `${w.n} trades`, trades: w.list }));
     } else {
-      items = st.days.slice(-Number(v)).map((d) => ({ label: parseISO(d.date).getDate() + '', value: d.net, tip: fmtDay(d.date), sub: `${d.n} trades`, on: d.date === today() }));
+      items = st.days.slice(-Number(v)).map((d) => ({ label: parseISO(d.date).getDate() + '', value: d.net, tip: fmtDay(d.date), sub: `${d.n} trades`, on: d.date === today(), trades: all.filter((t) => t.date === d.date) }));
     }
     box.innerHTML = tubes(items, { h: 200 });
     animateData(box); bindTips(box);
@@ -270,31 +282,41 @@ export function tradeModal(t0, preset = {}) {
   const body = `
   <div class="tabs" id="tTabs"><button class="is-on" data-tab="a">Trade</button><button data-tab="b">Psychology</button><button data-tab="c">Notes &amp; chart</button><button data-tab="d">${icon('coach')} AI review</button></div>
   <div data-pane="a"><div class="form">
-    ${field('Date', inp('date', t.date, 'type="date"'))}${field('Time', inp('time', t.time, 'type="time"'))}
-    ${field('Account', `<select class="in" name="accountId">${optionList(S.account.map((a) => [a.id, a.name]), t.accountId)}<option value="">No account</option></select>`, 'half')}
+    ${field('Date', inp('date', t.date, 'type="date"'))}${field('Entry time', inp('time', t.time, 'type="time"'))}${field('Exit time', inp('exitTime', t.exitTime, 'type="time"'), '', '<span id="durHint"></span>')}
+    ${field('Account', `<select class="in" name="accountId">${optionList(S.account.map((a) => [a.id, a.name]), t.accountId)}<option value="">No account</option></select>`)}
     ${field('Symbol', inp('symbol', t.symbol, `list="symList" placeholder="${esc(instruments[0] || 'NQ')}" autocomplete="off"`))}
     ${field('Side', `<div class="seg seg--accent" id="sideSeg"><button type="button" data-v="Long" class="${t.side !== 'Short' ? 'is-on' : ''}">Long</button><button type="button" data-v="Short" class="${t.side === 'Short' ? 'is-on' : ''}">Short</button></div>`)}
-    ${field(esc(qty()), inp('qty', t.qty, 'type="number" step="any" inputmode="decimal"'))}
-    ${field('Setup', `<select class="in" name="setup"><option value="">—</option>${optionList(setups, t.setup)}</select>`)}
-    ${field('Setup grade', `<div class="chips gradechips" id="gradeC">${['A+', 'B', 'C'].map((g) => `<button type="button" class="chip g-chip g-${g === 'A+' ? 'a' : g.toLowerCase()} ${t.grade === g ? 'is-on' : ''}" data-v="${g}">${g}</button>`).join('')}</div>`, 'half', '<span id="gradeHint"></span>')}
+    ${field(esc(qty()), inp('qty', t.qty, 'type="number" step="any" inputmode="decimal"'))}${field('Fees', inp('fees', t.fees, 'type="number" step="any" inputmode="decimal" placeholder="0"'))}
     ${field('Entry', inp('entry', t.entry, 'type="number" step="any" inputmode="decimal"'))}${field('Exit', inp('exit', t.exit, 'type="number" step="any" inputmode="decimal"'))}
     ${field('Stop', inp('stop', t.stop, 'type="number" step="any" inputmode="decimal"'))}${field('Target', inp('target', t.target, 'type="number" step="any" inputmode="decimal"'))}
     ${field(`P&amp;L (${esc(cur())})`, inp('pnl', t.pnl, 'type="number" step="any" inputmode="decimal" placeholder="auto"'), '', '<span id="pnlHint"></span>')}
-    ${field('Fees', inp('fees', t.fees, 'type="number" step="any" inputmode="decimal" placeholder="0"'))}
-    ${field('Session', `<select class="in" name="session"><option value="">auto</option>${optionList(SESSIONS, t.session)}</select>`)}
     ${field('R multiple', inp('r', t.r, 'type="number" step="any" placeholder="auto"'), '', '<span id="rHint"></span>')}
+    ${field('Session', `<select class="in" name="session"><option value="">auto</option>${optionList(SESSIONS, t.session)}</select>`)}
+    ${field('Entry timeframe', `<select class="in" name="tf"><option value="">—</option>${optionList(TIMEFRAMES, t.tf)}</select>`)}
+    <div class="field full"><span>Setups <em class="muted" style="font-style:normal;font-weight:500">first one is the entry setup; add others as confirmation</em></span><div class="chips" id="setC">${[...new Set([...setups, ...setupsOf(t)])].map((n) => `<button type="button" class="chip ${setupsOf(t).includes(n) ? 'is-on' : ''}" data-v="${esc(n)}">${esc(n)}${setupsOf(t)[0] === n ? ' <i class="prim">entry</i>' : ''}</button>`).join('')}<button type="button" class="chip chip--add" id="setAdd">${icon('plus')} New setup</button></div></div>
+    ${field('Setup grade', `<div class="chips gradechips" id="gradeC">${['A+', 'B', 'C'].map((g) => `<button type="button" class="chip g-chip g-${g === 'A+' ? 'a' : g.toLowerCase()} ${t.grade === g ? 'is-on' : ''}" data-v="${g}">${g}</button>`).join('')}</div>`, 'half', '<span id="gradeHint"></span>')}
+    ${field('Trend alignment', `<div class="seg" id="trendSeg">${[['with', 'With trend'], ['counter', 'Counter'], ['range', 'Range']].map(([v, l]) => `<button type="button" data-v="${v}" class="${t.trend === v ? 'is-on' : ''}">${l}</button>`).join('')}</div>`, 'half')}
   </div><datalist id="symList">${instruments.map((s) => `<option value="${esc(s)}">`).join('')}</datalist></div>
   <div data-pane="b" hidden><div class="stack">
     <div class="field"><span>How did you feel going in?</span><div class="chips" id="emo">${EMOTIONS.map((e) => `<button type="button" class="chip ${t.emotion === e ? 'is-on' : ''}" data-v="${e}">${e}</button>`).join('')}</div></div>
+    <div class="grid g-2" style="gap:12px">
+      <div class="field"><span>How did you exit?</span><div class="seg" id="exitSeg">${EXIT_BEHAVIOR.map(([v, l]) => `<button type="button" data-v="${v}" class="${t.exitBehavior === v ? 'is-on' : ''}">${l}</button>`).join('')}</div></div>
+      <div class="field"><span>Detached from the outcome?</span><div class="seg" id="neutSeg"><button type="button" data-v="yes" class="${t.neutral === true ? 'is-on' : ''}">Yes</button><button type="button" data-v="no" class="${t.neutral === false ? 'is-on' : ''}">No, it got to me</button></div></div>
+    </div>
     <div class="field"><span>Mistakes</span><div class="chips" id="mis">${MISTAKES.map((m) => `<button type="button" class="chip ${(t.mistakes || []).includes(m) ? 'is-on' : ''}" data-v="${m}">${m}</button>`).join('')}</div></div>
     ${S.rule.length ? `<div class="field"><span>Rules checklist</span><div class="chips" id="rulesChk">${S.rule.map((r) => `<button type="button" class="chip ${(t.rulesOk || []).includes(r.id) ? 'is-on' : ''}" data-v="${r.id}">${esc(r.text)}</button>`).join('')}</div></div>` : ''}
     <div class="row row--between"><span class="field"><span>Followed my plan</span></span><button type="button" class="switch ${t.followedPlan !== false ? 'is-on' : ''}" id="plan" aria-label="Followed plan"></button></div>
-    <div class="field"><span>Execution rating</span><div class="stars" id="stars">${[1, 2, 3, 4, 5].map((i) => `<button type="button" data-v="${i}" class="${i <= (t.rating || 0) ? 'is-on' : ''}" aria-label="${i} stars">${icon('star')}</button>`).join('')}</div></div>
+    <div class="row row--between"><div class="field"><span>Execution rating</span><div class="stars" id="stars">${[1, 2, 3, 4, 5].map((i) => `<button type="button" data-v="${i}" class="${i <= (t.rating || 0) ? 'is-on' : ''}" aria-label="${i} stars">${icon('star')}</button>`).join('')}</div></div><div class="mscore" id="mscore"></div></div>
   </div></div>
   <div data-pane="c" hidden><div class="stack">
-    ${field('Notes', `<textarea class="in" name="notes" rows="5" placeholder="Why did you take it? What did you see? What would you repeat or change?">${esc(t.notes || '')}</textarea>`)}
-    ${field('Tags', inp('tags', t.tags, 'placeholder="news, A+ setup, scaled out"'))}
-    <div class="drop" id="drop">${icon('image')}<div style="flex:1"><b>Chart screenshot</b><span class="muted" style="font-size:var(--fs-sm)">Drop or choose an image. The coach can read it.</span></div><input type="file" accept="image/*" id="file" hidden><button type="button" class="btn btn--sm" id="pick">Choose</button></div>
+    <div class="grid g-3" style="gap:12px">
+    ${field('Pre-trade plan', `<textarea class="in" name="notePlan" rows="4" placeholder="What did you expect, and why this level?">${esc(t.notePlan || '')}</textarea>`)}
+    ${field('Execution', `<textarea class="in" name="noteExec" rows="4" placeholder="How did the entry, management and exit actually go?">${esc(t.noteExec || '')}</textarea>`)}
+    ${field('Lesson', `<textarea class="in" name="noteLesson" rows="4" placeholder="What will you repeat or change?">${esc(t.noteLesson || '')}</textarea>`)}
+    </div>
+    ${field('Other notes', `<textarea class="in" name="notes" rows="2">${esc(t.notes || '')}</textarea>`)}
+    ${field('Tags', inp('tags', t.tags, 'placeholder="news, scaled out, best trade"'))}
+    <div class="drop" id="drop">${icon('image')}<div style="flex:1"><b>Chart screenshot</b><span class="muted" style="font-size:var(--fs-sm)">Drop, paste (⌘V) or choose an image. The coach can read it.</span></div><input type="file" accept="image/*" id="file" hidden><button type="button" class="btn btn--sm" id="pick">Choose</button></div>
     <div id="shotBox"></div>
   </div></div>
   <div data-pane="d" hidden><div class="stack">
@@ -311,6 +333,10 @@ export function tradeModal(t0, preset = {}) {
     t.side = $('#sideSeg .is-on', m.el)?.dataset.v || 'Long';
     t.emotion = $('#emo .is-on', m.el)?.dataset.v || '';
     t.grade = $('#gradeC .is-on', m.el)?.dataset.v || '';
+    t.setups = setOrder.slice(); t.setup = t.setups[0] || '';
+    t.trend = $('#trendSeg .is-on', m.el)?.dataset.v || '';
+    t.exitBehavior = $('#exitSeg .is-on', m.el)?.dataset.v || '';
+    const nv = $('#neutSeg .is-on', m.el)?.dataset.v; t.neutral = nv === 'yes' ? true : nv === 'no' ? false : undefined;
     t.mistakes = $$('#mis .is-on', m.el).map((b) => b.dataset.v);
     t.rulesOk = $$('#rulesChk .is-on', m.el).map((b) => b.dataset.v);
     t.followedPlan = $('#plan', m.el).classList.contains('is-on');
@@ -329,6 +355,18 @@ export function tradeModal(t0, preset = {}) {
   };
   m.el.addEventListener('input', hint);
   segInit($('#sideSeg', m.el)); segBind(m.el, '#sideSeg', hint);
+  // optional single-choice segs (click again to clear)
+  ['#trendSeg', '#exitSeg', '#neutSeg'].forEach((id) => { const sg = $(id, m.el); segInit(sg); $$('button', sg).forEach((b) => b.onclick = () => { const on = b.classList.contains('is-on'); $$('button', sg).forEach((x) => x.classList.remove('is-on')); if (!on) b.classList.add('is-on'); sg.__place?.(true); mScore(); }); });
+  let setOrder = setupsOf(t).slice();
+  const drawSetups = () => $$('#setC .chip:not(.chip--add)', m.el).forEach((c) => { const i = setOrder.indexOf(c.dataset.v); c.classList.toggle('is-on', i >= 0); c.innerHTML = esc(c.dataset.v) + (i === 0 ? ' <i class="prim">entry</i>' : i > 0 ? ' <i class="prim prim--c">confirm</i>' : ''); });
+  const bindSetup = (c) => c.onclick = () => { const v = c.dataset.v; const i = setOrder.indexOf(v); if (i >= 0) setOrder.splice(i, 1); else setOrder.push(v); drawSetups(); pop(c); };
+  $$('#setC .chip:not(.chip--add)', m.el).forEach(bindSetup);
+  $('#setAdd', m.el).onclick = (e) => { const b = e.currentTarget; const input = document.createElement('input'); input.className = 'in'; input.style.cssText = 'width:190px;height:34px;border-radius:99px'; input.placeholder = 'Setup name, Enter'; b.before(input); input.focus(); input.onkeydown = (ev) => { if (ev.key === 'Enter' && input.value.trim()) { ev.preventDefault(); const v = input.value.trim(); if (!S.setup.some((x) => x.name === v)) save('setup', { name: v }); const c = document.createElement('button'); c.type = 'button'; c.className = 'chip'; c.dataset.v = v; b.before(c); bindSetup(c); setOrder.push(v); input.remove(); drawSetups(); } if (ev.key === 'Escape') input.remove(); }; };
+  drawSetups();
+  const mScore = () => { const tmp = { ...t, emotion: $('#emo .is-on', m.el)?.dataset.v, exitBehavior: $('#exitSeg .is-on', m.el)?.dataset.v, mistakes: $$('#mis .is-on', m.el).map((b) => b.dataset.v), followedPlan: $('#plan', m.el).classList.contains('is-on') }; const nv = $('#neutSeg .is-on', m.el)?.dataset.v; tmp.neutral = nv === 'yes' ? true : nv === 'no' ? false : undefined; const f = formData(m.el); tmp.pnl = f.pnl !== '' ? f.pnl : calcPnl({ ...f, side: $('#sideSeg .is-on', m.el)?.dataset.v }) ?? 0; const sc = edgeScore(tmp); const z = sc === null ? null : zoneOf(sc); $('#mscore', m.el).innerHTML = sc === null ? '<small>Mindset score</small><b>—</b>' : `<small>Mindset score</small><b class="z-${z[0]}">${sc.toFixed(1)}</b><em>${z[1]}</em>`; };
+  m.el.addEventListener('click', () => setTimeout(mScore));
+  const durHint = () => { const f = formData(m.el); const d = durationMin({ date: f.date, time: f.time, exitTime: f.exitTime }); $('#durHint', m.el).textContent = d !== null ? `held ${d < 60 ? Math.round(d) + ' min' : (d / 60).toFixed(1) + ' h'}` : ''; };
+  m.el.addEventListener('input', durHint); durHint(); setTimeout(mScore);
   $$('#tTabs button', m.el).forEach((b) => b.onclick = () => { $$('#tTabs button', m.el).forEach((x) => x.classList.toggle('is-on', x === b)); $$('[data-pane]', m.el).forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab)); const pane = $(`[data-pane="${b.dataset.tab}"]`, m.el); if (window.gsap) window.gsap.fromTo(pane, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }); });
   const gHint = () => { const g = $('#gradeC .is-on', m.el)?.dataset.v; const bg = P().risk?.byGrade; $('#gradeHint', m.el).textContent = g && bg && num(bg[g]) ? `your ${g} risk: ${money(bg[g])}` : g ? '' : 'A+ high conviction · B normal · C low probability'; };
   $$('#gradeC .chip', m.el).forEach((c) => c.onclick = () => { const on = c.classList.contains('is-on'); $$('#gradeC .chip', m.el).forEach((x) => x.classList.remove('is-on')); if (!on) c.classList.add('is-on'); pop(c); gHint(); hint(); });
@@ -481,7 +519,7 @@ function dayModal(date) {
 // ======================================================================= ACCOUNTS
 export function accounts(el) {
   const accs = prefersStack();
-  const spent = sum(S.account, (a) => num(a.cost) + num(a.resetCost));
+  const spent = sum(S.account, accCost);
   const paid = sum(S.payout.filter((p) => p.status === 'credited'), (p) => p.amount);
   const live = S.account.filter(isLive);
   const groups = [['Live', accs.filter(isLive)], ['Passed / closed', accs.filter((a) => ['passed', 'closed'].includes(a.status))], ['Failed', accs.filter((a) => a.status === 'failed')]];
@@ -530,7 +568,7 @@ export function accountModal(a0) {
     <div class="half" id="pdBox">${slider({ name: 'personalDaily', label: 'Your daily stop', value: num(a.personalDaily) || defaultDaily(a) || 50, min: 50, max: dailyCap(a), step: 25, prefix: c, hint: 'tighter than the firm, if you like' })}</div>
     <div class="half">${slider({ name: 'minDays', label: 'Min trading days', value: num(a.minDays), min: 0, max: 30, step: 1, zero: 'None' })}</div>
     <div class="half">${slider({ name: 'consistency', label: 'Consistency rule', value: num(a.consistency), min: 0, max: 100, step: 5, suffix: '%', zero: 'None' })}</div>
-    ${field(`Cost paid (${esc(cur())})`, inp('cost', a.cost, 'type="number" step="any" placeholder="0"'))}${field('Resets / activation', inp('resetCost', a.resetCost, 'type="number" step="any" placeholder="0"'))}
+    <div class="full costs"><span class="costs__t">${icon('payouts')}What this account cost you <em>(${esc(cur())})</em></span><div class="costs__grid">${COST_FIELDS.map(([k, l]) => field(l, inp(k, a[k], 'type="number" step="any" placeholder="0"'))).join('')}</div></div>
     ${field('P&amp;L before journaling', inp('startPnl', a.startPnl, 'type="number" step="any" placeholder="0"'), '', 'e.g. −1000 if already down')}${field('Days already traded', inp('startDays', a.startDays, 'type="number" placeholder="0"'))}
     ${field('Notes', `<textarea class="in" name="notes" rows="2">${esc(a.notes || '')}</textarea>`, 'full')}
   </div>`,
@@ -575,7 +613,7 @@ export function accountModal(a0) {
   bindAI();
   m.on('save', () => {
     const f = formData(m.el); if (!f.name.trim()) { shake($('[name=name]', m.el)); return; }
-    ['size', 'cost', 'resetCost', 'target', 'maxLoss', 'dailyLimit', 'personalDaily', 'minDays', 'consistency', 'startPnl', 'startDays'].forEach((kk) => (f[kk] = f[kk] === '' || f[kk] === undefined ? '' : num(f[kk])));
+    ['size', 'cost', 'resetCost', 'activationFee', 'subscriptionFees', 'platformFees', 'otherFees', 'target', 'maxLoss', 'dailyLimit', 'personalDaily', 'minDays', 'consistency', 'startPnl', 'startDays'].forEach((kk) => (f[kk] = f[kk] === '' || f[kk] === undefined ? '' : num(f[kk])));
     ['target', 'dailyLimit', 'minDays', 'consistency', 'maxLoss'].forEach((kk) => { if (f[kk] === 0) f[kk] = ''; });
     f.type = f.status === 'funded' ? 'funded' : !f.firm ? 'personal' : 'challenge';
     if (f.status === 'funded') a.stage = 'funded';
@@ -663,15 +701,15 @@ let AR = 'all';
 export function analytics(el) {
   const list = inRange(S.trade, ...rangeFor(AR)); const st = stats(list);
   const wd = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const byWd = wd.map((d, i) => { const l = list.filter((t) => (parseISO(t.date).getDay() + 6) % 7 === i); return { label: d, value: sum(l, net), sub: `${l.length} trades` }; }).filter((x, i) => i < 5 || x.value);
+  const byWd = wd.map((d, i) => { const l = list.filter((t) => (parseISO(t.date).getDay() + 6) % 7 === i); return { label: d, value: sum(l, net), sub: `${l.length} trades`, trades: l, tip: d }; }).filter((x, i) => i < 5 || x.value);
   const hrs = {}; list.forEach((t) => { if (!t.time) return; const h = t.time.slice(0, 2); (hrs[h] ||= []).push(t); });
-  const byHr = Object.keys(hrs).sort().map((h) => ({ label: h + ':00', value: sum(hrs[h], net), sub: `${hrs[h].length} trades` }));
+  const byHr = Object.keys(hrs).sort().map((h) => ({ label: h + ':00', value: sum(hrs[h], net), sub: `${hrs[h].length} trades`, trades: hrs[h], tip: h + ':00' }));
   const rb = [['≤ −2R', (r) => r <= -2], ['−2 to −1', (r) => r > -2 && r <= -1], ['−1 to 0', (r) => r > -1 && r < 0], ['0 to 1', (r) => r >= 0 && r < 1], ['1 to 2', (r) => r >= 1 && r < 2], ['2 to 3', (r) => r >= 2 && r < 3], ['≥ 3R', (r) => r >= 3]];
   const rs = list.map(rMultiple).filter((r) => r !== null);
-  const rDist = rb.map(([l, f]) => ({ label: l, value: rs.filter(f).length * (l.includes('−') ? -1 : 1), tip: l, sub: `${rs.filter(f).length} trades` }));
+  const rDist = rb.map(([l, f]) => { const tr = list.filter((t) => { const r = rMultiple(t); return r !== null && f(r); }); return { label: l, value: tr.length * (l.includes('−') ? -1 : 1), tip: l, sub: `${tr.length} trades`, trades: tr }; });
   const mis = groupBy(list, (t) => (t.mistakes || []).filter((m) => m !== 'None')).sort((a, b) => a.net - b.net);
   const kept = list.filter((t) => t.followedPlan !== false && !(t.mistakes || []).some((m) => m !== 'None')); const broke = list.filter((t) => !kept.includes(t));
-  el.innerHTML = `<div class="page">${phead('Find your edge, find your leaks', 'Analytics', `${st.n} trades analysed.`, `<div class="seg" id="aSeg">${[['all', 'All time'], ['90d', '90 days'], ['30d', '30 days'], ['month', 'Month'], ['week', 'Week']].map(([v, l]) => `<button data-v="${v}" class="${AR === v ? 'is-on' : ''}">${l}</button>`).join('')}</div>`)}
+  el.innerHTML = `<div class="page">${phead('Find your edge, find your leaks', 'Analytics', `${st.n} trades analysed. Click any bar or row to see the trades behind it.`, `<div class="seg" id="aSeg">${[['all', 'All time'], ['90d', '90 days'], ['30d', '30 days'], ['month', 'Month'], ['week', 'Week']].map(([v, l]) => `<button data-v="${v}" class="${AR === v ? 'is-on' : ''}">${l}</button>`).join('')}</div>`)}
   <div class="grid g-4">${[
     ['Net P&L', st.total, 'moneySign', tone(st.total), `${st.n} trades, fees ${money(st.fees)}`], ['Win rate', st.winRate, 'pct', '', `${st.wins}W ${st.losses}L`], ['Profit factor', Number.isFinite(st.pf) ? st.pf : 99, 'dec', st.pf >= 1 ? 'good' : 'bad', 'gross win ÷ gross loss'], ['Expectancy', st.expectancy, 'moneySign', tone(st.expectancy), 'per trade'],
     ['Avg win', st.avgWin, 'money', 'good', `largest ${money(st.best)}`], ['Avg loss', -st.avgLoss, 'moneySign', 'bad', `largest ${money(st.worst)}`], ['Max drawdown', -st.maxDD, 'moneySign', 'bad', 'peak to trough, closed P&L'], ['Avg R', st.avgR ?? 0, 'r', tone(st.avgR || 0), `streak ${st.streak > 0 ? st.streak + 'W' : st.streak < 0 ? -st.streak + 'L' : '—'} · best ${st.bestStreak}W`]]
@@ -679,13 +717,19 @@ export function analytics(el) {
   <div class="grid g-2" style="margin-top:var(--gap)">
     ${card('Equity curve', 'Closed P&L, by day', equityChart(st.curve, { h: 220, id: 'an' }))}
     ${card('Rules kept vs broken', 'What discipline is worth to you', `<div class="grid g-2"><div class="kpi"><small>Followed plan</small><b class="${tone(sum(kept, net))}">${cnt(sum(kept, net), 'moneySign')}</b><em>${kept.length} trades · ${pct(kept.filter((t) => net(t) > 0).length / (kept.length || 1))} win</em></div><div class="kpi"><small>Broke a rule</small><b class="${tone(sum(broke, net))}">${cnt(sum(broke, net), 'moneySign')}</b><em>${broke.length} trades · ${pct(broke.filter((t) => net(t) > 0).length / (broke.length || 1))} win</em></div></div><h4 style="margin:18px 0 10px">Cost of mistakes</h4>${hbars(mis.slice(0, 6))}`)}
-    ${card('By setup', 'Which playbook plays pay', hbars(groupBy(list, (t) => t.setup || 'No setup')))}
+    ${card('By setup', 'Entry setup. Click a row for its trades.', hbars(groupBy(list, (t) => setupsOf(t)[0] || 'No setup')))}
+    ${card('Confirmation', 'Does a second setup improve the entry setup?', (() => { const rows = []; groupBy(list, (t) => setupsOf(t)[0]).forEach((g) => { const alone = g.list.filter((t) => new Set(setupsOf(t)).size === 1); const withC = groupBy(g.list.filter((t) => setupsOf(t).length > 1), (t) => [...new Set(setupsOf(t).slice(1))].filter((x) => x !== g.key)); if (!withC.length) return; rows.push({ key: g.key + ' alone', list: alone, n: alone.length, net: sum(alone, net), winRate: alone.length ? alone.filter((t) => net(t) > 0).length / alone.length : 0 }); withC.forEach((w) => rows.push({ ...w, key: `${g.key} + ${w.key}` })); }); return rows.length ? hbars(rows) + '<p class="muted" style="font-size:var(--fs-xs);margin:12px 0 0">Small samples are noisy: treat fewer than 10 trades per row as a hint, not proof.</p>' : '<div class="empty">Tag a second setup on a trade as confirmation to compare.</div>'; })())}
     ${card('By setup grade', 'Does your conviction match your results?', hbars(groupBy(list, (t) => (t.grade ? t.grade + ' grade' : 'Not graded')).sort((a, b) => a.key.localeCompare(b.key))))}
     ${card('By symbol', '', hbars(groupBy(list, (t) => t.symbol).slice(0, 10)))}
     ${card('By weekday', '', tubes(byWd, { h: 170 }))}
     ${card('By hour', `Entry time${P().sessionTz ? ' (' + esc(P().sessionTz) + ')' : ''}`, tubes(byHr, { h: 170 }))}
     ${card('By session', '', hbars(groupBy(list, (t) => t.session || sessionFromTime(t.time) || 'Unknown')))}
+    ${card('By entry timeframe', '', hbars(groupBy(list, (t) => t.tf || 'Not logged')))}
+    ${card('Trend alignment', 'With the trend, against it, or in a range', hbars(groupBy(list, (t) => ({ with: 'With trend', counter: 'Counter-trend', range: 'Range' }[t.trend] || 'Not logged'))))}
+    ${card('Exit behaviour', '', hbars(groupBy(list, (t) => (t.exitBehavior === 'late' ? (net(t) < 0 ? 'Late on a loser' : 'Late on a winner') : (EXIT_BEHAVIOR.find(([k]) => k === t.exitBehavior) || [0, 'Not logged'])[1]))))}
+    ${card('Hold time', 'Entry to exit', hbars(groupBy(list, (t) => durationBucket(t) || 'No exit time').sort((a, b) => ['< 5 min', '5–15 min', '15–30 min', '30–60 min', '1–4 h', '4 h +', 'No exit time'].indexOf(a.key) - ['< 5 min', '5–15 min', '15–30 min', '30–60 min', '1–4 h', '4 h +', 'No exit time'].indexOf(b.key))))}
     ${card('By emotion', 'How you felt going in', hbars(groupBy(list, (t) => t.emotion || 'Not logged')))}
+    ${card('Detached vs attached', 'Were you calm about the outcome?', hbars(groupBy(list, (t) => (t.neutral === true ? 'Detached' : t.neutral === false ? 'Attached to the result' : 'Not logged'))))}
     ${card('Long vs short', '', hbars(groupBy(list, (t) => t.side)))}
     ${card('R distribution', 'How many trades landed in each R bucket', tubes(rDist, { h: 170 }).replace(/[−+]?\$/g, ''))}
   </div></div>`;
@@ -694,6 +738,7 @@ export function analytics(el) {
 }
 
 // ======================================================================= JOURNAL
+const MAXIMS = ['Protect the downside; the upside takes care of itself.', 'A skipped bad trade is a winning decision.', 'Your stop is the price of being wrong. Pay it quickly.', 'Trade the plan you wrote, not the feeling you have.', 'Consistency is a stack of boring days.', 'The market pays patience and charges impatience.', 'One good process day beats one lucky P&L day.', 'Size for the next hundred trades, not this one.', 'When in doubt, stay out.', 'You only need a few clean setups a week.', 'Losses are tuition. Pay once, learn once.', 'Calm is a position too.'];
 let jDate = today();
 export function journal(el) {
   const j = S.journal.find((x) => x.date === jDate) || { date: jDate, mood: 3, followedPlan: true };
@@ -705,6 +750,9 @@ export function journal(el) {
     <section class="card"><div class="chead"><div class="chead__text"><h3>${esc(fmtDay(jDate))}</h3><p>${dayTrades.length} trades · <b class="${tone(dn)}">${money(dn, { sign: true })}</b></p></div>${S.ai.configured ? `<button class="btn btn--sm" id="jAI">${icon('coach')}Reflect with coach</button>` : ''}</div>
       <div class="stack">
         <div class="field"><span>Mood</span><div class="seg seg--accent" id="mood">${moods.map((x, i) => `<button type="button" data-v="${i + 1}" class="${+j.mood === i + 1 ? 'is-on' : ''}">${x}</button>`).join('')}</div></div>
+        <div class="diary"><div class="diary__q">${icon('brain')}<span>${esc(MAXIMS[(parseISO(jDate).getDate() + parseISO(jDate).getMonth()) % MAXIMS.length])}</span></div>
+          <div class="grid g-2" style="gap:12px"><div class="field"><span>Three things I'm grateful for</span>${[1, 2, 3].map((n) => inp('grat' + n, j['grat' + n], `placeholder="${n}."`)).join('')}</div>
+          <div class="field"><span>My main goal right now</span><textarea class="in" name="mainGoal" rows="3" placeholder="What are you working toward, beyond today's P&amp;L?">${esc(j.mainGoal || (S.journal.slice().sort((a, b) => b.date.localeCompare(a.date)).find((x) => x.mainGoal)?.mainGoal || ''))}</textarea></div></div></div>
         ${field('Pre-market plan', `<textarea class="in" name="pre" rows="4" placeholder="Bias, key levels, news, which setups you'll take, max loss today…">${esc(j.pre || '')}</textarea>`)}
         ${field('Post-market review', `<textarea class="in" name="post" rows="5" placeholder="What happened? Did you follow the plan? What would you do differently?">${esc(j.post || '')}</textarea>`)}
         ${field('Lesson to carry forward', inp('lesson', j.lesson, 'placeholder="One sentence"'))}
@@ -735,7 +783,12 @@ export function journal(el) {
 export function playbook(el) {
   const r = P().risk || {};
   el.innerHTML = `<div class="page">${phead('Only trade what you\'ve defined', 'Playbook', 'Your setups with their live stats, and the rules every trade is checked against.', `<button class="btn" data-act="rule">${icon('plus')}Rule</button><button class="btn btn--primary" data-act="setup">${icon('plus')}Setup</button>`)}
-  <div class="grid g-3">${S.setup.map((s, i) => { const l = S.trade.filter((t) => t.setup === s.name); const st = stats(l); return `<section class="card" data-setup="${s.id}" style="cursor:pointer"><div class="chead"><span class="prodico t${(i % 4) + 1}">${icon(setupIcons[i % setupIcons.length])}</span><div class="chead__text"><h3>${esc(s.name)}</h3><p>${l.length} trades</p></div><span class="amt ${tone(st.total)}">${money(st.total, { sign: true })}</span></div><p class="muted" style="margin:0 0 12px;font-size:var(--fs-md);min-height:20px">${esc(s.criteria || 'Add entry criteria, invalidation and targets.')}</p><div class="pace" style="grid-template-columns:repeat(3,1fr)"><div class="pace__item"><small>Win rate</small><b>${pct(st.winRate)}</b></div><div class="pace__item"><small>Avg R</small><b>${st.avgR !== null ? st.avgR.toFixed(2) : '—'}</b></div><div class="pace__item"><small>Per trade</small><b class="${tone(st.expectancy)}">${short(st.expectancy)}</b></div></div></section>`; }).join('')}</div>
+  <div class="grid g-2 pbgrid">${S.setup.map((s, i) => { const l = S.trade.filter((t) => setupsOf(t)[0] === s.name); const st = stats(l);
+    const mini = (title, fn, map = {}) => { const rows = groupBy(l, fn).sort((x, y) => y.n - x.n).slice(0, 3); return `<div class="pbm"><small>${title}</small>${rows.length ? rows.map((r) => `<div class="pbm__r" data-drill="${reg(r.list, s.name + ' · ' + (map[r.key] || r.key))}"><span>${esc(map[r.key] || r.key)}</span><b class="${r.winRate >= 0.5 ? 'good' : 'bad'}">${pct(r.winRate)}</b><em>${r.list.filter((t) => net(t) > 0).length}W / ${r.list.filter((t) => net(t) < 0).length}L</em></div>`).join('') : '<div class="pbm__r muted">—</div>'}</div>`; };
+    return `<section class="card pbcard" data-setup="${s.id}"><div class="chead"><span class="prodico t${(i % 4) + 1}">${icon(setupIcons[i % setupIcons.length])}</span><div class="chead__text"><h3>${esc(s.name)}</h3><p>${l.length} trades${s.criteria ? ' · ' + esc(s.criteria).slice(0, 80) : ''}</p></div><span class="amt ${tone(st.total)}">${money(st.total, { sign: true })}</span></div>
+      <div class="pbstats">${[['Win rate', pct(st.winRate)], ['Profit factor', Number.isFinite(st.pf) ? st.pf.toFixed(2) : st.n ? '∞' : '—'], ['Expectancy', money(st.expectancy, { sign: true })], ['Avg winner', money(st.avgWin)], ['Avg loser', money(st.avgLoss)], ['Avg R', st.avgR !== null ? st.avgR.toFixed(2) : '—']].map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>
+      ${l.length ? `<div class="pbmini">${mini('Trend', (t) => t.trend, { with: 'With trend', counter: 'Counter', range: 'Range' })}${mini('Timeframe', (t) => t.tf)}${mini('Session', (t) => t.session)}${mini('Grade', (t) => t.grade && t.grade + ' grade')}</div>` : '<p class="muted" style="margin:6px 0 0;font-size:var(--fs-md)">No trades tagged with this setup yet.</p>'}
+      <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn btn--sm btn--ghost" data-edit-setup="${s.id}">${icon('edit')}Edit rules</button></div></section>`; }).join('')}</div>
   <div class="grid g-2" style="margin-top:var(--gap)">
     ${card('Trading rules', 'Ticked off on every trade', `<div class="txlist">${S.rule.map((x) => `<div class="txrow" style="cursor:default"><span class="prodico">${icon('check')}</span><span class="cell__text"><b style="white-space:normal">${esc(x.text)}</b></span><button class="ibtn" data-del-rule="${x.id}" aria-label="Delete">${icon('trash')}</button></div>`).join('') || '<div class="empty">No rules yet.</div>'}</div>`)}
     ${card('Risk limits', 'Drive the “Safe to risk today” card and trade checks', `<div class="stack" id="riskF">
@@ -745,7 +798,7 @@ export function playbook(el) {
   </div></div>`;
   el.querySelector('[data-act="setup"]').onclick = () => setupModal();
   el.querySelector('[data-act="rule"]').onclick = () => { const m = modal('Add rule', field('Rule', inp('text', '', 'placeholder="No trades in the first 5 minutes"')), '<button class="btn" data-act="cancel">Cancel</button><button class="btn btn--primary" data-act="save">Add</button>', 'modal modal--sm'); m.on('save', () => { const v = $('[name=text]', m.el).value.trim(); if (v) save('rule', { text: v }); m.close(); H.refresh(); }); };
-  $$('[data-setup]', el).forEach((c) => c.onclick = () => setupModal(S.setup.find((s) => s.id === c.dataset.setup)));
+  $$('[data-edit-setup]', el).forEach((c) => c.onclick = () => setupModal(S.setup.find((s) => s.id === c.dataset.editSetup)));
   $$('[data-del-rule]', el).forEach((b) => b.onclick = () => { remove('rule', b.dataset.delRule); H.refresh(); });
   let mode = r.mode || 'none';
   const drawRm = () => { const bg = r.byGrade || { 'A+': 250, B: 150, C: 75 }; const mx = Math.max(500, num(r.maxDailyLoss)); $('#rmBox', el).innerHTML = mode === 'grade' ? ['A+', 'B', 'C'].map((g) => `<div class="grade"><span class="grade__tag g-${g === 'A+' ? 'a' : g.toLowerCase()}">${g}</span><div class="grade__body">${slider({ name: 'g_' + g, label: { 'A+': 'High conviction', B: 'Normal', C: 'Low probability' }[g], value: num(bg[g]), min: 25, max: mx, step: 25, prefix: sym() })}</div></div>`).join('') : mode === 'fixed' ? slider({ name: 'perTrade', label: 'Risk per trade', value: num(r.perTrade) || 150, min: 25, max: mx, step: 25, prefix: sym() }) : '<p class="muted" style="margin:0;font-size:var(--fs-md)">You log the risk on each trade; R multiples use it.</p>'; if (window.gsap) window.gsap.fromTo($('#rmBox', el).children, { opacity: 0, y: 8 }, { opacity: 1, y: 0, stagger: 0.05, duration: 0.4 }); };
@@ -757,7 +810,7 @@ function setupModal(s0) {
   const s = s0 ? { ...s0 } : {};
   const m = modal(s0 ? s.name : 'New setup', `<div class="stack">${field('Name', inp('name', s.name, 'placeholder="Opening range break"'))}${field('Entry criteria', `<textarea class="in" name="criteria" rows="3" placeholder="What must be true to take it?">${esc(s.criteria || '')}</textarea>`)}${field('Invalidation / stop', inp('stopRule', s.stopRule))}${field('Targets / management', inp('mgmt', s.mgmt))}</div>`,
     `${s0 ? `<button class="btn btn--ghost btn--danger" data-act="del">${icon('trash')}Delete</button><span style="flex:1"></span>` : ''}<button class="btn" data-act="cancel">Cancel</button><button class="btn btn--primary" data-act="save">Save</button>`, 'modal modal--sm');
-  m.on('save', () => { const f = formData(m.el); if (!f.name.trim()) return shake($('[name=name]', m.el)); if (s0 && s0.name !== f.name) S.trade.filter((t) => t.setup === s0.name).forEach((t) => save('trade', { ...t, setup: f.name })); save('setup', { ...s, ...f }); m.close(); H.refresh(); });
+  m.on('save', () => { const f = formData(m.el); if (!f.name.trim()) return shake($('[name=name]', m.el)); if (s0 && s0.name !== f.name) S.trade.filter((t) => setupsOf(t).includes(s0.name)).forEach((t) => { const ss = setupsOf(t).map((x) => (x === s0.name ? f.name : x)); save('trade', { ...t, setups: ss, setup: ss[0] }); }); save('setup', { ...s, ...f }); m.close(); H.refresh(); });
   m.on('del', () => { remove('setup', s.id); m.close(); H.refresh(); });
 }
 
@@ -830,9 +883,9 @@ export function settings(el) {
   segBind(el, '#sTheme', (v) => { const b = $('#sTheme .is-on', el).getBoundingClientRect(); window.__switchTheme(v, b.left + b.width / 2, b.top + b.height / 2); });
   $('#sFrost', el).oninput = (e) => { document.documentElement.style.setProperty('--frost', e.target.value); try { localStorage.setItem('ew_frost', e.target.value); } catch (er) {} };
   $('#sRM', el).onclick = (e) => { e.currentTarget.classList.toggle('is-on'); try { localStorage.setItem('ew_rm', e.currentTarget.classList.contains('is-on') ? '1' : '0'); } catch (er) {} toast('Reload to apply', icon('info')); };
-  $('#sExp', el).onclick = () => { const o = { exportedAt: new Date().toISOString(), profile: S.profile }; ['account', 'trade', 'payout', 'plan', 'journal', 'setup', 'rule'].forEach((k) => (o[k] = S[k])); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(o, null, 2)], { type: 'application/json' })); a.download = `edgewise-${today()}.json`; a.click(); };
+  $('#sExp', el).onclick = () => { const o = { exportedAt: new Date().toISOString(), profile: S.profile }; ['account', 'trade', 'payout', 'plan', 'journal', 'setup', 'rule'].forEach((k) => (o[k] = S[k])); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(o, null, 2)], { type: 'application/json' })); a.download = `smarttrade-${today()}.json`; a.click(); };
   $('#sImp', el).onclick = () => $('#sImpF', el).click();
-  $('#sImpF', el).onchange = async (e) => { try { const o = JSON.parse(await e.target.files[0].text()); if (o.profile) saveProfile(o.profile); ['account', 'trade', 'payout', 'plan', 'journal', 'setup', 'rule'].forEach((k) => (o[k] || []).forEach((x) => save(k, x))); toast('Imported', icon('check')); H.rerenderShell(); } catch (er) { toast('That file isn\'t an Edgewise export', icon('info')); } };
+  $('#sImpF', el).onchange = async (e) => { try { const o = JSON.parse(await e.target.files[0].text()); if (o.profile) saveProfile(o.profile); ['account', 'trade', 'payout', 'plan', 'journal', 'setup', 'rule'].forEach((k) => (o[k] || []).forEach((x) => save(k, x))); toast('Imported', icon('check')); H.rerenderShell(); } catch (er) { toast('That file isn\'t a Smart Trade export', icon('info')); } };
   $('#sOb', el).onclick = () => H.onboard();
   $('#sWipe', el).onclick = () => confirmBox('Delete all your journal data?', 'Trades, accounts, payouts, plans and notes are erased. This can\'t be undone.', async () => { await wipeAll(); H.onboard(); }, 'Delete everything');
   const out = $('#sOut', el); if (out) out.onclick = async () => { await flush(); await API.logout(); location.reload(); };
@@ -857,3 +910,16 @@ export function confirmBox(title, text, fn, label = 'Delete') {
   m.on('ok', () => { m.close(); fn(); });
 }
 export { countUp, flash };
+
+// shared helpers for views2.js
+export const helpers = { card, phead, cnt, meter, after, segBind, bindCommon, field, inp, optionList, formData, statusPill, hooks: () => H };
+
+// open the trades behind any chart bar / breakdown row
+document.addEventListener('click', (e) => {
+  const d = e.target.closest?.('[data-drill]'); if (!d) return;
+  const item = drillMap().get(d.dataset.drill); if (!item || !item.list.length) return;
+  const st = stats(item.list.slice().sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || ''))));
+  const m = modal(`${item.label || 'Trades'} · ${item.list.length} trade${item.list.length > 1 ? 's' : ''}`, `<div class="pace" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px"><div class="pace__item"><small>Net</small><b class="${tone(st.total)}">${money(st.total, { sign: true })}</b></div><div class="pace__item"><small>Win rate</small><b>${pct(st.winRate)}</b></div><div class="pace__item"><small>Profit factor</small><b>${Number.isFinite(st.pf) ? st.pf.toFixed(2) : '∞'}</b></div><div class="pace__item"><small>Avg trade</small><b class="${tone(st.expectancy)}">${money(st.expectancy, { sign: true })}</b></div></div>${tradeList(item.list.slice().sort((a, b) => b.date.localeCompare(a.date)))}`, '<button class="btn" data-act="cancel">Close</button>', 'modal');
+  $$('[data-trade]', m.el).forEach((r) => (r.onclick = () => { m.close(); setTimeout(() => tradeModal(S.trade.find((t) => t.id === r.dataset.trade)), 220); }));
+  if (window.gsap) window.gsap.fromTo($$('.txrow', m.el), { opacity: 0, x: -10 }, { opacity: 1, x: 0, stagger: 0.02, duration: 0.35, delay: 0.1 });
+});

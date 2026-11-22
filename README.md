@@ -1,4 +1,6 @@
-# Edgewise — trading journal with an AI coach
+# The Smart Trade — trading journal with an AI coach
+
+thesmarttrade.in
 
 A glass-UI trading journal for prop-firm and independent traders: trade log, calendar, prop account drawdown tracking, payouts, 5-day plans, analytics, daily journal, playbook and a Claude-powered coach.
 

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="The Smart Trade">
+  <rect x="1" y="1" width="62" height="62" rx="16" fill="#0c0d12"/>
+  <rect x="1.75" y="1.75" width="60.5" height="60.5" rx="15.25" fill="none" stroke="#ffffff" stroke-opacity=".12" stroke-width="1.5"/>
+  <path d="M35.5 18.5H26a7 7 0 0 0 0 14h6.5a7 7 0 0 1 0 14H19.5" fill="none" stroke="#ff3048" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M45 13v38" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"/>
+  <rect x="40.5" y="21" width="9" height="20" rx="2.4" fill="#ffffff"/>
+</svg>
