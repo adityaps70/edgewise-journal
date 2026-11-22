@@ -122,3 +122,16 @@ body.lp { overflow: auto; overflow-x: hidden; }
 .hero { position: relative; }
 .hero::before { content: ""; position: absolute; z-index: -1; width: 620px; height: 620px; right: -80px; top: 40px; border-radius: 50%; background: radial-gradient(closest-side, #ff304833, #4d7dff1f 55%, transparent); filter: blur(30px); pointer-events: none; }
 .eyebrow .live, .eyebrow .live::after { background: var(--accent); }
+
+/* ---------- restraint layer ---------- */
+.hs__head b { background: none; color: var(--ink); -webkit-background-clip: initial; background-clip: initial; }
+.hero h1 .grad, .hero h1 .word:last-child .ch { background: none; color: var(--ink); -webkit-background-clip: initial; background-clip: initial; }
+.hero::before { display: none; }
+.mini-ladder { background: var(--card-3); } .mini-ladder i { background: var(--ink); }
+.demo__ladder .ladder__track { background: var(--card-3); }
+.demo__ladder .ladder__fill { background: var(--bad); opacity: .45; }
+.final__card { background: linear-gradient(140deg, var(--glass-hi), transparent 40%), var(--card); }
+.steps3__line { display: none; }
+.step3__n { background: var(--card-3); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-2); }
+.sec__head h2 { margin-top: 0; }
+.ladder__stop { background: var(--ink); box-shadow: 0 0 0 3px #ffffff1a; }

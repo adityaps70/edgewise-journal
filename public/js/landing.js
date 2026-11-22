@@ -35,8 +35,7 @@ function boot() {
   // hero
   const h1 = $('.hero h1'); const chars = splitHeading(h1);
   const tl = g.timeline({ delay: 0.15 });
-  tl.fromTo($$('.hero .eyebrow'), { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.6, ease: 'expo.out' })
-    .fromTo(chars, { yPercent: 115, rotation: 6 }, { yPercent: 0, rotation: 0, duration: 0.9, ease: 'power4.out', stagger: 0.018 }, 0.1)
+  tl    .fromTo(chars, { yPercent: 115, rotation: 6 }, { yPercent: 0, rotation: 0, duration: 0.9, ease: 'power4.out', stagger: 0.018 }, 0.1)
     .fromTo($$('.hero__sub, .hero__cta > *, .hero__fine'), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.7, ease: 'expo.out', stagger: 0.07, clearProps: 'transform,opacity' }, 0.45)
     .fromTo('.hs--main', { opacity: 0, y: 40, rotationX: 12, scale: 0.96 }, { opacity: 1, y: 0, rotationX: 0, scale: 1, duration: 1.1, ease: 'expo.out', transformPerspective: 1200 }, 0.3)
     .fromTo('.hs--acct', { opacity: 0, y: 60, rotation: -4, scale: 0.92 }, { opacity: 1, y: 0, rotation: -3, scale: 1, duration: 1, ease: 'back.out(1.4)' }, 0.55)
@@ -60,10 +59,9 @@ function boot() {
     const cs = splitHeading(h);
     g.fromTo(cs, { yPercent: 115, rotation: 6 }, { yPercent: 0, rotation: 0, duration: 0.85, ease: 'power4.out', stagger: 0.016, scrollTrigger: { trigger: h, start: 'top 85%' } });
   });
-  $$('.sec__head').forEach((hd) => g.fromTo(hd.querySelectorAll('.eyebrow, p, .ticks li'), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.7, ease: 'expo.out', stagger: 0.06, scrollTrigger: { trigger: hd, start: 'top 82%' } }));
+  $$('.sec__head').forEach((hd) => g.fromTo(hd.querySelectorAll('p, .ticks li'), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.7, ease: 'expo.out', stagger: 0.06, scrollTrigger: { trigger: hd, start: 'top 82%' } }));
   ST.batch('.feat, .step3, .faq details', { start: 'top 88%', onEnter: (els) => g.fromTo(els, { opacity: 0, y: 40, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.9, ease: 'expo.out', stagger: 0.08, overwrite: true }) });
   g.set('.feat, .step3, .faq details', { opacity: 0 });
-  g.fromTo('.steps3__line path', { strokeDasharray: 1000, strokeDashoffset: 1000 }, { strokeDashoffset: 0, ease: 'none', scrollTrigger: { trigger: '.steps3', start: 'top 75%', end: 'bottom 60%', scrub: 0.6 } });
   g.fromTo('.step3__n', { scale: 0 }, { scale: 1, ease: 'back.out(3)', duration: 0.6, stagger: 0.2, scrollTrigger: { trigger: '.steps3', start: 'top 75%' } });
   g.fromTo('.mini-ladder i', { width: '0%' }, { width: '68%', duration: 1.4, ease: 'expo.out', scrollTrigger: { trigger: '.mini-ladder', start: 'top 90%' } });
   g.fromTo('#demo', { opacity: 0, y: 50, rotation: 1.5 }, { opacity: 1, y: 0, rotation: 0, duration: 1, ease: 'expo.out', scrollTrigger: { trigger: '#demo', start: 'top 85%' } });
@@ -88,9 +86,10 @@ function boot() {
 // live firm demo from the same catalog the app uses
 async function demo() {
   const cat = await loadFirms(); if (!cat.firms.length) return;
-  let firm = cat.firms[0]; let size = 50000; let stage = 'challenge';
+  let firm = cat.firms[0]; let progId = firm.programs[0].id; let size = 50000; let stage = 'challenge';
   const draw = () => {
-    const prog = firm.programs[0];
+    const prog = firm.programs.find((p) => p.id === progId) || firm.programs[0]; progId = prog.id;
+    $('#dProgs').innerHTML = firm.programs.map((p) => `<button data-v="${p.id}" class="${p.id === prog.id ? 'is-on' : ''}">${p.name}</button>`).join('');
     if (!prog.sizes.some((s) => s.size === size)) size = prog.sizes[Math.min(1, prog.sizes.length - 1)].size;
     const r = planRules(firm, prog, size, stage);
     $('#dFirms').innerHTML = cat.firms.map((f) => `<button type="button" class="fcard ${f.id === firm.id ? 'is-on' : ''}" data-f="${f.id}"><span class="fmono fmono--sm">${f.mono}</span><b>${f.name}</b></button>`).join('');
@@ -107,10 +106,11 @@ async function demo() {
     };
     place(cur);
     $('#dSlider').querySelector('.sl__num').addEventListener('input', (e) => place(+e.target.value || 0));
-    $$('#dFirms .fcard').forEach((b) => (b.onclick = () => { firm = cat.firms.find((f) => f.id === b.dataset.f); draw(); pulse(); }));
+    $$('#dFirms .fcard').forEach((b) => (b.onclick = () => { firm = cat.firms.find((f) => f.id === b.dataset.f); progId = firm.programs[0].id; draw(); pulse(); }));
+    $$('#dProgs button').forEach((b) => (b.onclick = () => { progId = b.dataset.v; draw(); pulse(); }));
     $$('#dSizes button').forEach((b) => (b.onclick = () => { size = +b.dataset.v; draw(); pulse(); }));
     $$('#dStage button').forEach((b) => (b.onclick = () => { stage = b.dataset.v; $$('#dStage button').forEach((x) => x.classList.toggle('is-on', x === b)); window.__seg && window.__seg($('#dStage')); draw(); pulse(); }));
-    import('./motion.js').then((mo) => { mo.segInit($('#dSizes')); mo.segInit($('#dStage')); });
+    import('./motion.js').then((mo) => { mo.segInit($('#dProgs')); mo.segInit($('#dSizes')); mo.segInit($('#dStage')); });
   };
   const pulse = () => { if (window.gsap && !reduced.matches) window.gsap.fromTo('#dRules .rp', { opacity: 0, y: 8 }, { opacity: 1, y: 0, stagger: 0.04, duration: 0.4, ease: 'power3.out' }); };
   draw();

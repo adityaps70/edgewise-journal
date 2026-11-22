@@ -42,10 +42,10 @@ export function equityChart(points, { h = 200, events = [], forecast = null, goa
   const first = pts[1] || pts[0]; const last = pts[pts.length - 1];
   return `<div class="chartwrap" style="position:relative">
   <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px">
-    <defs><linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--chart)" stop-opacity=".3"/><stop offset="1" stop-color="var(--chart)" stop-opacity="0"/></linearGradient><linearGradient id="${id}s" gradientUnits="userSpaceOnUse" x1="${L}" x2="${W - R}" y1="0" y2="0"><stop offset="0" stop-color="var(--blue)"/><stop offset=".7" stop-color="var(--violet)"/><stop offset="1" stop-color="var(--accent)"/></linearGradient></defs>
+    <defs><linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--chart)" stop-opacity=".1"/><stop offset="1" stop-color="var(--chart)" stop-opacity="0"/></linearGradient><linearGradient id="${id}s" gradientUnits="userSpaceOnUse" x1="${L}" x2="${W - R}" y1="0" y2="0"><stop offset="0" stop-color="var(--blue)"/><stop offset=".7" stop-color="var(--violet)"/><stop offset="1" stop-color="var(--accent)"/></linearGradient></defs>
     ${grid}${goalL}
     <path d="${area}" fill="url(#${id}g)" data-fade/>
-    <path d="${line}" fill="none" stroke="url(#${id}s)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" data-draw vector-effect="non-scaling-stroke"/>
+    <path d="${line}" fill="none" stroke="var(--chart)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" data-draw vector-effect="non-scaling-stroke"/>
     ${fc}${dots}
     <text x="${L}" y="${H - 4}">${esc(fmtDate(first.date))}</text><text x="${xs(pts.length - 1)}" y="${H - 4}" text-anchor="end">${esc(fmtDate(last.date))}</text>
     ${hit}
@@ -111,7 +111,7 @@ export function radar(m, { size = 240 } = {}) {
   const ring = (v) => m.axes.map((_, i) => pt(i, v).join(',')).join(' ');
   const poly = m.axes.map(([, v], i) => pt(i, v / 100).join(',')).join(' ');
   return `<div class="radar"><svg viewBox="0 0 ${size} ${size}" width="100%" style="max-width:${size}px">
-    <defs><linearGradient id="rdg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--blue)" stop-opacity=".45"/><stop offset="1" stop-color="var(--accent)" stop-opacity=".35"/></linearGradient></defs>
+    <defs><linearGradient id="rdg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".22"/><stop offset="1" stop-color="var(--accent)" stop-opacity=".22"/></linearGradient></defs>
     ${[0.25, 0.5, 0.75, 1].map((v) => `<polygon points="${ring(v)}" fill="none" stroke="var(--line-2)" stroke-dasharray="${v === 1 ? '' : '2 4'}"/>`).join('')}
     ${m.axes.map((_, i) => { const [x, y] = pt(i, 1); return `<line x1="${c}" y1="${c}" x2="${x}" y2="${y}" stroke="var(--line)"/>`; }).join('')}
     <g class="radar__shape" style="transform-origin:${c}px ${c}px"><polygon points="${poly}" fill="url(#rdg)" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
