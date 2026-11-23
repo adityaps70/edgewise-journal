@@ -1,5 +1,5 @@
 // Glass logo and floating glass candlesticks in a studio lit from the top left.
-// Loaded on demand by home.js when the stage gets near the viewport. (scene v6)
+// Loaded on demand by home.js when the stage gets near the viewport. (scene v7)
 import * as THREE from '../vendor/three/three.module.min.js';
 import { SVGLoader } from '../vendor/three/SVGLoader.js';
 
@@ -131,13 +131,13 @@ export function mount(canvas, { reduced = false } = {}) {
   ];
   const R = 0.3, candles = [];
   SPEC.forEach(([up, body, wu, wd, sz0, x, clear, z], i) => {
-    const sz = sz0 * 0.74; // overall candle scale
+    const sz = (0.55 + sz0 * 0.45) * 0.62; // overall candle scale
     const g = new THREE.Group(); const r = R * sz, bh = body * sz, top = bh / 2 + wu * sz, bot = bh / 2 + wd * sz;
     const bodyM = new THREE.Mesh(roundedCylinder(r, bh, Math.min(0.12, bh * 0.3)), up ? mBull : mBear);
     const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.03 * sz, 0.03 * sz, top + bot, 16), mWick); wick.position.y = (top - bot) / 2;
     g.add(wick, bodyM);
     const h = (n) => ((Math.sin(i * 12.9898 + n * 78.233) * 43758.5453) % 1 + 1) % 1; // fixed per-candle randomness
-    g.userData = { up: !!up, sz, x, z, y: clear + bot, sp: 0.35 + h(1) * 0.75, ph: h(2) * 6.28, amp: 0.07 + h(3) * 0.17, tilt: 0.03 + h(4) * 0.07, sway: 0.02 + h(5) * 0.06, low: -bot };
+    g.userData = { up: !!up, sz, x, z, y: clear + 0.35 + bot, sp: 0.35 + h(1) * 0.75, ph: h(2) * 6.28, amp: 0.07 + h(3) * 0.17, tilt: 0.03 + h(4) * 0.07, sway: 0.02 + h(5) * 0.06, low: -bot };
     g.position.set(x, g.userData.y, z);
     world.add(g); candles.push(g);
   });

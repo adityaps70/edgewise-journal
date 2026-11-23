@@ -1,7 +1,7 @@
 // Motion system — GSAP recipes matching the Verdelo template:
 // expo.out entrances, split-character headings, sliding nav pill / segment thumb,
 // count-up figures, growing bars, cursor glint on glass, back.out pops, circular theme reveal.
-import { $, $$, clamp } from './core.js?v=65c9daab';
+import { $, $$, clamp } from './core.js?v=a2b8b46f';
 
 const G = () => window.gsap;
 export const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
