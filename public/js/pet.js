@@ -1,7 +1,7 @@
 // Trading buddy: an optional little character that lives in the corner of the app.
 // It sleeps when you're away, wakes when the mouse comes near, follows the cursor with its eyes,
 // and talks only when something matters: your risk left today, losing streaks, news, your prep, your wins.
-import { S, P, $, esc, money, num, today, sum, net, safeToRisk, saveProfile, icon, API, addDays } from './core.js?v=f81d9df3';
+import { S, P, $, esc, money, num, today, sum, net, safeToRisk, saveProfile, icon, API, addDays } from './core.js?v=0489d084';
 
 export const PETS = { pip: { name: 'Pip', blurb: 'A little flame. Burns brighter when you stick to the plan.' } };
 
@@ -9,35 +9,35 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 let el = null; let st = null;
 
 // ---------- drawing: a chubby, glossy flame (original SVG) ----------
-const MOUTH = { happy: 'M-6 -1 Q0 7 6 -1 Q0 3 -6 -1Z', calm: 'M-3.5 0 Q0 3.2 3.5 0', worried: 'M-5 3 Q-2.5 0 0 2.5 Q2.5 0 5 3', sad: 'M-5 3.5 Q0 -2 5 3.5', wow: '' };
+const MOUTH = { happy: 'M-3.6 -0.6 Q0 4.4 3.6 -0.6 Z', calm: 'M-2.2 0 A2.2 1.25 0 1 0 2.2 0 A2.2 1.25 0 1 0 -2.2 0 Z', worried: 'M-3.4 1.4 Q-1.7 -0.6 0 1.2 Q1.7 -0.6 3.4 1.4', sad: 'M-3.4 1.8 Q0 -1.6 3.4 1.8', wow: '' };
 let uid = 0;
 function svg() {
   const u = 'p' + ++uid; // unique ids so the settings preview and the live pet don't share gradients
-  const body = 'M60 8 C69 24 79 23 82 14 C93 31 105 50 105 78 C105 104 86 121 60 121 C34 121 15 104 15 78 C15 59 23 45 34 34 C36 44 42 47 46 40 C50 30 54 21 60 8 Z';
+  const body = 'M60 9 C64 24 86 33 97 54 C107 74 103 101 88 114 C78 122 70 124 60 124 C50 124 42 122 32 114 C17 101 13 74 23 54 C33 36 52 28 60 9 Z';
   return `<svg viewBox="0 0 120 130" class="pet__svg" aria-hidden="true"><defs>
-      <radialGradient id="${u}b" cx="50%" cy="74%" r="72%"><stop offset="0" stop-color="#fff1b8"/><stop offset=".22" stop-color="#ffc04d"/><stop offset=".5" stop-color="#ff6d3a"/><stop offset=".8" stop-color="#ff2c48"/><stop offset="1" stop-color="#c80d33"/></radialGradient>
-      <radialGradient id="${u}r" cx="38%" cy="42%" r="70%"><stop offset=".55" stop-color="#7a0018" stop-opacity="0"/><stop offset="1" stop-color="#5c0013" stop-opacity=".55"/></radialGradient>
-      <radialGradient id="${u}c" cx="50%" cy="60%" r="60%"><stop offset="0" stop-color="#fff7d6"/><stop offset="1" stop-color="#ffd36b" stop-opacity="0"/></radialGradient>
-      <filter id="${u}s" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.2"/></filter>
-      <filter id="${u}k" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6"/></filter>
+      <linearGradient id="${u}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff4a2a"/><stop offset=".3" stop-color="#ff2419"/><stop offset=".6" stop-color="#ff2a18"/><stop offset=".8" stop-color="#ff4a1c"/><stop offset=".92" stop-color="#ff7e26"/><stop offset="1" stop-color="#ffa62e"/></linearGradient>
+      <radialGradient id="${u}d" cx="50%" cy="52%" r="56%"><stop offset=".72" stop-color="#8a0010" stop-opacity="0"/><stop offset="1" stop-color="#8a0010" stop-opacity=".28"/></radialGradient>
+      <radialGradient id="${u}l" cx="44%" cy="40%" r="40%"><stop offset="0" stop-color="#ff6a4a" stop-opacity=".55"/><stop offset="1" stop-color="#ff6a4a" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${u}y" x1="0" y1="0" x2="0" y2="1"><stop offset=".9" stop-color="#fff34a" stop-opacity="0"/><stop offset=".985" stop-color="#fff34a" stop-opacity=".7"/><stop offset="1" stop-color="#ffff6a" stop-opacity="1"/></linearGradient>
+      <linearGradient id="${u}t" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff4a22"/><stop offset="1" stop-color="#ff8a46"/></linearGradient>
     </defs>
     <g class="pet__flame">
+      <path class="pet__tip" d="M27 60 C21 46 17 35 13 22 C23 29 33 34 42 40 Z" fill="url(#${u}t)"/>
+      <path class="pet__tip t2" d="M93 60 C99 49 102 40 107 31 C98 34 88 38 80 41 Z" fill="url(#${u}t)"/>
       <path class="pet__shape" d="${body}" fill="url(#${u}b)"/>
-      <ellipse cx="60" cy="92" rx="30" ry="24" fill="url(#${u}c)" opacity=".75"/>
-      <path d="${body}" fill="url(#${u}r)"/>
-      <ellipse class="pet__gloss" cx="38" cy="60" rx="7" ry="13" transform="rotate(24 38 60)" fill="#fff" opacity=".6" filter="url(#${u}s)"/>
-      <circle class="pet__gloss" cx="46" cy="42" r="2.6" fill="#fff" opacity=".85"/>
+      <path d="${body}" fill="url(#${u}l)"/>
+      <path d="${body}" fill="url(#${u}d)"/>
+      <path d="${body}" fill="url(#${u}y)"/>
     </g>
     <g class="pet__face">
-      <g class="pet__cheeks"><ellipse cx="34" cy="94" rx="7" ry="4.2" fill="#ff8aa0" opacity=".75" filter="url(#${u}k)"/><ellipse cx="86" cy="94" rx="7" ry="4.2" fill="#ff8aa0" opacity=".75" filter="url(#${u}k)"/></g>
       <g class="pet__eyes"><g class="pet__open">
-        <g transform="translate(46 82)"><g class="pet__eye"><ellipse rx="6.6" ry="8.2" fill="#24070d"/><ellipse class="pet__hl" cx="-2" cy="-3.2" rx="2.6" ry="2.9" fill="#fff"/><circle class="pet__hl" cx="2.4" cy="2.8" r="1.2" fill="#fff" opacity=".9"/></g></g>
-        <g transform="translate(74 82)"><g class="pet__eye"><ellipse rx="6.6" ry="8.2" fill="#24070d"/><ellipse class="pet__hl" cx="-2" cy="-3.2" rx="2.6" ry="2.9" fill="#fff"/><circle class="pet__hl" cx="2.4" cy="2.8" r="1.2" fill="#fff" opacity=".9"/></g></g></g>
-        <g class="pet__shut" stroke="#24070d" stroke-width="2.6" stroke-linecap="round" fill="none"><path d="M40 83 q6 4.5 12 0"/><path d="M68 83 q6 4.5 12 0"/></g></g>
-      <path class="pet__mouth" transform="translate(60 98)" d="${MOUTH.calm}" stroke="#24070d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="#24070d" fill-opacity="0"/>
+        <g class="pet__e1" transform="translate(42 72)"><g class="pet__eye"><ellipse rx="4.3" ry="6" fill="#0b0b0d"/><ellipse cx="-1.4" cy="-2.6" rx="1.2" ry="1.1" fill="#fff"/></g></g>
+        <g class="pet__e2" transform="translate(78 72)"><g class="pet__eye"><ellipse rx="4.3" ry="6" fill="#0b0b0d"/><ellipse cx="-1.4" cy="-2.6" rx="1.2" ry="1.1" fill="#fff"/></g></g></g>
+        <g class="pet__shut" stroke="#0b0b0d" stroke-width="2" stroke-linecap="round" fill="none"><g class="pet__e1" transform="translate(42 72)"><path d="M-4.5 1 q4.5 3.5 9 0"/></g><g class="pet__e2" transform="translate(78 72)"><path d="M-4.5 1 q4.5 3.5 9 0"/></g></g></g>
+      <g class="pet__m" transform="translate(60 80)"><path class="pet__mouth" d="${MOUTH.calm}" stroke="#0b0b0d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="#0b0b0d"/></g>
     </g>
-    <path class="pet__sweat" d="M100 40 q6 10 0 14 q-6 -4 0 -14z" fill="#8fd3ff"/>
-    <g class="pet__spark" fill="#ffe27a"><path d="M10 34 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z"/><path d="M108 22 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5z"/></g>
+    <path class="pet__sweat" d="M100 52 q6 10 0 14 q-6 -4 0 -14z" fill="#8fd3ff"/>
+    <g class="pet__spark" fill="#ffe27a"><path d="M8 44 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z"/><path d="M110 20 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5z"/></g>
   </svg>`;
 }
 
@@ -75,7 +75,7 @@ function read() {
 // ---------- the widget ----------
 const coarse = matchMedia('(pointer: coarse)');
 const cfg = () => P().pet || {};
-const following = () => !!cfg().follow && !coarse.matches;
+const following = () => cfg().follow !== false && !coarse.matches;
 let mouse = { x: -1, y: -1, t: 0 };
 
 export function mountPet() {
@@ -86,7 +86,7 @@ export function mountPet() {
   el = document.createElement('div'); el.className = 'pet pet--pip'; el.dataset.kind = 'pip'; el.setAttribute('role', 'button'); el.setAttribute('aria-label', 'Pip, your trading buddy. Click for quick actions.'); el.tabIndex = 0;
   el.innerHTML = `<div class="pet__say" hidden><button type="button" class="pet__x" aria-label="Close">${icon('close')}</button><p></p><div class="pet__acts"></div></div><div class="pet__tilt"><div class="pet__body">${svg()}</div></div><span class="pet__shadow"></span>`;
   document.body.append(el);
-  st = { mood: '', last: '', sleep: false, idleT: Date.now(), saidAt: 0, timers: [], x: 0, y: 0, vx: 0, raf: 0, look: { x: 0, y: 0 }, cur: { x: 0, y: 0 } };
+  st = { mood: '', last: '', sleep: false, idleT: Date.now(), saidAt: 0, timers: [], x: 0, y: 0, vx: 0, lean: 0, raf: 0, look: { x: 0, y: 0 }, cur: { x: 0, y: 0 } };
   el.classList.toggle('is-follow', following());
   place(); drag(); closers(); loop(); blink(); think(true);
   st.timers.push(setInterval(() => { nextNews().then(() => think()); }, 60000));
@@ -140,26 +140,39 @@ function onMove(e) {
   if (st.sleep && d < 180) wake();
   el.classList.toggle('is-near', d < 140);
 }
+// the face sits on a ball: turning the ball moves each feature along the sphere and squashes it near the edge
+const BALL = { cx: 60, cy: 86, r: 40 };
+const FEAT = [['.pet__e1', 42, 72], ['.pet__e2', 78, 72], ['.pet__m', 60, 80]].map(([sel, x, y]) => [sel, Math.asin((x - BALL.cx) / BALL.r), Math.asin((y - BALL.cy) / BALL.r)]);
+function turnFace(yaw, pitch) {
+  if (!el) return;
+  FEAT.forEach(([sel, lon, lat]) => {
+    const a = lon + yaw; const b = lat + pitch; const ca = Math.cos(a); const cb = Math.cos(b);
+    const x = BALL.cx + BALL.r * Math.sin(a) * cb; const y = BALL.cy + BALL.r * Math.sin(b);
+    const sx = Math.max(0.08, ca); const sy = Math.max(0.3, cb / Math.cos(lat));
+    el.querySelectorAll(sel).forEach((g) => { g.setAttribute('transform', `translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${sx.toFixed(3)} ${sy.toFixed(3)})`); g.style.opacity = ca < 0.12 ? 0 : 1; });
+  });
+}
 // one animation loop: eyes, face and body turn toward the cursor; in follow mode Pip trots after it on a short leash
 function loop() {
   const tick = () => {
     if (!el) return; const w = SIZE(); const cx = st.x + w / 2; const cy = st.y + w / 2;
     // follow
     if (following() && mouse.t && !isMenuOpen() && !el.classList.contains('is-drag')) {
-      const dx = mouse.x - cx; const dy = mouse.y - cy; const d = Math.hypot(dx, dy) || 1; const LEASH = 120; const REST = 78;
+      const dx = mouse.x - cx; const dy = mouse.y - cy; const d = Math.hypot(dx, dy) || 1; const LEASH = 150; const REST = 96;
       if (d > LEASH || st.chasing) {
         st.chasing = d > REST + 4;
         const tx = mouse.x - (dx / d) * REST - w / 2; const ty = mouse.y - (dy / d) * REST - w / 2;
-        const nx = st.x + (tx - st.x) * 0.09; const ny = st.y + (ty - st.y) * 0.09; st.vx = nx - st.x; setPos(nx, ny);
+        const nx = st.x + (tx - st.x) * 0.045; const ny = st.y + (ty - st.y) * 0.045; st.vx = nx - st.x; setPos(nx, ny);
       } else st.vx *= 0.85;
       el.classList.toggle('is-moving', Math.abs(st.vx) > 0.6 || !!st.chasing);
     } else { st.vx *= 0.85; el.classList.remove('is-moving'); }
     // look
     let lx = 0; let ly = 0;
     if (mouse.t && !st.sleep) { const dx = mouse.x - cx; const dy = mouse.y - cy; const d = Math.hypot(dx, dy) || 1; const k = Math.min(1, d / 220); lx = (dx / d) * k; ly = (dy / d) * k; }
-    st.cur.x += (lx - st.cur.x) * 0.14; st.cur.y += (ly - st.cur.y) * 0.14;
-    const L = st.cur; const lean = Math.max(-14, Math.min(14, st.vx * 1.6));
-    el.style.setProperty('--lx', L.x.toFixed(3)); el.style.setProperty('--ly', L.y.toFixed(3)); el.style.setProperty('--lean', lean.toFixed(2) + 'deg');
+    st.cur.x += (lx - st.cur.x) * 0.1; st.cur.y += (ly - st.cur.y) * 0.1;
+    const L = st.cur; st.lean += (Math.max(-16, Math.min(16, st.vx * 2.2)) - st.lean) * 0.12;
+    el.style.setProperty('--lx', L.x.toFixed(3)); el.style.setProperty('--ly', L.y.toFixed(3)); el.style.setProperty('--lean', st.lean.toFixed(2) + 'deg');
+    turnFace(L.x * 0.95, L.y * 0.55);
     st.raf = requestAnimationFrame(tick);
   };
   st.raf = requestAnimationFrame(tick);
@@ -168,7 +181,7 @@ function blink() { const go = () => { if (!el) return; if (!st.sleep) { el.class
 function sleep(on) { if (!el) return; st.sleep = on; el.classList.toggle('is-asleep', on); if (on) say('Zzz…', null, 0, true); }
 function wake() { if (!el || !st.sleep) return; sleep(false); hide(); setMood(st.mood || 'calm'); if (Date.now() - st.saidAt > 20000) setTimeout(() => think(true), 300); }
 function bounce(h = 18) { if (!window.gsap || reduced.matches || !el) return; window.gsap.fromTo($('.pet__body', el), { y: 0, scaleY: 1, scaleX: 1 }, { keyframes: [{ y: 2, scaleY: 0.86, scaleX: 1.1, duration: 0.1 }, { y: -h, scaleY: 1.08, scaleX: 0.94, duration: 0.22, ease: 'power2.out' }, { y: 0, scaleY: 0.92, scaleX: 1.06, duration: 0.2, ease: 'power2.in' }, { scaleY: 1, scaleX: 1, duration: 0.25, ease: 'back.out(3)' }] }); }
-function setMood(m) { if (!el) return; st.mood = m; ['happy', 'calm', 'worried', 'sad'].forEach((x) => el.classList.toggle('m-' + x, x === m)); const mo = $('.pet__mouth', el); mo.setAttribute('d', MOUTH[m] || MOUTH.calm); mo.setAttribute('fill-opacity', m === 'happy' ? 1 : 0); }
+function setMood(m) { if (!el) return; st.mood = m; ['happy', 'calm', 'worried', 'sad'].forEach((x) => el.classList.toggle('m-' + x, x === m)); const mo = $('.pet__mouth', el); mo.setAttribute('d', MOUTH[m] || MOUTH.calm); mo.setAttribute('fill-opacity', m === 'happy' || m === 'calm' || !MOUTH[m] ? 1 : 0); }
 
 function say(text, action, hold = 7, quiet = false) {
   if (!el) return; const b = $('.pet__say', el); clearTimeout(st.sayT);
@@ -201,7 +214,7 @@ function onPrep() { wake(); setMood('happy'); bounce(); say('Prep done. Trade on
 
 function menu() {
   if (!el) return; wake(); const b = $('.pet__say', el);
-  const r = safeToRisk(); const f = !!cfg().follow;
+  const r = safeToRisk(); const f = cfg().follow !== false;
   $('p', b).innerHTML = r.amount !== null ? `Risk left today: <b>${esc(money(r.amount))}</b>` : "Hi, I'm Pip.";
   $('.pet__acts', b).innerHTML = `<button type="button" data-a="log">${icon('plus')}Log trade</button><button type="button" data-a="shot">${icon('image')}From screenshot</button><button type="button" data-a="coach">${icon('coach')}Ask coach</button><button type="button" data-a="journal">${icon('journal')}Start my day</button>
     <div class="pet__opts"><span>Pip</span><div class="pet__seg" role="group" aria-label="How Pip moves"><button type="button" data-a="stay" class="${f ? '' : 'is-on'}">Stays put</button><button type="button" data-a="follow" class="${f ? 'is-on' : ''}" ${coarse.matches ? 'disabled title="Needs a mouse"' : ''}>Follows cursor</button></div></div>
@@ -212,7 +225,7 @@ function menu() {
     e.stopPropagation(); const a = x.dataset.a;
     if (a === 'stay' || a === 'follow') { setFollow(a === 'follow'); b.querySelectorAll('.pet__seg button').forEach((y) => y.classList.toggle('is-on', y === x)); return; }
     hide();
-    if (a === 'log' || a === 'shot') { const V = await import('./views.js?v=f81d9df3'); V.tradeModal(null, {}, a === 'shot' ? { shot: true } : {}); }
+    if (a === 'log' || a === 'shot') { const V = await import('./views.js?v=0489d084'); V.tradeModal(null, {}, a === 'shot' ? { shot: true } : {}); }
     else if (a === 'coach') location.hash = '#coach'; else if (a === 'journal') location.hash = '#journal';
     else if (a === 'hide') { try { localStorage.setItem(HIDE_KEY, today()); } catch (err) {} if (window.gsap && !reduced.matches) window.gsap.to($('.pet__tilt', el), { scale: 0, duration: 0.3, ease: 'back.in(2)', onComplete: unmountPet }); else unmountPet(); }
   }));
