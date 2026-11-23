@@ -96,6 +96,7 @@ async function ensurePayTable(env) { await env.DB.prepare('CREATE TABLE IF NOT E
 // records the payment once and extends Pro; safe to call from both the checkout callback and the webhook
 async function grantPro(env, { paymentId, orderId, userId, amount, currency, months }) {
   await ensurePayTable(env); await ensurePlanTables(env);
+  if (!(await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first())) return false;
   const ins = await env.DB.prepare('INSERT OR IGNORE INTO payments (id, order_id, user_id, amount, currency, months, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').bind(paymentId, orderId || '', userId, amount || 0, currency || '', months || 1, 'captured', Date.now()).run();
   if (!ins.meta?.changes) return false;
   const u = await env.DB.prepare('SELECT plan, pro_until FROM users WHERE id = ?').bind(userId).first();
@@ -422,7 +423,8 @@ export async function onRequest(context) {
         const pay = ev.payload?.payment?.entity; const ord = ev.payload?.order?.entity; const orderId = pay?.order_id || ord?.id;
         let notes = (ord && ord.notes && ord.notes.user_id) ? ord.notes : pay?.notes || {};
         if (!notes.user_id && orderId && rzpOn(env)) notes = (await rzp(env, '/orders/' + orderId)).notes || {};
-        if (notes.user_id && pay?.id && pay.status === 'captured') await grantPro(env, { paymentId: pay.id, orderId, userId: notes.user_id, amount: pay.amount, currency: pay.currency, months: parseInt(notes.months || '1', 10) });
+        // the Razorpay account also serves Self Streak: only act on orders this site created
+        if (notes.product === 'The Smart Trade Pro' && notes.user_id && pay?.id && pay.status === 'captured') await grantPro(env, { paymentId: pay.id, orderId, userId: notes.user_id, amount: pay.amount, currency: pay.currency, months: parseInt(notes.months || '1', 10) });
       }
       // refunds: a full refund takes back the Pro time that payment bought; a partial one is only recorded
       if (ev.event === 'refund.processed') {
