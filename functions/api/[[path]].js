@@ -251,6 +251,20 @@ export async function onRequest(context) {
       return startSession(env, request, user);
     }
 
+    // economic calendar: this week's events from the Forex Factory feed, cached at the edge for 30 min with a stale copy in D1
+    if (path === '/econ' && method === 'GET') {
+      const cache = caches.default; const key = new Request('https://cache.thesmarttrade.in/econ-week');
+      const hit = await cache.match(key); if (hit) return hit;
+      await env.DB.prepare('CREATE TABLE IF NOT EXISTS econ_cache (k TEXT PRIMARY KEY, body TEXT NOT NULL, at INTEGER NOT NULL)').run();
+      let body = null; let at = Date.now();
+      try {
+        const r = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.json', { headers: { 'user-agent': 'TheSmartTrade/1.0 (+https://thesmarttrade.in)' } });
+        if (r.ok) { const j = await r.json(); if (Array.isArray(j)) { body = JSON.stringify(j.map((e) => ({ t: e.title, c: e.country, d: e.date, i: e.impact, f: e.forecast || '', p: e.previous || '' }))); await env.DB.prepare('INSERT OR REPLACE INTO econ_cache (k, body, at) VALUES (?, ?, ?)').bind('week', body, at).run(); } }
+      } catch (e) { /* fall back to the stored copy */ }
+      if (!body) { const row = await env.DB.prepare('SELECT body, at FROM econ_cache WHERE k = ?').bind('week').first(); if (!row) return err('Calendar is unavailable right now. Try again in a few minutes.', 503); body = row.body; at = row.at; }
+      const res = new Response(`{"at":${at},"events":${body}}`, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=1800' } });
+      await cache.put(key, res.clone()); return res;
+    }
     if (path === '/config' && method === 'GET') {
       return json({ googleClientId: env.GOOGLE_CLIENT_ID || null, signup: env.ALLOW_SIGNUP !== 'false' });
     }

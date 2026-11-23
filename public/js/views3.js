@@ -3,12 +3,12 @@ import {
   S, P, $, $$, esc, uid, num, sum, clamp, today, addDays, parseISO, weekStart, fmtDate, fmtDay, money, pct, tone, sym,
   net, stats, groupBy, inRange, rMultiple, accName, isLive, icon, API, aiContext, md, save, remove, saveProfile, setupsOf,
   F, setFilter, filterLabels, filterCount, FT, tagList, runAgents, autoTags, agentState, AGENT_METRICS, AGENT_OPS, pointValue, POINT_VALUE,
-} from './core.js?v=42b089e0';
-import { equityChart, hbars } from './charts.js?v=42b089e0';
-import { helpers, modal, confirmBox } from './views.js?v=42b089e0';
-import { segInit, toast, shake } from './motion.js?v=42b089e0';
-import { slider } from './ui.js?v=42b089e0';
-import * as V4m from './views4.js?v=42b089e0';
+} from './core.js?v=d1fceb2b';
+import { equityChart, hbars } from './charts.js?v=d1fceb2b';
+import { helpers, modal, confirmBox } from './views.js?v=d1fceb2b';
+import { segInit, toast, shake } from './motion.js?v=d1fceb2b';
+import { slider } from './ui.js?v=d1fceb2b';
+import * as V4m from './views4.js?v=d1fceb2b';
 
 // views.js imports this module too, so reach helpers lazily (they don't exist yet while modules load)
 const card = (...a) => helpers.card(...a); const phead = (...a) => helpers.phead(...a); const cnt = (...a) => helpers.cnt(...a);
@@ -318,25 +318,73 @@ export function tools(el) {
     $('#psOut', el).innerHTML = `<div class="grid g-3" style="gap:10px"><div class="kpi"><small>Contracts</small><b>${qty}</b><em>${money(perC)} risk each</em></div><div class="kpi"><small>Actual risk</small><b>${money(qty * perC)}</b><em>${qty ? pct(qty * perC / risk) + ' of plan' : 'stop too wide for this risk'}</em></div><div class="kpi"><small>Reward</small><b class="good">${money(qty * tgt * pv)}</b><em>${stop ? (tgt / stop).toFixed(2) : '—'} R</em></div></div>${micro !== null ? `<p class="muted" style="margin:10px 0 0;font-size:var(--fs-md)">Or ${micro} micro${micro === 1 ? '' : 's'} (M${esc(String(f.sym).toUpperCase())}) for finer sizing.</p>` : ''}`;
   };
   ps.addEventListener('input', calc);
-  $$('#psGrade .chip', el).forEach((c) => (c.onclick = () => { const s = $('[name=risk]', ps).closest('.sl'); import('./ui.js?v=42b089e0').then((u) => { u.setSlider(s, +c.dataset.v); calc(); }); $$('#psGrade .chip', el).forEach((x) => x.classList.toggle('is-on', x === c)); }));
+  $$('#psGrade .chip', el).forEach((c) => (c.onclick = () => { const s = $('[name=risk]', ps).closest('.sl'); import('./ui.js?v=d1fceb2b').then((u) => { u.setSlider(s, +c.dataset.v); calc(); }); $$('#psGrade .chip', el).forEach((x) => x.classList.toggle('is-on', x === c)); }));
   calc();
   after(el);
 }
 
 // ======================================================================= ECONOMIC CALENDAR
-export function economic(el) {
-  const theme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
-  el.innerHTML = `<div class="page">${phead('Know what moves the market today', 'Economic calendar', 'High and medium impact news for the US, Europe, UK, Japan, China and India, in your timezone. Check it before the open: most prop firms restrict trading around big releases.', '')}
-  <section class="card"><div id="econ" class="econ econ--full"><div class="empty">Loading calendar…</div></div>
-    <p class="muted" style="font-size:var(--fs-xs);margin:8px 0 0">Calendar by TradingView.</p></section></div>`;
-  const box = $('#econ', el);
-  const w = document.createElement('div'); w.className = 'tradingview-widget-container';
-  w.innerHTML = '<div class="tradingview-widget-container__widget"></div>';
-  const s = document.createElement('script'); s.src = 'https://s3.tradingview.com/external-embedding/embed-widget-events.js'; s.async = true;
-  s.innerHTML = JSON.stringify({ colorTheme: theme, isTransparent: true, width: '100%', height: 720, locale: 'en', importanceFilter: '0,1', countryFilter: 'us,eu,gb,jp,cn,in' });
-  s.onerror = () => { box.innerHTML = '<div class="empty">Couldn\'t load the calendar. Check your connection or an ad blocker.</div>'; };
-  w.append(s); setTimeout(() => { box.innerHTML = ''; box.append(w); }, 50);
+const FLAG = { USD: '🇺🇸', EUR: '🇪🇺', GBP: '🇬🇧', JPY: '🇯🇵', CNY: '🇨🇳', AUD: '🇦🇺', CAD: '🇨🇦', NZD: '🇳🇿', CHF: '🇨🇭', INR: '🇮🇳', ALL: '🌐' };
+const CUR_ORDER = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'AUD', 'CAD', 'NZD', 'CHF'];
+const IMPACTS = [['High', 'High'], ['Medium', 'Medium'], ['Low', 'Low'], ['Holiday', 'Holidays']];
+let EC = null; let ecData = null; let ecTimer = null;
+const ecLoadPrefs = () => {
+  try { const v = JSON.parse(localStorage.getItem('st_econ') || 'null'); if (v) return { day: 'today', ...v }; } catch (e) {}
+  const m = P().markets || []; const fx = m.includes('forex');
+  return { day: 'today', impact: ['High', 'Medium'], cur: fx ? CUR_ORDER.slice(0, 6) : ['USD'] };
+};
+const ecSave = () => { try { localStorage.setItem('st_econ', JSON.stringify({ impact: EC.impact, cur: EC.cur })); } catch (e) {} };
+const localISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const hhmm = (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const until = (ms) => { if (ms <= 0) return 'now'; const m = Math.round(ms / 60000); if (m < 60) return `in ${m} min`; const h = Math.floor(m / 60); const r = m % 60; return h < 24 ? `in ${h} h${r ? ' ' + r + ' min' : ''}` : `in ${Math.floor(h / 24)} d${h % 24 ? ' ' + (h % 24) + ' h' : ''}`; };
+const impactBars = (i) => { const n = { High: 3, Medium: 2, Low: 1 }[i] || 0; return i === 'Holiday' ? '<span class="ecimp ecimp--hol">Holiday</span>' : `<span class="ecimp ecimp--${i.toLowerCase()}" title="${i} impact"><i></i><i></i><i></i><em>${i}</em></span>`; };
+export async function economic(el) {
+  EC ||= ecLoadPrefs(); clearInterval(ecTimer);
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  el.innerHTML = `<div class="page">${phead("This week's market-moving news", 'Economic calendar', `Every time is in your timezone (${esc(tz.replace(/_/g, ' '))}). High-impact releases can move price in seconds, and many prop firms restrict trading around them: check your firm's rule.`, '')}<div id="ecBody"><section class="card"><div class="empty"><span class="typing"><i></i><i></i><i></i></span>Loading this week's events…</div></section></div></div>`;
   after(el);
+  try { if (!ecData || Date.now() - ecData._got > 15 * 60000) { ecData = await API.econ(); ecData._got = Date.now(); } }
+  catch (e) { $('#ecBody', el).innerHTML = `<section class="card"><div class="empty">${icon('info')}<b>Couldn't load the calendar</b>${esc(e.message || 'Check your connection and try again.')}</div></section>`; return; }
+  const all = (ecData.events || []).map((e) => { const d = new Date(e.d); return { ...e, at: d, day: localISO(d) }; }).filter((e) => !isNaN(e.at)).sort((a, b) => a.at - b.at);
+  const curs = [...new Set(all.map((e) => e.c))].sort((a, b) => (CUR_ORDER.indexOf(a) + 1 || 99) - (CUR_ORDER.indexOf(b) + 1 || 99));
+  const days = [...new Set(all.map((e) => e.day))].sort();
+  const todayK = localISO(new Date());
+  if (EC.day === 'today') EC.day = days.includes(todayK) ? todayK : 'all';
+  const draw = () => {
+    const now = Date.now();
+    const pass = (e) => EC.cur.includes(e.c) && EC.impact.includes(e.i);
+    const shown = all.filter(pass);
+    const list = EC.day === 'all' ? shown : shown.filter((e) => e.day === EC.day);
+    const nextHigh = shown.find((e) => e.i === 'High' && e.at >= now - 60000);
+    const todayHigh = all.filter((e) => e.day === todayK && e.i === 'High' && EC.cur.includes(e.c));
+    const upcomingToday = todayHigh.filter((e) => e.at >= now);
+    const byDay = [...new Set(list.map((e) => e.day))].sort().map((k) => ({ key: k, list: list.filter((e) => e.day === k) }));
+    const dayChip = (k) => { const d = parseISO(k); const hi = all.filter((e) => e.day === k && e.i === 'High' && EC.cur.includes(e.c)).length; return `<button type="button" class="ecday ${EC.day === k ? 'is-on' : ''} ${k === todayK ? 'is-today' : ''} ${k < todayK ? 'is-past' : ''}" data-day="${k}"><small>${d.toLocaleDateString([], { weekday: 'short' })}</small><b>${d.getDate()}</b><span class="ecday__hi">${hi ? '<i></i>'.repeat(Math.min(hi, 4)) : ''}</span></button>`; };
+    const row = (e) => { const past = e.at < now - 60000; return `<div class="ecrow ecrow--${e.i.toLowerCase()} ${past ? 'is-past' : ''}"><span class="ecrow__time">${e.i === 'Holiday' ? 'All day' : hhmm(e.at)}${past ? '<em>Released</em>' : ''}</span><span class="ecrow__cur"><span class="ecflag">${FLAG[e.c] || ''}</span>${esc(e.c)}</span><span class="ecrow__imp">${impactBars(e.i)}</span><span class="ecrow__title">${esc(e.t)}</span><span class="ecrow__num"><small>Forecast</small>${esc(e.f || '—')}</span><span class="ecrow__num"><small>Previous</small>${esc(e.p || '—')}</span></div>`; };
+    const nowLine = (g) => { if (g.key !== todayK) return g.list.map(row).join(''); const i = g.list.findIndex((e) => e.at >= now - 60000); const rows = g.list.map(row); if (i === -1) rows.push('<div class="ecnow"><span>Now · nothing else today</span></div>'); else rows.splice(i, 0, `<div class="ecnow"><span>Now · ${hhmm(new Date())}</span></div>`); return rows.join(''); };
+    $('#ecBody', el).innerHTML = `
+      <div class="grid g-2 ectop">
+        <section class="card echero ${nextHigh ? '' : 'is-quiet'}"><small>Next high-impact release</small>${nextHigh ? `<div class="echero__main"><span class="ecflag ecflag--lg">${FLAG[nextHigh.c] || ''}</span><div><b>${esc(nextHigh.t)}</b><span>${esc(nextHigh.c)} · ${fmtDay(nextHigh.day)} at ${hhmm(nextHigh.at)}</span></div></div><div class="echero__count" id="ecCount">${until(nextHigh.at - now)}</div>` : '<div class="echero__main"><div><b>Nothing high-impact left this week</b><span>for the currencies you follow</span></div></div>'}</section>
+        <section class="card echero"><small>Today</small><div class="echero__main"><div><b>${todayHigh.length ? `${todayHigh.length} high-impact release${todayHigh.length > 1 ? 's' : ''}` : 'No high-impact news'}</b><span>${todayHigh.length ? (upcomingToday.length ? `Next at ${hhmm(upcomingToday[0].at)}: ${esc(upcomingToday[0].c)} ${esc(upcomingToday[0].t)}` : 'All released for today') : 'A cleaner day for price action, for the currencies you follow'}</span></div></div>${todayHigh.length ? `<div class="echero__times">${todayHigh.map((e) => `<span class="${e.at < now ? 'is-past' : ''}">${hhmm(e.at)} ${esc(e.c)}</span>`).join('')}</div>` : ''}</section>
+      </div>
+      <section class="card ecbar">
+        <div class="ecdays"><button type="button" class="ecday ecday--all ${EC.day === 'all' ? 'is-on' : ''}" data-day="all"><small>Whole</small><b>Week</b><span class="ecday__hi"></span></button>${days.map(dayChip).join('')}</div>
+        <div class="ecfilters">
+          <div class="ecf"><span>Impact</span><div class="chips">${IMPACTS.map(([v, l]) => `<button type="button" class="chip ${EC.impact.includes(v) ? 'is-on' : ''}" data-imp="${v}">${l}</button>`).join('')}</div></div>
+          <div class="ecf"><span>Currencies</span><div class="chips">${curs.map((c) => `<button type="button" class="chip ${EC.cur.includes(c) ? 'is-on' : ''}" data-cur="${c}">${FLAG[c] || ''} ${c}</button>`).join('')}</div></div>
+        </div>
+      </section>
+      <section class="card ecboard">
+        ${byDay.length ? byDay.map((g) => `<div class="ecgroup"><div class="ecgroup__h"><b>${esc(fmtDay(g.key))}</b>${g.key === todayK ? '<span class="pill pill--accent">Today</span>' : ''}<span class="muted">${g.list.length} event${g.list.length > 1 ? 's' : ''}</span></div><div class="ecrows">${nowLine(g)}</div></div>`).join('') : `<div class="empty">${icon('calendar')}<b>Nothing matches</b>No ${EC.impact.join(' / ').toLowerCase()} events for ${EC.cur.join(', ') || 'the currencies you picked'}${EC.day !== 'all' ? ' on this day' : ' this week'}. Try adding a currency or impact level.</div>`}
+        <p class="ecfoot">Data from Forex Factory, refreshed every 30 minutes · last update ${Math.max(0, Math.round((now - ecData.at) / 60000))} min ago. Shows forecast and previous; actual figures are not included.</p>
+      </section>`;
+    $$('[data-day]', el).forEach((b) => (b.onclick = () => { EC.day = b.dataset.day; draw(); }));
+    $$('[data-imp]', el).forEach((b) => (b.onclick = () => { const v = b.dataset.imp; EC.impact = EC.impact.includes(v) ? EC.impact.filter((x) => x !== v) : [...EC.impact, v]; ecSave(); draw(); }));
+    $$('[data-cur]', el).forEach((b) => (b.onclick = () => { const v = b.dataset.cur; EC.cur = EC.cur.includes(v) ? EC.cur.filter((x) => x !== v) : [...EC.cur, v]; ecSave(); draw(); }));
+    const cnt = $('#ecCount', el); if (cnt) cnt.dataset.at = +nextHigh.at;
+  };
+  draw();
+  ecTimer = setInterval(() => { if (!el.isConnected || !$('#ecBody', el)) { clearInterval(ecTimer); return; } const c = $('#ecCount', el); if (c && +c.dataset.at - Date.now() < -60000) draw(); else if (c) c.textContent = until(+c.dataset.at - Date.now()); }, 30000);
 }
 
 // ======================================================================= MENTOR MODE
@@ -363,7 +411,7 @@ async function loadShares(el) {
     nt.innerHTML = `<div class="chead"><div class="chead__text"><h3>Feedback</h3><p>Notes your mentors left</p></div></div>${notes.length ? `<div class="txlist">${notes.map((n) => { const t = S.trade.find((x) => x.id === n.trade_id); return `<div class="txrow" ${t ? `data-trade="${t.id}"` : 'style="cursor:default"'}><span class="av" style="width:36px;height:36px;font-size:13px">${esc((n.author || 'M').slice(0, 1).toUpperCase())}</span><span class="cell__text"><b style="white-space:normal">${esc(n.text)}</b><small>${esc(n.author || 'Mentor')} via ${esc(n.label || 'link')} · ${esc(fmtDate(new Date(n.created_at).toISOString().slice(0, 10)))}${t ? ` · on ${esc(t.symbol)} ${esc(fmtDate(t.date))}` : ''}</small></span></div>`; }).join('')}</div>` : `<div class="empty">${icon('users')}<b>No feedback yet</b>Notes appear here and on the trade itself.</div>`}`;
     $$('[data-copy]', sh).forEach((b) => (b.onclick = () => copyLink(b.dataset.copy)));
     $$('[data-off]', sh).forEach((b) => (b.onclick = () => confirmBox('Turn off this link?', 'Anyone with it loses access, and its notes are deleted.', async () => { await API.unshare(b.dataset.off); loadShares(el); }, 'Turn off')));
-    $$('[data-trade]', nt).forEach((r) => (r.onclick = () => import('./views.js?v=42b089e0').then((V) => V.tradeModal(S.trade.find((t) => t.id === r.dataset.trade)))));
+    $$('[data-trade]', nt).forEach((r) => (r.onclick = () => import('./views.js?v=d1fceb2b').then((V) => V.tradeModal(S.trade.find((t) => t.id === r.dataset.trade)))));
   } catch (e) { const sh = $('#shares', el); if (sh) sh.innerHTML = `<div class="empty"><b>Couldn't load</b>${esc(e.message)}</div>`; }
 }
 

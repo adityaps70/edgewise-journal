@@ -63,6 +63,7 @@ export const API = {
   image: (data) => api('/images', { method: 'POST', body: { data } }),
   getImage: (id) => api('/images/' + id),
   ai: (b) => api('/ai', { method: 'POST', body: b }),
+  econ: () => api('/econ'),
   shares: () => api('/shares'),
   share: (b) => api('/shares', { method: 'POST', body: b }),
   unshare: (token) => api('/shares/' + token, { method: 'DELETE' }),
