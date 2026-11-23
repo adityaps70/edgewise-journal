@@ -1,8 +1,8 @@
 // Landing page: the hero dashboard assembles from scattered pieces as you scroll, plus reveals and live demos.
-import { icon, $, $$, clamp } from './core.js?v=03b89d27';
-import { reduced, segInit } from './motion.js?v=03b89d27';
-import { slider } from './ui.js?v=03b89d27';
-import { loadFirms, planRules, defaultDaily, dailyCap } from './firms.js?v=03b89d27';
+import { icon, $, $$, clamp } from './core.js?v=5a4409dc';
+import { reduced, segInit } from './motion.js?v=5a4409dc';
+import { slider } from './ui.js?v=5a4409dc';
+import { loadFirms, planRules, defaultDaily, dailyCap } from './firms.js?v=5a4409dc';
 
 document.documentElement.dataset.theme = 'dark';
 $$('[data-ico]').forEach((el) => (el.innerHTML = icon(el.dataset.ico)));
@@ -67,62 +67,86 @@ function assemble() {
   addEventListener('scroll', () => { if (scrollY > 40) pieces.forEach((p, i) => { qx[i](0); qy[i](0); }); }, { passive: true });
 }
 
-// ---------- replay card ----------
+// ---------- replay card: a realistic 1-minute NQ chart with volume and a price axis ----------
 (function replay() {
   const svg = $('#rpChart'); if (!svg) return;
-  const W = 440, H = 170, N = 26, PAD = 22, ENTRY = 7, EXIT = 18, QTY = 2, PV = 20; // NQ $20 a point
-  let seed = 11; const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
-  const bars = []; let p = 18410;
+  const W = 440, CW = 398, TOP = 14, PB = 152, VB = 200, N = 44, ENTRY = 13, EXIT = 30, QTY = 2, PV = 20; // NQ $20 a point
+  let seed = 7; const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+  const gauss = () => { let s = 0; for (let i = 0; i < 4; i++) s += rnd(); return (s - 2) * 1.7; };
+  const bars = []; let p = 18412.25;
   for (let i = 0; i < N; i++) {
-    const drift = i < ENTRY ? 1.6 : i <= EXIT ? -2.2 : 0.3; const o = p; const c = o + drift + (rnd() - 0.5) * 3.2;
-    const h = Math.max(o, c) + 0.4 + rnd() * 1.4; const l = Math.min(o, c) - 0.4 - rnd() * 1.4; bars.push({ o, c, h, l }); p = c;
+    const drift = i < ENTRY ? 1.1 : i <= EXIT ? -2.1 : 0.4;
+    const o = p + (rnd() - 0.5) * 0.75; const c = o + drift + gauss() * 2.6;
+    const h = Math.max(o, c) + Math.abs(gauss()) * 1.6 + 0.25; const l = Math.min(o, c) - Math.abs(gauss()) * 1.6 - 0.25;
+    const v = 300 + rnd() * 500 + Math.abs(c - o) * 60 + (i === ENTRY || i === EXIT ? 500 : 0);
+    bars.push({ o, c, h, l, v }); p = c;
   }
-  // scale the move so the trade is exactly +$400 (10 points on 2 NQ contracts)
-  const e0 = bars[ENTRY].c, f = (400 / (QTY * PV)) / (e0 - bars[EXIT].c);
-  bars.forEach((b) => ['o', 'c', 'h', 'l'].forEach((k) => (b[k] = e0 + (b[k] - e0) * f)));
-  const entry = e0; const exit = bars[EXIT].c;
-  const hi = Math.max(...bars.map((b) => b.h)) + 1; const lo = Math.min(...bars.map((b) => b.l)) - 1;
-  const y = (v) => PAD + ((hi - v) / (hi - lo)) * (H - PAD * 2); const step = W / N; const x = (i) => i * step + step / 2; const bw = step * 0.56;
-  const grid = [0.25, 0.5, 0.75].map((k) => `<line class="grid" x1="0" x2="${W}" y1="${PAD + k * (H - PAD * 2)}" y2="${PAD + k * (H - PAD * 2)}"/>`).join('');
-  const cds = bars.map((b, i) => { const up = b.c >= b.o; const t = y(Math.max(b.o, b.c)); const hgt = Math.max(1.6, Math.abs(y(b.o) - y(b.c))); return `<g class="cd ${up ? 'u' : 'd'}"><line x1="${x(i)}" x2="${x(i)}" y1="${y(b.h)}" y2="${y(b.l)}" stroke-width="1.3"/><rect x="${x(i) - bw / 2}" y="${t}" width="${bw}" height="${hgt}" rx="1.5" stroke="none"/></g>`; }).join('');
-  const ye = y(entry), yx = y(exit);
-  const trade = `<g id="rpTrade" opacity="0"><rect x="${x(ENTRY)}" y="${ye}" width="${x(EXIT) - x(ENTRY)}" height="${yx - ye}" fill="#3ecf8e14"/><line x1="${x(ENTRY)}" x2="${x(EXIT)}" y1="${ye}" y2="${ye}" stroke="#ff5a6a" stroke-width="1.2" stroke-dasharray="4 3"/></g>
-    <g id="rpIn" opacity="0"><rect x="${x(ENTRY) - 30}" y="${ye - 28}" width="60" height="17" rx="5" fill="#ff3048"/><text class="tag" x="${x(ENTRY)}" y="${ye - 16.5}" text-anchor="middle">SHORT 2</text><circle cx="${x(ENTRY)}" cy="${ye}" r="3.5" fill="#fff" stroke="#ff3048" stroke-width="2"/></g>
-    <g id="rpOut" opacity="0"><rect x="${x(EXIT) - 27}" y="${yx + 11}" width="54" height="17" rx="5" fill="#0f9d6b"/><text class="tag" x="${x(EXIT)}" y="${yx + 22.5}" text-anchor="middle">+$400</text><circle cx="${x(EXIT)}" cy="${yx}" r="3.5" fill="#fff" stroke="#0f9d6b" stroke-width="2"/></g>`;
-  svg.innerHTML = grid + cds + trade + `<line id="rpHead" x1="0" x2="0" y1="0" y2="${H}" stroke="#fff" stroke-width="1.6" style="filter:drop-shadow(0 0 5px #fff)"/>`;
-  const cs = $$('.cd', svg); const head = $('#rpHead'); const pl = $('#rpPl'); const tr = $('#rpTrade'), inn = $('#rpIn'), out = $('#rpOut');
+  const q = (v) => Math.round(v * 4) / 4; bars.forEach((b) => ['o', 'c', 'h', 'l'].forEach((k) => (b[k] = q(b[k]))));
+  const entry = bars[ENTRY].c, exit = bars[EXIT].c;
+  const hi = Math.max(...bars.map((b) => b.h)) + 2, lo = Math.min(...bars.map((b) => b.l)) - 2, vmax = Math.max(...bars.map((b) => b.v));
+  const y = (v) => TOP + ((hi - v) / (hi - lo)) * (PB - TOP); const step = CW / N; const x = (i) => i * step + step / 2; const bw = step * 0.62;
+  const tk = hi - lo > 60 ? 20 : 10; const ticks = []; for (let v = Math.ceil(lo / tk) * tk; v <= hi; v += tk) ticks.push(v);
+  const grid = ticks.map((v) => `<line class="grid" x1="0" x2="${CW}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${W - 2}" y="${y(v) + 3}" text-anchor="end">${v.toLocaleString('en-US')}</text>`).join('')
+    + `<line class="grid" x1="0" x2="${CW}" y1="${PB + 8}" y2="${PB + 8}"/>`;
+  const cds = bars.map((b, i) => {
+    const up = b.c >= b.o; const t = y(Math.max(b.o, b.c)); const hgt = Math.max(1.2, Math.abs(y(b.o) - y(b.c))); const vh = (b.v / vmax) * (VB - PB - 14);
+    return `<g class="cd ${up ? 'u' : 'd'}"><line x1="${x(i)}" x2="${x(i)}" y1="${y(b.h)}" y2="${y(b.l)}" stroke-width="1"/><rect x="${x(i) - bw / 2}" y="${t}" width="${bw}" height="${hgt}" rx="1" stroke="none"/><rect class="vol" x="${x(i) - bw / 2}" y="${VB - vh}" width="${bw}" height="${vh}" stroke="none"/></g>`;
+  }).join('');
+  const ye = y(entry), yx = y(exit); const pnl = Math.round((entry - exit) * QTY * PV);
+  const lbl = (pnl >= 0 ? '+$' : '−$') + Math.abs(pnl).toLocaleString('en-US'); const lw = 10 + lbl.length * 6.2;
+  const trade = `<g id="rpTrade" opacity="0"><rect x="${x(ENTRY)}" y="${ye}" width="${x(EXIT) - x(ENTRY)}" height="${yx - ye}" fill="#3ecf8e14"/><line x1="${x(ENTRY)}" x2="${x(EXIT)}" y1="${ye}" y2="${ye}" stroke="#ff5a6a" stroke-width="1" stroke-dasharray="4 3"/></g>
+    <g id="rpIn" opacity="0"><rect x="${x(ENTRY) - 30}" y="${ye - 30}" width="60" height="17" rx="5" fill="#ff3048"/><text class="tag" x="${x(ENTRY)}" y="${ye - 18.5}" text-anchor="middle">SHORT 2</text><circle cx="${x(ENTRY)}" cy="${ye}" r="3.5" fill="#fff" stroke="#ff3048" stroke-width="2"/></g>
+    <g id="rpOut" opacity="0"><rect x="${x(EXIT) - lw / 2}" y="${yx + 12}" width="${lw}" height="17" rx="5" fill="#0f9d6b"/><text class="tag" x="${x(EXIT)}" y="${yx + 23.5}" text-anchor="middle">${lbl}</text><circle cx="${x(EXIT)}" cy="${yx}" r="3.5" fill="#fff" stroke="#0f9d6b" stroke-width="2"/></g>`;
+  svg.innerHTML = grid + cds + trade + `<rect id="rpPx" x="${CW + 3}" y="0" width="38" height="14" rx="3" fill="#fff"/><text id="rpPxT" class="axh" x="${W - 2}" y="0" text-anchor="end"></text><line id="rpHead" x1="0" x2="0" y1="${TOP - 6}" y2="${VB}" stroke="#fff" stroke-width="1.4" style="filter:drop-shadow(0 0 5px #fff)"/>`;
+  const cs = $$('.cd', svg); const head = $('#rpHead'); const pl = $('#rpPl'); const tr = $('#rpTrade'), inn = $('#rpIn'), out = $('#rpOut'), px = $('#rpPx'), pxt = $('#rpPxT');
   const show = (n) => {
     cs.forEach((c, i) => c.classList.toggle('off', i > n)); head.setAttribute('x1', x(n) + step / 2); head.setAttribute('x2', x(n) + step / 2);
+    const yc = y(bars[n].c); px.setAttribute('y', yc - 7); pxt.setAttribute('y', yc + 3); pxt.textContent = bars[n].c.toFixed(2);
+    px.setAttribute('fill', bars[n].c >= bars[n].o ? '#3ecf8e' : '#ff5a6a');
     inn.setAttribute('opacity', n >= ENTRY ? 1 : 0); out.setAttribute('opacity', n >= EXIT ? 1 : 0); tr.setAttribute('opacity', n >= EXIT ? 1 : 0);
-    const v = n <= ENTRY ? 0 : Math.round(((entry - (n >= EXIT ? exit : bars[n].c)) * QTY * PV) / 10) * 10;
-    pl.textContent = (v > 0 ? '+' : v < 0 ? '−' : '') + '$' + Math.abs(v).toLocaleString(); pl.classList.toggle('up', v > 0);
+    const v = n <= ENTRY ? 0 : Math.round((entry - (n >= EXIT ? exit : bars[n].c)) * QTY * PV);
+    pl.textContent = (v > 0 ? '+' : v < 0 ? '−' : '') + '$' + Math.abs(v).toLocaleString('en-US'); pl.classList.toggle('up', v > 0); pl.classList.toggle('dn', v < 0);
   };
   if (reduced.matches) return show(N - 1);
   let n = -1, last = 0;
-  const tick = (t) => { if (t - last > (n === N - 1 ? 2200 : 260)) { last = t; n = (n + 1) % N; show(n); } requestAnimationFrame(tick); };
-  requestAnimationFrame(tick);
+  const tickF = (t) => { if (t - last > (n === N - 1 ? 2400 : 190)) { last = t; n = (n + 1) % N; show(n); } requestAnimationFrame(tickF); };
+  requestAnimationFrame(tickF);
 })();
 
-// ---------- AI coach question box ----------
-(function ask() {
-  const T = $('#askT'); if (!T) return; const A = $('#askA'), AH = $('#askAh'), AB = $('#askAb');
+// ---------- AI coach chat ----------
+(function chat() {
+  const log = $('#chatLog'), T = $('#chatT'); if (!log) return;
   const qa = [
-    ['Am I overtrading?', 'Yes, on Tuesdays.', '14 trades, 9 of them after 11:30 ET. Those lost $610.'],
-    ["What's my best setup?", 'Opening range break.', '64% win rate and +$2,140 this month across 3 accounts.'],
-    ['How much can I risk today?', '$650 before your stop.', 'Your 50K eval allows $1,250, but your own limit comes first.'],
-    ['Why was last week red?', 'Two revenge trades.', 'Both came after a loss on Thursday and cost you $820.'],
+    ['Am I overtrading?', 'Yes, on Tuesdays.', '14 trades, 9 of them after 11:30 ET.', '−$610 after 11:30', 'dn'],
+    ["What's my best setup?", 'Opening range break.', '64% win rate across 3 accounts this month.', '+$2,140 this month', 'up'],
+    ['How much can I risk today?', '$650 before your own stop.', 'Your 50K eval allows $1,250 a day.', '$1,340 above the floor', 'up'],
+    ['Why was last week red?', 'Two revenge trades.', 'Both came right after a loss on Thursday.', '−$820 from 2 trades', 'dn'],
   ];
   if (reduced.matches) return;
   let k = 0; const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  const run = async () => {
+  const el = (cls, html) => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; return d; };
+  (async () => {
     for (;;) {
-      await wait(3200); A.classList.add('is-out'); k = (k + 1) % qa.length; const [q, h, b] = qa[k];
-      T.textContent = ''; await wait(250);
-      for (let i = 1; i <= q.length; i++) { T.textContent = q.slice(0, i); await wait(38 + Math.random() * 40); }
-      await wait(500); AH.textContent = h; AB.textContent = b; A.classList.remove('is-out');
+      await wait(3600); k = (k + 1) % qa.length; const [q, h, b, chip, tone] = qa[k];
+      for (let i = 1; i <= q.length; i++) { T.textContent = q.slice(0, i); await wait(34 + Math.random() * 36); }
+      await wait(380); T.textContent = '';
+      log.classList.add('is-out'); await wait(260); log.replaceChildren(); log.classList.remove('is-out');
+      log.append(el('chat__q', q)); await wait(250); const dots = el('chat__a chat__a--dots', '<span class="ask__dots"><i></i><i></i><i></i></span>'); log.append(dots);
+      await wait(1100); dots.replaceWith(el('chat__a is-new', `<b>${h}</b><span>${b}</span><em class="chat__k ${tone}">${chip}</em>`));
     }
-  };
-  run();
+  })();
+})();
+
+// ---------- 3D candles card (Three.js, loaded only when the card is close) ----------
+(function glass3d() {
+  const cv = $('#c3d'); if (!cv) return;
+  const ok = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; } })();
+  if (!ok) return;
+  const io = new IntersectionObserver(async ([e]) => {
+    if (!e.isIntersecting) return; io.disconnect();
+    try { const m = await import('./candles3d.js?v=5a4409dc'); m.mount(cv, { reduced: reduced.matches }); cv.closest('.bc').classList.add('is-3d'); } catch (err) { console.warn('3D card', err); }
+  }, { rootMargin: '400px' });
+  io.observe(cv);
 })();
 
 // ---------- breach line chart (50K, $2,000 trailing, locks at the start balance) ----------
