@@ -1,6 +1,6 @@
 // Core: API, store + sync, formatting, stats, icons.
 export const APP = { name: 'The Smart Trade', short: 'SmartTrade', domain: 'thesmarttrade.in', tagline: 'Trading journal' };
-export const LOGO = '<span class="mark mark--img"><img src="brand/mark.svg" alt=""></span>';
+export const LOGO = '<span class="mark mark--img"><img src="brand/mark.svg?v=8" alt=""></span>';
 export const WORDMARK = '<span class="wm"><small>THE</small><b>Smart<i>Trade</i></b></span>';
 
 // ------------------------------------------------------------------ helpers

@@ -14,5 +14,13 @@ for f in files:
     if f.suffix == '.js': n = JS.sub(lambda m: f"{m[1]}./{m[2]}.js?v={v}{m[1]}", t)
     if f.suffix == '.html': n = HT.sub(lambda m: f'{m[1]}{m[2]}?v={v}"', t)
     if n != t: f.write_text(n)
+# logo and icon files live in /brand/ (cached by browsers for a day): every reference carries ?v=BRAND_V.
+# When the logo changes, bump BRAND_V and run this script.
+BRAND_V = '8'
+BR = re.compile(r"(brand/(?:mark[A-Za-z0-9-]*|icon-maskable-512|og-1200x630)\.(?:svg|png))(?:\?v=[A-Za-z0-9]+)?")
+for f in sorted([*pub.glob('js/*.js'), *pub.glob('*.css'), *pub.glob('*.html'), *pub.glob('blog/*.html'), pub / 'manifest.webmanifest', pub.parent / 'tools' / 'build_blog.py']):
+    if not f.exists(): continue
+    t = f.read_text(); n = BR.sub(lambda m: f'{m[1]}?v={BRAND_V}', t)
+    if n != t: f.write_text(n)
 (pub / 'js' / 'version.txt').write_text(v)
 print('version', v)

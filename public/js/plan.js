@@ -1,7 +1,7 @@
 // Free vs Pro: the upgrade screen, the usage meter, and the admin panel.
-import { S, $, $$, esc, icon, API, isPro, tradesLeft, aiLeft } from './core.js?v=3b5c48ce';
-import { modal, confirmBox, helpers } from './views.js?v=3b5c48ce';
-import { toast } from './motion.js?v=3b5c48ce';
+import { S, $, $$, esc, icon, API, isPro, tradesLeft, aiLeft } from './core.js?v=03b89d27';
+import { modal, confirmBox, helpers } from './views.js?v=03b89d27';
+import { toast } from './motion.js?v=03b89d27';
 
 const SUPPORT = 'support@thesmarttrade.in';
 const price = () => S.sub?.price || '20';
@@ -16,7 +16,7 @@ export async function checkout(btn, months = 1) {
     const [o] = await Promise.all([API.payOrder(months), loadRzp()]);
     const rz = new window.Razorpay({
       key: o.key, order_id: o.orderId, amount: o.amount, currency: o.currency,
-      name: 'The Smart Trade', description: months > 1 ? `Pro, ${months} months` : 'Pro, 1 month', image: location.origin + '/brand/mark-512.png',
+      name: 'The Smart Trade', description: months > 1 ? `Pro, ${months} months` : 'Pro, 1 month', image: location.origin + '/brand/mark-512.png?v=8',
       prefill: { email: o.email, name: o.name }, notes: { months: String(months) }, theme: { color: '#ff3048' },
       modal: { ondismiss: reset },
       handler: async (r) => {

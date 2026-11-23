@@ -92,7 +92,7 @@ def load_posts():
 
 
 NAV = '''<header class="bnav">
-  <a class="lnav__brand" href="/"><span class="mark mark--img"><img src="/brand/mark.svg" alt=""></span><span class="wm"><small>THE</small><b>Smart<i>Trade</i></b></span></a>
+  <a class="lnav__brand" href="/"><span class="mark mark--img"><img src="/brand/mark.svg?v=8" alt=""></span><span class="wm"><small>THE</small><b>Smart<i>Trade</i></b></span></a>
   <nav><a href="/blog/">Blog</a><a href="/about">About</a><a class="btn btn--primary" href="/app">Open journal</a></nav>
 </header>'''
 
@@ -115,14 +115,14 @@ def page(title, desc, path, body, extra_head='', image=None, kind='article'):
   <meta property="og:url" content="{url}">
   <meta property="og:title" content="{t}">
   <meta property="og:description" content="{d}">
-  <meta property="og:image" content="{SITE}{image or '/brand/og-1200x630.png'}">
+  <meta property="og:image" content="{SITE}{image or '/brand/og-1200x630.png?v=8'}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="{SITE}{image or '/brand/og-1200x630.png'}">
+  <meta name="twitter:image" content="{SITE}{image or '/brand/og-1200x630.png?v=8'}">
   <link rel="alternate" type="application/rss+xml" title="The Smart Trade blog" href="{SITE}/blog/feed.xml">
   <meta name="theme-color" content="#050608">
-  <link rel="icon" type="image/svg+xml" href="/brand/mark.svg">
+  <link rel="icon" type="image/svg+xml" href="/brand/mark.svg?v=8">
   <link rel="stylesheet" href="/styles.css?v={ver('styles.css')}">
   <link rel="stylesheet" href="/landing.css?v={ver('landing.css')}">
   <link rel="stylesheet" href="/blog/blog.css?v={ver('blog/blog.css')}">
@@ -147,7 +147,7 @@ def build_post(p, posts):
         'headline': p['h1'], 'description': p['description'], 'datePublished': p['date'], 'dateModified': p.get('updated', p['date']),
         'mainEntityOfPage': SITE + path, 'image': f'{SITE}/blog/og/{p["slug"]}.png',
         'author': {'@type': 'Person', 'name': AUTHOR['name'], 'url': AUTHOR['url']},
-        'publisher': {'@type': 'Organization', 'name': 'The Smart Trade', 'logo': {'@type': 'ImageObject', 'url': SITE + '/brand/mark-512.png'}},
+        'publisher': {'@type': 'Organization', 'name': 'The Smart Trade', 'logo': {'@type': 'ImageObject', 'url': SITE + '/brand/mark-512.png?v=8'}},
         'keywords': ', '.join(p['keywords']),
     }
     crumbs = {'@context': 'https://schema.org', '@type': 'BreadcrumbList', 'itemListElement': [
@@ -230,7 +230,7 @@ def build_about():
 </main>"""
     head = ld({'@context': 'https://schema.org', '@type': 'AboutPage', 'url': SITE + '/about',
                'mainEntity': {'@type': 'Organization', 'name': 'The Smart Trade', 'url': SITE + '/', 'email': EMAIL,
-                              'logo': SITE + '/brand/mark-512.png',
+                              'logo': SITE + '/brand/mark-512.png?v=8',
                               'founder': {'@type': 'Person', 'name': AUTHOR['name'], 'url': AUTHOR['url'], 'description': AUTHOR['bio']}}})
     return page('About The Smart Trade · Trading journal for prop firm traders',
                 'Who builds The Smart Trade, how our prop firm rules and guides are sourced, and how to contact us.', '/about', body, head, kind='website')

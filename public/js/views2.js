@@ -3,10 +3,10 @@ import {
   S, P, $, $$, esc, num, sum, clamp, iso, today, addDays, parseISO, weekStart, monthKey, fmtDate, fmtDay, money, short, pct, tone, cur, sym,
   net, stats, groupBy, inRange, rangeFor, rMultiple, accName, accountMetrics, isLive, icon, API, aiContext, md,
   FT, edgeScore, zoneOf, severeCombo, lateLoss, durationMin, durationBucket, setupsOf, mastery, HOT, EXIT_BEHAVIOR, accCost, COST_FIELDS,
-} from './core.js?v=3b5c48ce';
-import { equityChart, tubes, hbars, bindTips, reg, radar } from './charts.js?v=3b5c48ce';
-import { helpers, tradeList, accountModal, modal } from './views.js?v=3b5c48ce';
-import { segInit, animateData } from './motion.js?v=3b5c48ce';
+} from './core.js?v=03b89d27';
+import { equityChart, tubes, hbars, bindTips, reg, radar } from './charts.js?v=03b89d27';
+import { helpers, tradeList, accountModal, modal } from './views.js?v=03b89d27';
+import { segInit, animateData } from './motion.js?v=03b89d27';
 
 const { card, phead, cnt, meter, after, segBind, bindCommon } = helpers;
 const H = () => helpers.hooks();
@@ -164,7 +164,7 @@ export function reports(el) {
       <select class="in" style="width:auto" id="rKey">${opts.map(([k, l]) => `<option value="${k}" ${k === RP.key ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
       <span style="flex:1"></span><button class="btn" data-act="csv">${icon('download')}CSV</button><button class="btn btn--primary" data-act="pdf">${icon('download')}Save as PDF</button></div>
     <section class="card report">
-      <div class="report__head"><span class="mark mark--img"><img src="brand/mark.svg" alt=""></span><div><small>${esc(P().name || '')} · ${esc(fmtDate(from, { day: 'numeric', month: 'short', year: 'numeric' }))} – ${esc(fmtDate(to, { day: 'numeric', month: 'short', year: 'numeric' }))}</small><h2>${esc(label)} report</h2></div><span class="report__brand"><span class="wm"><small>THE</small><b>Smart<i>Trade</i></b></span></span></div>
+      <div class="report__head"><span class="mark mark--img"><img src="brand/mark.svg?v=8" alt=""></span><div><small>${esc(P().name || '')} · ${esc(fmtDate(from, { day: 'numeric', month: 'short', year: 'numeric' }))} – ${esc(fmtDate(to, { day: 'numeric', month: 'short', year: 'numeric' }))}</small><h2>${esc(label)} report</h2></div><span class="report__brand"><span class="wm"><small>THE</small><b>Smart<i>Trade</i></b></span></span></div>
       ${list.length ? `<div class="grid g-4">${[['Net P&L', st.total, 'moneySign', tone(st.total)], ['Trades', st.n, 'int', ''], ['Win rate', st.winRate, 'pct', ''], ['Profit factor', Number.isFinite(st.pf) ? st.pf : 99, 'dec', ''], ['Expectancy', st.expectancy, 'moneySign', tone(st.expectancy)], ['Max drawdown', -st.maxDD, 'moneySign', 'bad'], ['Avg R', st.avgR ?? 0, 'r', ''], ['Avg hold', avgHold ?? 0, 'mins', '']].map(([l, v, f, c]) => `<div class="kpi"><small>${l}</small><b class="${c}">${cnt(v, f)}</b></div>`).join('')}</div>
       <div class="grid g-2" style="margin-top:var(--gap)">
         <div><h4 class="rh">Equity</h4>${equityChart(st.curve, { h: 180, id: 'rp' })}</div>
