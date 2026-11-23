@@ -1,6 +1,6 @@
 // Read-only journal a trader shared with a mentor. The token in the URL hash is the only key.
-import { S, $, $$, esc, num, sum, today, fmtDate, fmtDay, money, pct, tone, net, stats, groupBy, setupsOf, rMultiple, icon, LOGO, WORDMARK, accName } from './core.js?v=c8ab25c2';
-import { equityChart, hbars, tubes, bindTips } from './charts.js?v=c8ab25c2';
+import { S, $, $$, esc, num, sum, today, fmtDate, fmtDay, money, pct, tone, net, stats, groupBy, setupsOf, rMultiple, icon, LOGO, WORDMARK, accName } from './core.js?v=2bd0652a';
+import { equityChart, hbars, tubes, bindTips } from './charts.js?v=2bd0652a';
 
 const token = location.hash.slice(1);
 const app = $('#app');

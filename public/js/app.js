@@ -3,15 +3,15 @@ import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
   goalIdea,
-} from './core.js?v=c8ab25c2';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=c8ab25c2';
-import { slider, liveRate, fxAgo } from './ui.js?v=c8ab25c2';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=c8ab25c2';
+} from './core.js?v=2bd0652a';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=2bd0652a';
+import { slider, liveRate, fxAgo } from './ui.js?v=2bd0652a';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=2bd0652a';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=c8ab25c2';
-import * as V2 from './views2.js?v=c8ab25c2';
-import * as V3 from './views3.js?v=c8ab25c2';
-import * as V4 from './views4.js?v=c8ab25c2';
+import * as V from './views.js?v=2bd0652a';
+import * as V2 from './views2.js?v=2bd0652a';
+import * as V3 from './views3.js?v=2bd0652a';
+import * as V4 from './views4.js?v=2bd0652a';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -416,30 +416,37 @@ async function importWorkbook(file) {
 // ---------------------------------------------------------------- shell
 const VIEWS = {
   overview: ['Overview', 'overview', V.overview], trades: ['Trades', 'trades', V.trades], calendar: ['Calendar', 'calendar', V.calendar],
-  accounts: ['Accounts', 'accounts', accountsHub], payouts: ['Payouts', 'payouts', V.payouts], plan: ['Weekly plan', 'plan', V.plan],
+  accounts: ['Accounts', 'accounts', V.accounts], payouts: ['Payouts', 'payouts', V.payouts], plan: ['Weekly plan', 'plan', V.plan],
   analytics: ['Analytics', 'analytics', V.analytics], journal: ['Journal', 'journal', V.journal], playbook: ['Playbook', 'playbook', V.playbook],
   mindset: ['Mindset', 'brain', V2.mindset], firms: ['Prop firms', 'shield', V2.firms], reports: ['Reports', 'sheet', V2.reports],
   coach: ['AI coach', 'coach', V.coach], settings: ['Settings', 'settings', V.settings],
   notebook: ['Notebook', 'note', V3.notebook], agents: ['Agents', 'agent', V3.agents], backtest: ['Backtesting', 'flask', V3.backtest],
   tools: ['Tools', 'calc', V3.tools], mentor: ['Mentor mode', 'users', V3.mentor], connections: ['Connections', 'link', V4.connections],
 };
-// ---- Accounts: your accounts + what each firm cost and paid, one page with two tabs
-let ACC_TAB = 'list';
-function accountsHub(el, opts = {}) {
-  const prop = S.account.some((a) => a.type !== 'personal');
-  if (!prop) ACC_TAB = 'list';
-  (ACC_TAB === 'money' ? V2.firms : V.accounts)(el, opts);
-  if (!prop) return;
+// ---- menu sections: each groups related pages, shown as tabs at the top of the page
+const HUBS = [
+  ['overview', 'Overview', 'overview', ['overview']],
+  ['trades', 'Trades', 'trades', ['trades', 'calendar']],
+  ['analytics', 'Analytics', 'analytics', ['analytics', 'mindset', 'reports']],
+  ['journal', 'Journal', 'journal', ['journal', 'notebook', 'plan']],
+  ['playbook', 'Playbook', 'playbook', ['playbook', 'backtest']],
+  ['accounts', 'Accounts', 'accounts', ['accounts', 'firms', 'payouts']],
+  ['tools', 'Tools', 'calc', ['connections', 'agents', 'mentor', 'tools']],
+];
+const TAB_LABEL = { trades: 'Trade log', analytics: 'Stats', journal: 'Daily journal', accounts: 'Your accounts', firms: 'Firms & costs', tools: 'Calculators' };
+const hubOf = (id) => HUBS.find((h) => h[3].includes(id)) || null;
+const lastTab = {};
+function hubTabs(el, id) {
+  const h = hubOf(id); if (!h) return; lastTab[h[0]] = id;
+  const allowed = navItems(); const subs = h[3].filter((x) => allowed.includes(x)); if (subs.length < 2) return;
   const head = $('.phead', el); if (!head) return;
-  const h1 = $('h1', head); if (h1) h1.textContent = 'Accounts';
-  const eb = $('.phead__eyebrow', head); if (eb) eb.textContent = ACC_TAB === 'money' ? 'Run it like a business' : 'Challenges, funded and personal';
-  head.insertAdjacentHTML('afterend', `<div class="tabs hubtabs" id="accTabs" role="tablist"><button type="button" role="tab" data-v="list" class="${ACC_TAB === 'list' ? 'is-on' : ''}">${icon('accounts')}Your accounts</button><button type="button" role="tab" data-v="money" class="${ACC_TAB === 'money' ? 'is-on' : ''}">${icon('payouts')}Firms, costs &amp; payouts</button></div>`);
-  $$('#accTabs button', el).forEach((b) => (b.onclick = () => { if (b.dataset.v === ACC_TAB) return; ACC_TAB = b.dataset.v; const main = $('#main'); main.scrollTop = 0; accountsHub(main); animateData(main); if (window.gsap) window.gsap.fromTo($$('.page > *:not(.phead):not(.hubtabs)', main), { opacity: 0, y: 12 }, { opacity: 1, y: 0, stagger: 0.04, duration: 0.45, ease: 'expo.out' }); }));
+  head.insertAdjacentHTML('afterend', `<nav class="tabs hubtabs" aria-label="${esc(h[1])}">${subs.map((x) => `<a href="#${x}" class="${x === id ? 'is-on' : ''}" ${x === id ? 'aria-current="page"' : ''}>${icon(VIEWS[x][1])}${esc(TAB_LABEL[x] || VIEWS[x][0])}</a>`).join('')}</nav>`);
 }
-function navItems() {
+function navItems() { // every page this trader can open (the menu shows them grouped by HUBS)
   const p = P(); const prop = (p.funding || []).some((f) => f !== 'own') || S.account.some((a) => a.type !== 'personal');
   const list = ['overview', 'trades', 'calendar', 'analytics', 'mindset', 'playbook', 'journal', 'notebook', 'backtest'];
-  if (S.account.length || prop) list.push('accounts'); // prop-firm money lives inside Accounts as a tab
+  if (S.account.length || prop) list.push('accounts');
+  if (prop) list.push('firms');
   if (prop || S.payout.length) list.push('payouts');
   if (prop || p.mission || S.plan.length) list.push('plan');
   list.push('connections', 'agents', 'reports', 'mentor', 'tools', 'coach');
@@ -503,10 +510,13 @@ function buildNav() {
   const todayN = S.trade.filter((t) => t.date === today()).length;
   const atRisk = S.account.filter(isLive).filter((a) => { const m = accountMetrics(a); return m.buffer !== null && m.maxLoss && m.buffer < m.maxLoss * 0.3; }).length;
   const pending = S.payout.filter((p) => p.status === 'requested').length;
-  nav.innerHTML = '<span class="nav__pill"></span>' + [...items, 'settings'].map((id) => {
-    const [label, ic] = VIEWS[id];
-    const badge = id === 'trades' && todayN ? `<span class="nav__count">${todayN}</span>` : id === 'accounts' && atRisk ? `<span class="nav__count" style="background:var(--bad-soft);color:var(--bad)">${atRisk}</span>` : id === 'payouts' && pending ? `<span class="nav__count">${pending}</span>` : id === 'coach' ? '<span class="nav__ai">AI</span>' : '';
-    return `<a class="nav__item${id === 'settings' ? ' nav__item--gap' : ''}" href="#${id}" data-id="${id}" ${id === current ? 'aria-current="page"' : ''}>${icon(ic)}<span class="nav__label">${label}</span>${badge}</a>`;
+  const cur = hubOf(current)?.[0] || current;
+  const hubs = HUBS.filter((h) => h[3].some((x) => items.includes(x)));
+  nav.innerHTML = '<span class="nav__pill"></span>' + [...hubs.map((h) => h[0]), 'settings'].map((hid) => {
+    const h = HUBS.find((x) => x[0] === hid); const label = h ? h[1] : VIEWS[hid][0]; const ic = h ? h[2] : VIEWS[hid][1];
+    const subs = h ? h[3].filter((x) => items.includes(x)) : [hid]; const href = lastTab[hid] && subs.includes(lastTab[hid]) ? lastTab[hid] : subs[0];
+    const badge = hid === 'trades' && todayN ? `<span class="nav__count">${todayN}</span>` : hid === 'accounts' && atRisk ? `<span class="nav__count" style="background:var(--bad-soft);color:var(--bad)">${atRisk}</span>` : hid === 'accounts' && pending ? `<span class="nav__count">${pending}</span>` : '';
+    return `<a class="nav__item${hid === 'settings' ? ' nav__item--gap' : ''}" href="#${href}" data-id="${hid}" ${hid === cur ? 'aria-current="page"' : ''}>${icon(ic)}<span class="nav__label">${label}</span>${badge}</a>`;
   }).join('');
   $$('.nav__item', nav).forEach((a) => a.onclick = () => $('#slab').classList.remove('is-open'));
   requestAnimationFrame(() => movePill(nav, false));
@@ -556,16 +566,17 @@ function go(id, opts = {}, force = false) {
 function route(first = false) {
   const items = [...navItems(), 'settings'];
   let id = (location.hash || '#overview').slice(1);
-  if (id === 'firms') { ACC_TAB = 'money'; id = 'accounts'; history.replaceState(null, '', '#accounts'); } // old links
   if (!VIEWS[id]) id = 'overview';
   if (!items.includes(id)) id = 'overview';
   const main = $('#main'); if (!main) return;
   const render = () => {
     current = id;
-    $$('.nav__item').forEach((a) => (a.dataset.id === id ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
+    const hid = hubOf(id)?.[0] || id;
+    $$('.nav__item').forEach((a) => (a.dataset.id === hid ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
+    { const a = $(`.nav__item[data-id="${hid}"]`); if (a) a.setAttribute('href', '#' + id); }
     movePill($('#nav'), !first);
     main.scrollTop = 0;
-    VIEWS[id][2](main, pendingOpts); pendingOpts = {};
+    VIEWS[id][2](main, pendingOpts); pendingOpts = {}; hubTabs(main, id);
     V3.renderFilterBar(id);
     document.title = `${VIEWS[id][0]} · ${APP.name}`;
     enterPage(main, { first });
@@ -577,7 +588,7 @@ window.addEventListener('hashchange', () => { if ($('#main')) route(false); });
 function refresh() {
   const main = $('#main'); if (!main || !current) return;
   const y = main.scrollTop;
-  VIEWS[current][2](main, {});
+  VIEWS[current][2](main, {}); hubTabs(main, current);
   main.scrollTop = y;
   V3.renderFilterBar(current);
   // light re-entrance: headings stay, data re-animates

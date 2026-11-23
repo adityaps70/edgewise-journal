@@ -1045,3 +1045,8 @@ body.mp { overflow: auto; background: var(--scene); background-color: var(--bg);
 /* weekly plan: weekend note */
 .wkend { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: var(--gap); }
 .wkend__t { display: grid; gap: 4px; flex: 1; min-width: 240px; } .wkend__t b { font-size: var(--fs-md); } .wkend__t span { color: var(--muted); font-size: var(--fs-sm); } .wkend__t span b { font-size: inherit; }
+.hubtabs { overflow-x: auto; scrollbar-width: none; } .hubtabs::-webkit-scrollbar { display: none; }
+.hubtabs a { display: inline-flex; align-items: center; gap: 8px; padding: 12px 14px; font-weight: 600; font-size: var(--fs-md); color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; text-decoration: none; transition: color .2s; }
+.hubtabs a:hover { color: var(--ink-2); }
+.hubtabs a.is-on { color: var(--ink); border-color: var(--accent); }
+.hubtabs a svg { width: 16px; height: 16px; opacity: .8; }

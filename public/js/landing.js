@@ -1,8 +1,8 @@
 // Landing page motion: split headings, scroll reveals, count-ups, chart draw, parallax stage, live firm-rules demo.
-import { icon, $, $$, clamp } from './core.js?v=c8ab25c2';
-import { splitHeading, installGlint, installPress, switchTheme, reduced } from './motion.js?v=c8ab25c2';
-import { slider } from './ui.js?v=c8ab25c2';
-import { loadFirms, planRules, defaultDaily, dailyCap } from './firms.js?v=c8ab25c2';
+import { icon, $, $$, clamp } from './core.js?v=2bd0652a';
+import { splitHeading, installGlint, installPress, switchTheme, reduced } from './motion.js?v=2bd0652a';
+import { slider } from './ui.js?v=2bd0652a';
+import { loadFirms, planRules, defaultDaily, dailyCap } from './firms.js?v=2bd0652a';
 
 const root = document.documentElement;
 try { root.dataset.theme = localStorage.getItem('ew_theme') || 'dark'; } catch (e) { /* ignore */ }
@@ -111,7 +111,7 @@ async function demo() {
     $$('#dProgs button').forEach((b) => (b.onclick = () => { progId = b.dataset.v; draw(); pulse(); }));
     $$('#dSizes button').forEach((b) => (b.onclick = () => { size = +b.dataset.v; draw(); pulse(); }));
     $$('#dStage button').forEach((b) => (b.onclick = () => { stage = b.dataset.v; $$('#dStage button').forEach((x) => x.classList.toggle('is-on', x === b)); window.__seg && window.__seg($('#dStage')); draw(); pulse(); }));
-    import('./motion.js?v=c8ab25c2').then((mo) => { mo.segInit($('#dProgs')); mo.segInit($('#dSizes')); mo.segInit($('#dStage')); });
+    import('./motion.js?v=2bd0652a').then((mo) => { mo.segInit($('#dProgs')); mo.segInit($('#dSizes')); mo.segInit($('#dStage')); });
   };
   const pulse = () => { if (window.gsap && !reduced.matches) window.gsap.fromTo('#dRules .rp', { opacity: 0, y: 8 }, { opacity: 1, y: 0, stagger: 0.04, duration: 0.4, ease: 'power3.out' }); };
   draw();
