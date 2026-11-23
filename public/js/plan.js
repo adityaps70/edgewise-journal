@@ -1,7 +1,7 @@
 // Free vs Pro: the upgrade screen, the usage meter, and the admin panel.
-import { S, $, $$, esc, icon, API, isPro, tradesLeft, aiLeft } from './core.js?v=bd19c77f';
-import { modal, confirmBox, helpers } from './views.js?v=bd19c77f';
-import { toast } from './motion.js?v=bd19c77f';
+import { S, $, $$, esc, icon, API, isPro, tradesLeft, aiLeft } from './core.js?v=6dca6492';
+import { modal, confirmBox, helpers } from './views.js?v=6dca6492';
+import { toast } from './motion.js?v=6dca6492';
 
 const SUPPORT = 'support@thesmarttrade.in';
 const price = () => S.sub?.price || '999';
@@ -61,12 +61,13 @@ export function upgradeModal(reason = '') {
 export function usageHTML(compact = true) {
   if (isPro() || !S.sub) return '';
   const t = S.sub.trades; const a = S.sub.ai; const pct = (x) => Math.min(100, (x.used / x.limit) * 100);
-  return `<div class="usage ${compact ? 'usage--side' : ''}"><div class="usage__h"><b>Free plan</b><button type="button" class="linkbtn" data-upgrade>Upgrade</button></div>
+  return `<div class="usage ${compact ? 'usage--side' : ''}"><div class="usage__h"><b>Free plan</b>${compact ? '' : `<span class="muted">Pro ${esc(priceTxt())}/month</span>`}</div>
     <div class="usage__r"><span>Trades</span><em>${Math.min(t.used, t.limit)}/${t.limit}</em></div><div class="usage__bar"><i style="width:${pct(t)}%"></i></div>
-    <div class="usage__r"><span>AI requests</span><em>${Math.min(a.used, a.limit)}/${a.limit}</em></div><div class="usage__bar"><i style="width:${pct(a)}%"></i></div></div>`;
+    <div class="usage__r"><span>AI requests</span><em>${Math.min(a.used, a.limit)}/${a.limit}</em></div><div class="usage__bar"><i style="width:${pct(a)}%"></i></div>
+    <button type="button" class="btn btn--primary usage__go" data-upgrade>${icon('star')}Upgrade to Pro${compact ? ` · ${esc(priceTxt())}` : ''}</button></div>`;
 }
 export function bindUsage(root) { $$('[data-upgrade]', root).forEach((b) => (b.onclick = () => upgradeModal())); }
-export { tradesLeft, aiLeft };
+export { tradesLeft, aiLeft, priceTxt };
 
 // ---------------------------------------------------------------- admin panel
 const fmtD = (t) => (t ? new Date(t).toLocaleDateString([], { day: 'numeric', month: 'short', year: '2-digit' }) : '—');

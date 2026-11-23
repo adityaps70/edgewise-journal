@@ -3,16 +3,16 @@ import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
   goalIdea,
-} from './core.js?v=bd19c77f';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=bd19c77f';
-import { slider, liveRate, fxAgo } from './ui.js?v=bd19c77f';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=bd19c77f';
+} from './core.js?v=6dca6492';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=6dca6492';
+import { slider, liveRate, fxAgo } from './ui.js?v=6dca6492';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=6dca6492';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=bd19c77f';
-import * as V2 from './views2.js?v=bd19c77f';
-import * as V3 from './views3.js?v=bd19c77f';
-import * as PL from './plan.js?v=bd19c77f';
-import * as V4 from './views4.js?v=bd19c77f';
+import * as V from './views.js?v=6dca6492';
+import * as V2 from './views2.js?v=6dca6492';
+import * as V3 from './views3.js?v=6dca6492';
+import * as PL from './plan.js?v=6dca6492';
+import * as V4 from './views4.js?v=6dca6492';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -464,7 +464,7 @@ function navItems() { // every page this trader can open (the menu shows them gr
 let current = null;
 function shell(first = false) {
   setTimeout(paintPlan, 0);
-  import('./pet.js?v=bd19c77f').then((m) => m.mountPet()).catch(() => {});
+  import('./pet.js?v=6dca6492').then((m) => m.mountPet()).catch(() => {});
   const p = P();
   app.innerHTML = `<div class="app"><div class="slab" id="slab">
     <aside class="side"><div class="side__top">${LOGO}<a class="side__name" href="index.html" aria-label="${APP.name} home">${WORDMARK}</a><button class="side__fold" id="fold" aria-label="Collapse sidebar">${icon('fold')}</button></div>

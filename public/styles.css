@@ -1245,3 +1245,7 @@ body.mp { overflow: auto; background: var(--scene); background-color: var(--bg);
   #hTheme { display: none; } /* theme is in Settings */
   .head .rbtn { width: 38px; height: 38px; }
 }
+
+/* upgrade entry points */
+.usage__go { margin-top: 8px; width: 100%; justify-content: center; height: 38px; font-size: var(--fs-sm); }
+.usage:not(.usage--side) .usage__go { width: auto; justify-self: start; padding: 0 18px; }
