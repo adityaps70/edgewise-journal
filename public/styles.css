@@ -1107,7 +1107,7 @@ body.mp { overflow: auto; background: var(--scene); background-color: var(--bg);
 /* ---------- Pip, the trading buddy ---------- */
 .pet { position: fixed; left: 0; top: 0; z-index: 70; width: 84px; height: 84px; touch-action: none; user-select: none; -webkit-user-select: none; --lx: 0; --ly: 0; --lean: 0deg; will-change: transform; }
 .pet__tilt { position: relative; width: 100%; height: 100%; cursor: grab; transform: rotate(var(--lean)); transform-origin: 50% 90%; }
-.pet__body { position: relative; width: 100%; height: 100%; transform-origin: 50% 100%; transform-style: preserve-3d; animation: petBreathe 3.2s ease-in-out infinite; filter: drop-shadow(0 10px 14px #ff2a1a38); }
+.pet__body { position: relative; width: 100%; height: 100%; transform-origin: 50% 100%; transform-style: preserve-3d; animation: petBreathe 3.2s ease-in-out infinite; filter: drop-shadow(0 8px 14px #ff2a1a30); }
 .pet__svg { width: 100%; height: 100%; overflow: visible; display: block; }
 .pet.is-follow.is-moving .pet__tilt { pointer-events: none; }
 .pet.is-drag .pet__tilt { cursor: grabbing; } .pet.is-drag .pet__body { animation: none; transform: scale(1.08); }
@@ -1157,7 +1157,7 @@ body.mp { overflow: auto; background: var(--scene); background-color: var(--bg);
 .pet__acts .pet__mute { flex-basis: 100%; justify-content: center; height: 28px; color: var(--muted); box-shadow: none; background: none; } .pet__acts .pet__mute:hover { background: none; box-shadow: none; color: #fff; }
 [data-theme="light"] .pet__say { background: #fff; color: #15171c; box-shadow: 0 0 0 1px #00000014, 0 18px 40px -14px #0004; } [data-theme="light"] .pet__acts > button { color: #15171c; background: #0000000a; box-shadow: inset 0 0 0 1px #00000014; } [data-theme="light"] .pet__seg button.is-on { background: #fff; color: #15171c; box-shadow: 0 1px 3px #0002; } [data-theme="light"] .pet__opts { border-color: #0000000f; }
 .petrow { align-items: center; gap: 16px; } .petrow__l { display: flex; align-items: center; gap: 14px; } .petrow__l small { display: block; color: var(--muted); font-size: var(--fs-xs); line-height: 1.45; margin-top: 3px; max-width: 460px; }
-.petpv-slot { flex: none; width: 56px; height: 56px; } .petpv { display: block; width: 56px; height: 56px; filter: drop-shadow(0 6px 8px #ff2a1a33); }
+.petpv-slot { flex: none; width: 56px; height: 56px; } .petpv { display: block; width: 56px; height: 56px; }
 .petpv svg { width: 100%; height: 100%; overflow: visible; } .petpv .pet__shut, .petpv .pet__sweat, .petpv .pet__spark { display: none; }
 @media (max-width: 760px) { .pet { width: 64px; height: 64px; } .pet__say { max-width: 220px; } }
 @media (prefers-reduced-motion: reduce) { .pet__body, .pet__flame, .pet__tip, .pet__shadow, .pet__sweat, .pet__spark { animation: none !important; } }

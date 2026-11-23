@@ -1,7 +1,7 @@
 // Trading buddy: an optional little character that lives in the corner of the app.
 // It sleeps when you're away, wakes when the mouse comes near, follows the cursor with its eyes,
 // and talks only when something matters: your risk left today, losing streaks, news, your prep, your wins.
-import { S, P, $, esc, money, num, today, sum, net, safeToRisk, saveProfile, icon, API, addDays } from './core.js?v=0489d084';
+import { S, P, $, esc, money, num, today, sum, net, safeToRisk, saveProfile, icon, API, addDays } from './core.js?v=f0ce2236';
 
 export const PETS = { pip: { name: 'Pip', blurb: 'A little flame. Burns brighter when you stick to the plan.' } };
 
@@ -9,35 +9,37 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 let el = null; let st = null;
 
 // ---------- drawing: a chubby, glossy flame (original SVG) ----------
-const MOUTH = { happy: 'M-3.6 -0.6 Q0 4.4 3.6 -0.6 Z', calm: 'M-2.2 0 A2.2 1.25 0 1 0 2.2 0 A2.2 1.25 0 1 0 -2.2 0 Z', worried: 'M-3.4 1.4 Q-1.7 -0.6 0 1.2 Q1.7 -0.6 3.4 1.4', sad: 'M-3.4 1.8 Q0 -1.6 3.4 1.8', wow: '' };
+const MOUTH = { happy: 'M-3 -0.6 Q0 3.6 3 -0.6 Z', calm: 'M-1.9 0 A1.9 0.85 0 1 0 1.9 0 A1.9 0.85 0 1 0 -1.9 0 Z', worried: 'M-2.8 1.2 Q-1.4 -0.4 0 1 Q1.4 -0.4 2.8 1.2', sad: 'M-2.8 1.4 Q0 -1.2 2.8 1.4', wow: '' };
 let uid = 0;
 function svg() {
   const u = 'p' + ++uid; // unique ids so the settings preview and the live pet don't share gradients
-  const body = 'M60 9 C64 24 86 33 97 54 C107 74 103 101 88 114 C78 122 70 124 60 124 C50 124 42 122 32 114 C17 101 13 74 23 54 C33 36 52 28 60 9 Z';
+  // a ball (centre 60,78, r 44) drawn up into a thin flame tip
+  const body = 'M60 10 C61.5 17 70 26 80 37 C93 51 104 62 104 78 A44 44 0 0 1 16 78 C16 62 27 51 40 37 C50 26 58.5 17 60 10 Z';
+  const ball = 'M16 78 A44 44 0 0 0 104 78 A44 44 0 0 0 16 78 Z';
   return `<svg viewBox="0 0 120 130" class="pet__svg" aria-hidden="true"><defs>
-      <linearGradient id="${u}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff4a2a"/><stop offset=".3" stop-color="#ff2419"/><stop offset=".6" stop-color="#ff2a18"/><stop offset=".8" stop-color="#ff4a1c"/><stop offset=".92" stop-color="#ff7e26"/><stop offset="1" stop-color="#ffa62e"/></linearGradient>
-      <radialGradient id="${u}d" cx="50%" cy="52%" r="56%"><stop offset=".72" stop-color="#8a0010" stop-opacity="0"/><stop offset="1" stop-color="#8a0010" stop-opacity=".28"/></radialGradient>
-      <radialGradient id="${u}l" cx="44%" cy="40%" r="40%"><stop offset="0" stop-color="#ff6a4a" stop-opacity=".55"/><stop offset="1" stop-color="#ff6a4a" stop-opacity="0"/></radialGradient>
-      <linearGradient id="${u}y" x1="0" y1="0" x2="0" y2="1"><stop offset=".9" stop-color="#fff34a" stop-opacity="0"/><stop offset=".985" stop-color="#fff34a" stop-opacity=".7"/><stop offset="1" stop-color="#ffff6a" stop-opacity="1"/></linearGradient>
-      <linearGradient id="${u}t" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff4a22"/><stop offset="1" stop-color="#ff8a46"/></linearGradient>
+      <linearGradient id="${u}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7a5a"/><stop offset=".14" stop-color="#ff2a1c"/><stop offset=".3" stop-color="#ff130c"/><stop offset=".6" stop-color="#ff1a06"/><stop offset=".74" stop-color="#ff4a02"/><stop offset=".86" stop-color="#ff8400"/><stop offset="1" stop-color="#ffb000"/></linearGradient>
+      <radialGradient id="${u}e" cx="50%" cy="50%" r="50%"><stop offset=".82" stop-color="#e0002a" stop-opacity="0"/><stop offset="1" stop-color="#e0002a" stop-opacity=".45"/></radialGradient>
+      <linearGradient id="${u}m" x1="0" y1="0" x2="0" y2="1"><stop offset=".55" stop-color="#fff" stop-opacity="1"/><stop offset=".72" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <mask id="${u}k"><path d="${ball}" fill="url(#${u}m)"/></mask>
+      <linearGradient id="${u}r" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffff3a" stop-opacity="0"/><stop offset=".25" stop-color="#ffff3a" stop-opacity=".9"/><stop offset=".75" stop-color="#ffff3a" stop-opacity=".9"/><stop offset="1" stop-color="#ffff3a" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${u}t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7d48"/><stop offset=".6" stop-color="#ff8a4e"/><stop offset="1" stop-color="#ff6a3a"/></linearGradient>
+      <filter id="${u}f" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation=".5"/></filter>
     </defs>
     <g class="pet__flame">
-      <path class="pet__tip" d="M27 60 C21 46 17 35 13 22 C23 29 33 34 42 40 Z" fill="url(#${u}t)"/>
-      <path class="pet__tip t2" d="M93 60 C99 49 102 40 107 31 C98 34 88 38 80 41 Z" fill="url(#${u}t)"/>
+      <path class="pet__tip" d="M15 22 C19 30 15.5 48 16 64 C16.5 70 17 72 18 74 L34 64 L40 38 C31 32 20 28 15 22 Z" fill="url(#${u}t)"/>
+      <path class="pet__tip t2" d="M104 31 C99 36 99 42 100.5 50 C102 58 103 64 103 72 L88 66 L84 42 C92 38 99 35 104 31 Z" fill="url(#${u}t)"/>
       <path class="pet__shape" d="${body}" fill="url(#${u}b)"/>
-      <path d="${body}" fill="url(#${u}l)"/>
-      <path d="${body}" fill="url(#${u}d)"/>
-      <path d="${body}" fill="url(#${u}y)"/>
+      <path d="M21.2 98 A43.6 43.6 0 0 0 98.8 98" fill="none" stroke="url(#${u}r)" stroke-width="1.6" filter="url(#${u}f)"/>
     </g>
     <g class="pet__face">
       <g class="pet__eyes"><g class="pet__open">
-        <g class="pet__e1" transform="translate(42 72)"><g class="pet__eye"><ellipse rx="4.3" ry="6" fill="#0b0b0d"/><ellipse cx="-1.4" cy="-2.6" rx="1.2" ry="1.1" fill="#fff"/></g></g>
-        <g class="pet__e2" transform="translate(78 72)"><g class="pet__eye"><ellipse rx="4.3" ry="6" fill="#0b0b0d"/><ellipse cx="-1.4" cy="-2.6" rx="1.2" ry="1.1" fill="#fff"/></g></g></g>
-        <g class="pet__shut" stroke="#0b0b0d" stroke-width="2" stroke-linecap="round" fill="none"><g class="pet__e1" transform="translate(42 72)"><path d="M-4.5 1 q4.5 3.5 9 0"/></g><g class="pet__e2" transform="translate(78 72)"><path d="M-4.5 1 q4.5 3.5 9 0"/></g></g></g>
-      <g class="pet__m" transform="translate(60 80)"><path class="pet__mouth" d="${MOUTH.calm}" stroke="#0b0b0d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="#0b0b0d"/></g>
+        <g class="pet__e1" transform="translate(41.5 80)"><g class="pet__eye"><ellipse rx="3.4" ry="5.3" fill="#0a0a0a"/><circle cx=".6" cy="-2.7" r="1.05" fill="#fff"/><circle cx="-.4" cy="-1.8" r=".35" fill="#fff"/></g></g>
+        <g class="pet__e2" transform="translate(76.5 80)"><g class="pet__eye"><ellipse rx="3.4" ry="5.3" fill="#0a0a0a"/><circle cx=".6" cy="-2.7" r="1.05" fill="#fff"/><circle cx="-.4" cy="-1.8" r=".35" fill="#fff"/></g></g></g>
+        <g class="pet__shut" stroke="#0a0a0a" stroke-width="1.8" stroke-linecap="round" fill="none"><g class="pet__e1" transform="translate(41.5 80)"><path d="M-3.6 .6 q3.6 2.8 7.2 0"/></g><g class="pet__e2" transform="translate(76.5 80)"><path d="M-3.6 .6 q3.6 2.8 7.2 0"/></g></g></g>
+      <g class="pet__m" transform="translate(59 88)"><path class="pet__mouth" d="${MOUTH.calm}" stroke="#0a0a0a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="#0a0a0a"/></g>
     </g>
     <path class="pet__sweat" d="M100 52 q6 10 0 14 q-6 -4 0 -14z" fill="#8fd3ff"/>
-    <g class="pet__spark" fill="#ffe27a"><path d="M8 44 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z"/><path d="M110 20 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5z"/></g>
+    <g class="pet__spark" fill="#ffe27a"><path d="M6 40 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z"/><path d="M112 18 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5z"/></g>
   </svg>`;
 }
 
@@ -141,8 +143,8 @@ function onMove(e) {
   el.classList.toggle('is-near', d < 140);
 }
 // the face sits on a ball: turning the ball moves each feature along the sphere and squashes it near the edge
-const BALL = { cx: 60, cy: 86, r: 40 };
-const FEAT = [['.pet__e1', 42, 72], ['.pet__e2', 78, 72], ['.pet__m', 60, 80]].map(([sel, x, y]) => [sel, Math.asin((x - BALL.cx) / BALL.r), Math.asin((y - BALL.cy) / BALL.r)]);
+const BALL = { cx: 60, cy: 78, r: 44 };
+const FEAT = [['.pet__e1', 41.5, 80], ['.pet__e2', 76.5, 80], ['.pet__m', 59, 88]].map(([sel, x, y]) => [sel, Math.asin((x - BALL.cx) / BALL.r), Math.asin((y - BALL.cy) / BALL.r)]);
 function turnFace(yaw, pitch) {
   if (!el) return;
   FEAT.forEach(([sel, lon, lat]) => {
@@ -225,7 +227,7 @@ function menu() {
     e.stopPropagation(); const a = x.dataset.a;
     if (a === 'stay' || a === 'follow') { setFollow(a === 'follow'); b.querySelectorAll('.pet__seg button').forEach((y) => y.classList.toggle('is-on', y === x)); return; }
     hide();
-    if (a === 'log' || a === 'shot') { const V = await import('./views.js?v=0489d084'); V.tradeModal(null, {}, a === 'shot' ? { shot: true } : {}); }
+    if (a === 'log' || a === 'shot') { const V = await import('./views.js?v=f0ce2236'); V.tradeModal(null, {}, a === 'shot' ? { shot: true } : {}); }
     else if (a === 'coach') location.hash = '#coach'; else if (a === 'journal') location.hash = '#journal';
     else if (a === 'hide') { try { localStorage.setItem(HIDE_KEY, today()); } catch (err) {} if (window.gsap && !reduced.matches) window.gsap.to($('.pet__tilt', el), { scale: 0, duration: 0.3, ease: 'back.in(2)', onComplete: unmountPet }); else unmountPet(); }
   }));
