@@ -3,15 +3,15 @@ import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
   goalIdea,
-} from './core.js?v=cfa49f3d';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=cfa49f3d';
-import { slider, liveRate, fxAgo } from './ui.js?v=cfa49f3d';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=cfa49f3d';
+} from './core.js?v=1a2e09d8';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=1a2e09d8';
+import { slider, liveRate, fxAgo } from './ui.js?v=1a2e09d8';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=1a2e09d8';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=cfa49f3d';
-import * as V2 from './views2.js?v=cfa49f3d';
-import * as V3 from './views3.js?v=cfa49f3d';
-import * as V4 from './views4.js?v=cfa49f3d';
+import * as V from './views.js?v=1a2e09d8';
+import * as V2 from './views2.js?v=1a2e09d8';
+import * as V3 from './views3.js?v=1a2e09d8';
+import * as V4 from './views4.js?v=1a2e09d8';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -416,18 +416,30 @@ async function importWorkbook(file) {
 // ---------------------------------------------------------------- shell
 const VIEWS = {
   overview: ['Overview', 'overview', V.overview], trades: ['Trades', 'trades', V.trades], calendar: ['Calendar', 'calendar', V.calendar],
-  accounts: ['Accounts', 'accounts', V.accounts], payouts: ['Payouts', 'payouts', V.payouts], plan: ['Weekly plan', 'plan', V.plan],
+  accounts: ['Accounts', 'accounts', accountsHub], payouts: ['Payouts', 'payouts', V.payouts], plan: ['Weekly plan', 'plan', V.plan],
   analytics: ['Analytics', 'analytics', V.analytics], journal: ['Journal', 'journal', V.journal], playbook: ['Playbook', 'playbook', V.playbook],
   mindset: ['Mindset', 'brain', V2.mindset], firms: ['Prop firms', 'shield', V2.firms], reports: ['Reports', 'sheet', V2.reports],
   coach: ['AI coach', 'coach', V.coach], settings: ['Settings', 'settings', V.settings],
   notebook: ['Notebook', 'note', V3.notebook], agents: ['Agents', 'agent', V3.agents], backtest: ['Backtesting', 'flask', V3.backtest],
   tools: ['Tools', 'calc', V3.tools], mentor: ['Mentor mode', 'users', V3.mentor], connections: ['Connections', 'link', V4.connections],
 };
+// ---- Accounts: your accounts + what each firm cost and paid, one page with two tabs
+let ACC_TAB = 'list';
+function accountsHub(el, opts = {}) {
+  const prop = S.account.some((a) => a.type !== 'personal');
+  if (!prop) ACC_TAB = 'list';
+  (ACC_TAB === 'money' ? V2.firms : V.accounts)(el, opts);
+  if (!prop) return;
+  const head = $('.phead', el); if (!head) return;
+  const h1 = $('h1', head); if (h1) h1.textContent = 'Accounts';
+  const eb = $('.phead__eyebrow', head); if (eb) eb.textContent = ACC_TAB === 'money' ? 'Run it like a business' : 'Challenges, funded and personal';
+  head.insertAdjacentHTML('afterend', `<div class="tabs hubtabs" id="accTabs" role="tablist"><button type="button" role="tab" data-v="list" class="${ACC_TAB === 'list' ? 'is-on' : ''}">${icon('accounts')}Your accounts</button><button type="button" role="tab" data-v="money" class="${ACC_TAB === 'money' ? 'is-on' : ''}">${icon('payouts')}Firms, costs &amp; payouts</button></div>`);
+  $$('#accTabs button', el).forEach((b) => (b.onclick = () => { if (b.dataset.v === ACC_TAB) return; ACC_TAB = b.dataset.v; const main = $('#main'); main.scrollTop = 0; accountsHub(main); animateData(main); if (window.gsap) window.gsap.fromTo($$('.page > *:not(.phead):not(.hubtabs)', main), { opacity: 0, y: 12 }, { opacity: 1, y: 0, stagger: 0.04, duration: 0.45, ease: 'expo.out' }); }));
+}
 function navItems() {
   const p = P(); const prop = (p.funding || []).some((f) => f !== 'own') || S.account.some((a) => a.type !== 'personal');
   const list = ['overview', 'trades', 'calendar', 'analytics', 'mindset', 'playbook', 'journal', 'notebook', 'backtest'];
-  if (S.account.length) list.push('accounts');
-  if (prop) list.push('firms');
+  if (S.account.length || prop) list.push('accounts'); // prop-firm money lives inside Accounts as a tab
   if (prop || S.payout.length) list.push('payouts');
   if (prop || p.mission || S.plan.length) list.push('plan');
   list.push('connections', 'agents', 'reports', 'mentor', 'tools', 'coach');
@@ -540,7 +552,9 @@ function go(id, opts = {}, force = false) {
 }
 function route(first = false) {
   const items = [...navItems(), 'settings'];
-  let id = (location.hash || '#overview').slice(1); if (!VIEWS[id]) id = 'overview';
+  let id = (location.hash || '#overview').slice(1);
+  if (id === 'firms') { ACC_TAB = 'money'; id = 'accounts'; history.replaceState(null, '', '#accounts'); } // old links
+  if (!VIEWS[id]) id = 'overview';
   if (!items.includes(id)) id = 'overview';
   const main = $('#main'); if (!main) return;
   const render = () => {

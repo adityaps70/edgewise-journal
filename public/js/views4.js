@@ -1,11 +1,11 @@
 // Connections (broker sync), file import, trade replay, AI backtesting.
 import {
   S, P, $, $$, esc, uid, num, sum, clamp, today, addDays, fmtDate, fmtDay, money, pct, tone, net, icon, API, save, saveProfile, pointValue, setupsOf,
-} from './core.js?v=cfa49f3d';
-import { equityChart } from './charts.js?v=cfa49f3d';
-import { helpers, modal, confirmBox, tradeList } from './views.js?v=cfa49f3d';
-import { toast, shake } from './motion.js?v=cfa49f3d';
-import * as IM from './importers.js?v=cfa49f3d';
+} from './core.js?v=1a2e09d8';
+import { equityChart } from './charts.js?v=1a2e09d8';
+import { helpers, modal, confirmBox, tradeList } from './views.js?v=1a2e09d8';
+import { toast, shake } from './motion.js?v=1a2e09d8';
+import * as IM from './importers.js?v=1a2e09d8';
 
 const card = (...a) => helpers.card(...a); const phead = (...a) => helpers.phead(...a); const after = (...a) => helpers.after(...a);
 const field = (...a) => helpers.field(...a); const inp = (...a) => helpers.inp(...a); const optionList = (...a) => helpers.optionList(...a); const formData = (...a) => helpers.formData(...a);
