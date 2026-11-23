@@ -13,6 +13,12 @@ PUB = ROOT / 'public'
 SRC = ROOT / 'tools' / 'blog'
 OUT = PUB / 'blog'
 SITE = 'https://thesmarttrade.in'
+
+
+def ver(rel):
+    """Short content hash, so a changed stylesheet gets a new URL and browsers can't serve a stale copy."""
+    import hashlib
+    return hashlib.sha1((PUB / rel).read_bytes()).hexdigest()[:8]
 AUTHOR = {
     'name': 'Aditya Pratap Singh',
     'url': SITE + '/about',
@@ -117,9 +123,9 @@ def page(title, desc, path, body, extra_head='', image=None, kind='article'):
   <link rel="alternate" type="application/rss+xml" title="The Smart Trade blog" href="{SITE}/blog/feed.xml">
   <meta name="theme-color" content="#050608">
   <link rel="icon" type="image/svg+xml" href="/brand/mark.svg">
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/landing.css">
-  <link rel="stylesheet" href="/blog/blog.css">
+  <link rel="stylesheet" href="/styles.css?v={ver('styles.css')}">
+  <link rel="stylesheet" href="/landing.css?v={ver('landing.css')}">
+  <link rel="stylesheet" href="/blog/blog.css?v={ver('blog/blog.css')}">
 {extra_head}</head>
 <body class="blog">
 {NAV}

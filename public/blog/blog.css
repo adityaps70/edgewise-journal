@@ -41,3 +41,6 @@ details { border-bottom: 1px solid var(--line); padding: 12px 0; } summary { cur
 .shot figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; }
 .abox { margin-top: 40px; padding: 18px 20px; border-radius: 16px; border: 1px solid var(--line-2); }
 .abox p { margin: 6px 0 0; font-size: 15px; }
+.post img { max-width: 100%; height: auto; }
+.post figure { margin: 24px 0; }
+.post a.btn--primary, .post a.btn--primary:hover { color: var(--accent-ink, #fff); text-decoration: none; }

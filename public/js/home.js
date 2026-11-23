@@ -1,8 +1,8 @@
 // Landing page: the hero dashboard assembles from scattered pieces as you scroll, plus reveals and live demos.
-import { icon, $, $$, clamp } from './core.js?v=4dac5de5';
-import { reduced, segInit } from './motion.js?v=4dac5de5';
-import { slider } from './ui.js?v=4dac5de5';
-import { loadFirms, planRules, defaultDaily, dailyCap } from './firms.js?v=4dac5de5';
+import { icon, $, $$, clamp } from './core.js?v=0dba013b';
+import { reduced, segInit } from './motion.js?v=0dba013b';
+import { slider } from './ui.js?v=0dba013b';
+import { loadFirms, planRules, defaultDaily, dailyCap } from './firms.js?v=0dba013b';
 
 document.documentElement.dataset.theme = 'dark';
 $$('[data-ico]').forEach((el) => (el.innerHTML = icon(el.dataset.ico)));
