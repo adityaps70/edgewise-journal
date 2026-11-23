@@ -3,15 +3,15 @@ import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
   goalIdea,
-} from './core.js?v=daca8531';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=daca8531';
-import { slider, liveRate, fxAgo } from './ui.js?v=daca8531';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=daca8531';
+} from './core.js?v=42b089e0';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=42b089e0';
+import { slider, liveRate, fxAgo } from './ui.js?v=42b089e0';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=42b089e0';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=daca8531';
-import * as V2 from './views2.js?v=daca8531';
-import * as V3 from './views3.js?v=daca8531';
-import * as V4 from './views4.js?v=daca8531';
+import * as V from './views.js?v=42b089e0';
+import * as V2 from './views2.js?v=42b089e0';
+import * as V3 from './views3.js?v=42b089e0';
+import * as V4 from './views4.js?v=42b089e0';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
