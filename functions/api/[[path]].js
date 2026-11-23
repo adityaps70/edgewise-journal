@@ -106,6 +106,19 @@ async function grantPro(env, { paymentId, orderId, userId, amount, currency, mon
   return true;
 }
 
+async function revokePro(env, paymentId, full) {
+  await ensurePayTable(env);
+  const p = await env.DB.prepare('SELECT user_id, months, status FROM payments WHERE id = ?').bind(paymentId).first();
+  if (!p || p.status !== 'captured') return false;
+  await env.DB.prepare('UPDATE payments SET status = ? WHERE id = ?').bind(full ? 'refunded' : 'partial_refund', paymentId).run();
+  if (!full) return true;
+  const u = await env.DB.prepare('SELECT plan, pro_until FROM users WHERE id = ?').bind(p.user_id).first();
+  if (!u || u.plan !== 'pro' || !u.pro_until) return true; // free already, or Pro with no end date given by an admin
+  const until = u.pro_until - (p.months || 1) * 30 * 86400000;
+  if (until <= Date.now()) await env.DB.prepare("UPDATE users SET plan = 'free', pro_until = NULL WHERE id = ?").bind(p.user_id).run();
+  else await env.DB.prepare('UPDATE users SET pro_until = ? WHERE id = ?').bind(until, p.user_id).run();
+  return true;
+}
 async function startSession(env, request, user) {
   const token = randomId(32);
   await env.DB.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)')
@@ -411,6 +424,11 @@ export async function onRequest(context) {
         if (!notes.user_id && orderId && rzpOn(env)) notes = (await rzp(env, '/orders/' + orderId)).notes || {};
         if (notes.user_id && pay?.id && pay.status === 'captured') await grantPro(env, { paymentId: pay.id, orderId, userId: notes.user_id, amount: pay.amount, currency: pay.currency, months: parseInt(notes.months || '1', 10) });
       }
+      // refunds: a full refund takes back the Pro time that payment bought; a partial one is only recorded
+      if (ev.event === 'refund.processed') {
+        const rf = ev.payload?.refund?.entity; const pay = ev.payload?.payment?.entity;
+        if (rf?.payment_id) await revokePro(env, rf.payment_id, (pay && pay.amount_refunded >= pay.amount) || rf.amount >= (pay?.amount || Infinity));
+      }
       return json({ ok: true });
     }
 
@@ -521,8 +539,8 @@ export async function onRequest(context) {
         const signups = days.map((d) => su.filter((r) => new Date(r.created_at).toISOString().slice(0, 10) === d).length);
         const aiDaily = days.map((d) => (au.find((r) => r.day === d) || {}).n || 0);
         await ensurePayTable(env);
-        const { results: rev } = await env.DB.prepare('SELECT currency, COALESCE(SUM(amount), 0) AS amt, COUNT(*) AS n FROM payments WHERE created_at > ? GROUP BY currency').bind(now - 30 * DAY).all();
-        const paidAll = await one('SELECT COUNT(*) AS n, COUNT(DISTINCT user_id) AS u FROM payments');
+        const { results: rev } = await env.DB.prepare("SELECT currency, COALESCE(SUM(amount), 0) AS amt, COUNT(*) AS n FROM payments WHERE created_at > ? AND status != 'refunded' GROUP BY currency").bind(now - 30 * DAY).all();
+        const paidAll = await one("SELECT COUNT(*) AS n, COUNT(DISTINCT user_id) AS u FROM payments WHERE status != 'refunded'");
         return json({ users: users.n, new7: new7.n, new30: new30.n, active1: active1.n, active7: active7.n, pro: pro.n, trades: trades.n, accounts: accounts.n, aiToday: aiToday.n, ai30: ai30.n, atLimit: atLimit.n, days, signups, aiDaily, revenue30: rev, payments: paidAll.n || 0, payers: paidAll.u || 0, checkout: rzpOn(env) });
       }
       if (path === '/admin/users' && method === 'GET') {
