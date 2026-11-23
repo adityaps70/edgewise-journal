@@ -3,15 +3,15 @@ import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
   goalIdea,
-} from './core.js?v=2bd0652a';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=2bd0652a';
-import { slider, liveRate, fxAgo } from './ui.js?v=2bd0652a';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=2bd0652a';
+} from './core.js?v=e2389fed';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=e2389fed';
+import { slider, liveRate, fxAgo } from './ui.js?v=e2389fed';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=e2389fed';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=2bd0652a';
-import * as V2 from './views2.js?v=2bd0652a';
-import * as V3 from './views3.js?v=2bd0652a';
-import * as V4 from './views4.js?v=2bd0652a';
+import * as V from './views.js?v=e2389fed';
+import * as V2 from './views2.js?v=e2389fed';
+import * as V3 from './views3.js?v=e2389fed';
+import * as V4 from './views4.js?v=e2389fed';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -431,7 +431,7 @@ const HUBS = [
   ['journal', 'Journal', 'journal', ['journal', 'notebook', 'plan']],
   ['playbook', 'Playbook', 'playbook', ['playbook', 'backtest']],
   ['accounts', 'Accounts', 'accounts', ['accounts', 'firms', 'payouts']],
-  ['tools', 'Tools', 'calc', ['connections', 'agents', 'mentor', 'tools']],
+  ['tools', 'Tools', 'calc', ['agents', 'tools', 'connections', 'mentor']],
 ];
 const TAB_LABEL = { trades: 'Trade log', analytics: 'Stats', journal: 'Daily journal', accounts: 'Your accounts', firms: 'Firms & costs', tools: 'Calculators' };
 const hubOf = (id) => HUBS.find((h) => h[3].includes(id)) || null;
