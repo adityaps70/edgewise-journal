@@ -23,7 +23,7 @@
   <meta name="twitter:description" content="Guard every prop account's drawdown, track payouts and get an AI coach that reads your whole journal.">
   <meta name="twitter:image" content="https://thesmarttrade.in/brand/og-1200x630.png">
 
-  <meta name="theme-color" content="#050608">
+  <meta name="theme-color" content="#080808">
 
   <script type="application/ld+json">
   {
@@ -70,134 +70,226 @@
   <link rel="icon" type="image/png" sizes="32x32" href="brand/mark-32.png">
   <link rel="apple-touch-icon" href="brand/mark-180.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=eeb11cdb">
-  <link rel="stylesheet" href="landing.css?v=eeb11cdb">
+  <link rel="preload" href="vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css?v=b9ac972d">
   <script src="vendor/gsap.min.js" defer></script>
   <script src="vendor/ScrollTrigger.min.js" defer></script>
-  <script type="module" src="js/landing.js?v=eeb11cdb"></script>
+  <link rel="stylesheet" href="home.css?v=b9ac972d">
+  <script type="module" src="js/home.js?v=b9ac972d"></script>
 </head>
-<body class="lp">
-  <header class="lnav" id="lnav">
-    <a class="lnav__brand" href="#top"><span class="mark mark--img"><img src="brand/mark.svg?v=7" alt=""></span><span class="wm"><small>THE</small><b>Smart<i>Trade</i></b></span></a>
-    <nav class="lnav__links"><a href="/blog/">Blog</a><a href="#features">Features</a><a href="#firms">Prop firms</a><a href="#coach">AI coach</a><a href="#faq">FAQ</a></nav>
-    <button class="rbtn rbtn--plain" id="lTheme" aria-label="Switch theme"></button>
-    <a class="btn btn--primary" href="app.html" data-cta>Open journal</a>
+<body class="home">
+  <header class="hn" id="hn">
+    <div class="hn__in">
+      <a class="hn__brand" href="#top" aria-label="The Smart Trade home"><span class="mark mark--img"><img src="brand/mark.svg?v=7" alt=""></span><span class="wm"><small>THE</small><b>Smart<i>Trade</i></b></span></a>
+      <nav class="hn__links" id="hnLinks"><a href="#features">Features</a><a href="#firms">Prop firms</a><a href="#pricing">Pricing</a><a href="/blog/">Blog</a><a href="#faq">FAQ</a></nav>
+      <div class="hn__end"><a class="wbtn wbtn--sm" href="app.html" data-cta>Open journal</a><button class="hn__burger" id="hnBurger" aria-label="Menu" aria-expanded="false"><i></i><i></i></button></div>
+    </div>
   </header>
 
   <main id="top">
-    <!-- HERO -->
-    <section class="hero">
-      <div class="hero__copy">
-        
-        <h1 class="hsplit">Trade the plan. Keep the payout.</h1>
-        <p class="hero__sub">The Smart Trade knows your firm's rules, watches every account's drawdown, and tells you where your money actually leaks. Log a trade in seconds; the journal does the maths.</p>
-        <div class="hero__cta"><a class="btn btn--primary btn--lg" href="app.html" data-cta data-ico-r="right">Start journaling free</a><a class="btn btn--lg" href="#how">See how it works</a></div>
-        <p class="hero__fine">Free while in beta. Create an account in seconds and your journal syncs across every device.</p>
+    <!-- ============ HERO: the dashboard assembles itself as you scroll ============ -->
+    <section class="hero2" id="hero">
+      <canvas class="stars" id="stars" aria-hidden="true"></canvas>
+      <div class="beam" aria-hidden="true"><i></i><i></i></div>
+      <div class="hero2__copy">
+        <span class="pill2">Free while in beta</span>
+        <h1 class="h1"><span>Trade the plan.</span><span>Keep the payout.</span></h1>
+        <p class="lead">The journal that knows your prop firm's rules, guards every account's drawdown and shows where your money leaks.</p>
+        <div class="hero2__cta"><a class="wbtn" href="app.html" data-cta>Start journaling free</a><a class="gbtn" href="#features">See what's inside</a></div>
       </div>
-      <div class="hero__stage" id="stage">
-        <div class="hs hs--main">
-          <div class="hs__head"><div><small>Net P&amp;L · this month</small><b data-count="4835" data-fmt="usdSign">+$0</b></div><span class="delta"><span data-ico="up"></span>18.4%</span></div>
-          <svg class="hs__chart" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true">
-            <defs><linearGradient id="hg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--chart)" stop-opacity=".35"/><stop offset="1" stop-color="var(--chart)" stop-opacity="0"/></linearGradient><linearGradient id="hs" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="var(--blue)"/><stop offset=".65" stop-color="var(--violet)"/><stop offset="1" stop-color="var(--accent)"/></linearGradient></defs>
-            <path class="hs__area" d="M0,120 L30,112 60,116 90,98 120,104 150,86 180,90 210,70 240,76 270,58 300,62 330,44 360,40 400,24 L400,140 L0,140Z" fill="url(#hg)"/>
-            <path class="hs__line" d="M0,120 L30,112 60,116 90,98 120,104 150,86 180,90 210,70 240,76 270,58 300,62 330,44 360,40 400,24" fill="none" stroke="url(#hs)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
-            <circle class="hs__pt" cx="210" cy="70" r="5" fill="var(--mint)"/><circle class="hs__pt" cx="330" cy="44" r="5" fill="var(--mint)"/><circle class="hs__pt" cx="400" cy="24" r="6" fill="var(--accent)" stroke="#fff" stroke-width="2"/>
-          </svg>
-          <div class="hs__kpis"><div><small>Win rate</small><b data-count="58" data-fmt="pct0">0%</b></div><div><small>Profit factor</small><b data-count="1.9" data-fmt="dec">0</b></div><div><small>Avg R</small><b data-count="0.74" data-fmt="r">0R</b></div></div>
+
+      <div class="dstage" id="dstage">
+        <div class="dscale" id="dscale">
+          <div class="dash" id="dash">
+            <aside class="dash__side">
+              <div class="dash__logo"><span class="mark mark--img"><img src="brand/mark.svg?v=7" alt=""></span><span class="wm"><small>THE</small><b>Smart<i>Trade</i></b></span></div>
+              <nav class="dash__nav"><span class="is-on"><i data-ico="overview"></i>Overview</span><span><i data-ico="trades"></i>Trades<em>3</em></span><span><i data-ico="analytics"></i>Analytics</span><span><i data-ico="journal"></i>Journal</span><span><i data-ico="playbook"></i>Playbook</span><span><i data-ico="accounts"></i>Accounts</span><span><i data-ico="calc"></i>Tools</span></nav>
+              <div class="slot slot--safe"><div class="pc pc--safe" data-p="safe"><small>Safe to risk today</small><b>$650</b><span>2 trades left · today +$240</span><div class="bar"><i style="width:62%"></i></div></div></div>
+            </aside>
+            <div class="dash__main">
+              <div class="dash__top"><div class="dash__search"><i data-ico="search"></i>Search trades, symbols, setups<kbd>⌘K</kbd></div><span class="dash__plus"><i data-ico="plus"></i></span><span class="dash__ib"><i data-ico="filter"></i></span><span class="dash__ib"><i data-ico="coach"></i></span><span class="dash__av">A</span></div>
+              <div class="dash__head"><small>Monday 23 November</small><b>Good morning, Alex</b><span>Q4 payout goal: $1,900 of $3,000 paid out. 26 trading days left.</span></div>
+              <div class="dash__grid">
+                <div class="slot slot--k1"><div class="pc pc--kpi" data-p="k1"><small>Today</small><b class="up">+$240</b></div></div>
+                <div class="slot slot--k2"><div class="pc pc--kpi" data-p="k2"><small>This week</small><b class="up">+$1,215</b></div></div>
+                <div class="slot slot--k3"><div class="pc pc--kpi" data-p="k3"><small>Win rate</small><b>58%</b></div></div>
+                <div class="slot slot--k4"><div class="pc pc--kpi" data-p="k4"><small>Profit factor</small><b>1.92</b></div></div>
+
+                <div class="slot slot--acct"><div class="pc pc--acct" data-p="acct">
+                  <div class="pa__top"><span class="fm">AX</span><div><b>Apex 50K EOD</b><small>Apex Trader Funding · EOD trail</small></div><span class="tag">Challenge</span></div>
+                  <small class="pa__l">Account P&amp;L</small><b class="pa__pnl up">+$1,840</b><em class="pa__sub">61% of $3,000 target · 72% pass odds</em>
+                  <div class="lad"><div class="lad__t"><i class="lad__f"></i><span class="lad__z"></span><span class="lad__d"></span></div><div class="lad__l"><span class="dn">Breach −$2,000</span><span>Target +$3,000</span></div></div>
+                  <div class="pa__stats"><div><small>Daily left</small><b>$650</b></div><div><small>DD buffer</small><b>$3,840</b></div><div><small>Days</small><b>4 / 5</b></div></div>
+                </div></div>
+
+                <div class="slot slot--eq"><div class="pc pc--eq" data-p="eq">
+                  <div class="pe__h"><div><small>Net P&amp;L</small><b class="up">+$4,835.20</b><span>86 trades · 31 trading days</span></div><span class="chip2 up">▲ 18.4% vs last month</span></div>
+                  <svg viewBox="0 0 520 170" preserveAspectRatio="none" class="pe__c" aria-hidden="true"><defs><linearGradient id="eqg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#3ecf8e" stop-opacity=".28"/><stop offset="1" stop-color="#3ecf8e" stop-opacity="0"/></linearGradient></defs>
+                    <g class="pe__grid"><line x1="0" x2="520" y1="40" y2="40"/><line x1="0" x2="520" y1="85" y2="85"/><line x1="0" x2="520" y1="130" y2="130"/></g>
+                    <path d="M0,150 L26,141 52,146 78,128 104,133 130,112 156,118 182,96 208,104 234,84 260,90 286,70 312,76 338,58 364,66 390,44 416,52 442,34 468,40 494,22 520,18 L520,170 L0,170Z" fill="url(#eqg)"/>
+                    <path class="pe__line" d="M0,150 L26,141 52,146 78,128 104,133 130,112 156,118 182,96 208,104 234,84 260,90 286,70 312,76 338,58 364,66 390,44 416,52 442,34 468,40 494,22 520,18" fill="none" stroke="#3ecf8e" stroke-width="2.4" vector-effect="non-scaling-stroke"/>
+                    <circle cx="286" cy="70" r="4.5" fill="#3ecf8e"/><circle cx="104" cy="133" r="4.5" fill="#e2b462"/><circle cx="520" cy="18" r="5" fill="#fff"/></svg>
+                  <div class="pe__lg"><span><i style="background:#3ecf8e"></i>Equity</span><span><i style="background:#3ecf8e;border-radius:50%"></i>Payout</span><span><i style="background:#e2b462;border-radius:50%"></i>Worst day</span></div>
+                </div></div>
+
+                <div class="slot slot--cal"><div class="pc pc--cal" data-p="cal"><div class="pk__h"><b>November</b><small>+$4,835</small></div><div class="pk__g" id="miniCal"></div></div></div>
+
+                <div class="slot slot--tr"><div class="pc pc--tr" data-p="tr"><div class="pk__h"><b>Recent trades</b><small>today</small></div>
+                  <div class="trow"><span class="sd up">L</span><b>NQ</b><span class="g g--a">A+</span><small>09:42 · 2 ct</small><em class="up">+$400</em></div>
+                  <div class="trow"><span class="sd dn">S</span><b>ES</b><span class="g g--b">B</span><small>10:15 · 1 ct</small><em class="dn">−$125</em></div>
+                  <div class="trow"><span class="sd up">L</span><b>MNQ</b><span class="g g--a">A</span><small>11:02 · 3 ct</small><em class="up">+$86</em></div>
+                </div></div>
+
+                <div class="slot slot--ai"><div class="pc pc--ai" data-p="ai"><div class="pk__h"><b><i data-ico="coach"></i>Coach</b><small>just now</small></div><p>Your C-grade setups lost <b class="dn">$1,120</b> this month. Your A+ trades made <b class="up">$3,980</b>. Skip C setups this week.</p></div></div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="hs hs--acct vcard" data-tone="1"><div class="vcard__face" style="position:relative">
-          <div class="vcard__top"><span class="fmono">EV</span><div class="vcard__id"><b>50K Evaluation</b><small>Sample firm · EOD trailing</small></div><span class="vstage vstage--challenge">Challenge</span></div>
-          <div class="vcard__pnl"><small>Account P&amp;L</small><b data-count="1840" data-fmt="usdSign">+$0</b><em>61% of $3,000 target</em></div>
-          <div class="ladder"><div class="ladder__track"><i class="ladder__fill hs__fill" style="left:40%;width:24%"></i><span class="ladder__zero" style="left:40%"></span><span class="ladder__dot hs__dot" style="left:64%"></span></div><div class="ladder__lab"><span class="bad">Breach −$2,000</span><span>Target +$3,000</span></div></div>
-          <div class="vcard__stats"><div><small>Daily left</small><b>$650</b></div><div><small>DD buffer</small><b>$3,840</b></div><div><small>Days</small><b>4/5</b></div></div>
-        </div></div>
-        <div class="hs hs--chip hs--c1"><span class="gtag g-a">A+</span><span><b>Opening range break</b><small>NQ · +2.4R</small></span></div>
-        <div class="hs hs--chip hs--c2"><span class="spark" data-ico="coach"></span><span><b>Coach</b><small>Your C-grade trades lost $1,120 this month.</small></span></div>
-        <div class="hs hs--chip hs--c3"><span class="prodico" data-ico="shield"></span><span><b>Daily stop</b><small>$350 left today</small></span></div>
       </div>
     </section>
 
-    <div class="marquee" aria-label="Firm rules included"><div class="marquee__track" id="marq"></div></div>
-
-    <!-- FEATURES -->
-    <section class="sec" id="features">
-      <div class="sec__head"><h2 class="hsplit">Less spreadsheet. More edge.</h2><p>Built around how funded traders actually work: several accounts, firm rules, payouts, and a plan you're trying to stick to.</p></div>
-      <div class="fgrid">
-        <article class="card feat"><span class="prodico" data-ico="shield"></span><h3>Drawdown guard</h3><p>Every account shows how far you are from breaching and from the profit target, updated the moment you log a trade.</p><div class="mini-ladder"><i></i></div></article>
-        <article class="card feat"><span class="prodico t2" data-ico="bolt"></span><h3>Firm rules built in</h3><p>Pick your firm, account type and size. Target, max loss, daily limit and consistency rules fill themselves in.</p></article>
-        <article class="card feat"><span class="prodico t3" data-ico="target"></span><h3>Risk by setup grade</h3><p>Size A+ setups bigger and C setups smaller. Tag each trade and see whether your conviction actually pays.</p><div class="feat__grades"><span class="gtag g-a">A+</span><span class="gtag g-b">B</span><span class="gtag g-c">C</span></div></article>
-        <article class="card feat"><span class="prodico t4" data-ico="payouts"></span><h3>Payouts in your currency</h3><p>Track estimated vs actual payouts by month, converted at today's live exchange rate.</p></article>
-        <article class="card feat"><span class="prodico" data-ico="calendar"></span><h3>Calendar &amp; analytics</h3><p>Winning and losing days at a glance, plus your edge by setup, timeframe, trend, session, hold time and emotion. Click any bar to see the trades behind it.</p></article>
-        <article class="card feat"><span class="prodico t3" data-ico="brain"></span><h3>Mindset score</h3><p>Every trade gets a 0–10 score from how you felt, whether you stayed detached and how you exited. See which states cost you money.</p></article>
-        <article class="card feat"><span class="prodico t4" data-ico="shield"></span><h3>Prop firm ROI</h3><p>Evaluation, activation, subscriptions and data fees per firm against the payouts each one sent you. Breached accounts show the true sunk cost.</p></article>
-        <article class="card feat"><span class="prodico" data-ico="sheet"></span><h3>Filters, reports &amp; exports</h3><p>Filter every page by account, symbol, setup, grade, side or tag. Monthly to yearly reports as CSV or PDF in one click.</p></article>
-        <article class="card feat"><span class="prodico" data-ico="agent"></span><h3>Agents that watch for you</h3><p>A risk agent, habit agent and auto-tagger check every trade you log. Write your own rules in plain words, no code.</p></article>
-        <article class="card feat"><span class="prodico" data-ico="note"></span><h3>Start my day &amp; notebook</h3><p>A pre-market checklist, a plan-vs-result review every evening, prep streaks, and a notebook with ready templates.</p></article>
-        <article class="card feat"><span class="prodico" data-ico="users"></span><h3>Backtesting &amp; mentor mode</h3><p>Log replay trades in R and compare them with your live results. Share a read-only link and get notes back on any trade.</p></article>
-        <article class="card feat"><span class="prodico t2" data-ico="coach"></span><h3>AI coach</h3><p>Grades trades, reads chart screenshots, writes your weekly review and plans tomorrow from your own numbers.</p></article>
+    <!-- three quick promises -->
+    <section class="sx sx--tight" id="features">
+      <div class="trio">
+        <div class="tri"><span class="ibox"><i data-ico="shield"></i></span><h3>Drawdown guard</h3><p>Every account shows how far you are from breaching and from the target, the moment you log a trade.</p></div>
+        <div class="tri"><span class="ibox"><i data-ico="bolt"></i></span><h3>Firm rules built in</h3><p>Pick your firm, account type and size. Target, max loss, daily limit and consistency fill themselves in.</p></div>
+        <div class="tri"><span class="ibox"><i data-ico="coach"></i></span><h3>An AI coach on your numbers</h3><p>Ask anything. It reads your trades, accounts and notes, and answers with your own data.</p></div>
       </div>
     </section>
 
-    <!-- FIRMS DEMO -->
-    <section class="sec sec--split" id="firms">
-      <div class="sec__head sec__head--left"><h2 class="hsplit">Pick your firm and account. The rules come with it.</h2><p>Choose the firm, then the account type, size and stage you bought. Target, max loss, daily limit and consistency rules load from published firm rules, checked November 2026. Your own daily stop sits on top, because most traders want to quit before the firm makes them.</p>
-        <p class="fine">Rules change often, so every value stays editable and links back to the firm's site.</p></div>
-      <div class="card demo" id="demo">
-        <div class="demo__firms" id="dFirms"></div>
-        <div class="demo__row"><div class="seg" id="dProgs"></div></div>
-        <div class="demo__row"><div class="seg" id="dSizes"></div><div class="seg" id="dStage"><button data-v="challenge" class="is-on">Challenge</button><button data-v="funded">Funded</button></div></div>
-        <div class="fp__rules" id="dRules"></div>
-        <div id="dSlider"></div>
-        <div class="demo__ladder"><div class="ladder"><div class="ladder__track"><i class="ladder__fill" id="dFill"></i><span class="ladder__zero" id="dZero"></span><span class="ladder__stop" id="dStop"></span><span class="ladder__dot" id="dDot"></span></div><div class="ladder__lab"><span class="bad" id="dLo"></span><span id="dHi"></span></div></div><p class="muted fine" id="dCap"></p></div>
+    <!-- statement that reveals word by word -->
+    <section class="sx statement"><p class="reveal" id="reveal">Turn a messy spreadsheet into a trading system. <span class="dim">Log, review and fix your leaks from one place.</span></p></section>
+
+    <!-- bento -->
+    <section class="sx">
+      <div class="shead"><span class="pill2">Built for funded traders</span><h2 class="h2">Make five prop accounts feel like one</h2><p class="lead">Every account, every rule and every payout in one journal that does the maths for you.</p></div>
+      <div class="bento">
+        <article class="bc bc--core"><div class="bc__art"><div class="core"><span class="core__c c1"></span><span class="core__c c2"></span><span class="core__c c3"></span><span class="core__c c4"></span><i data-ico="coach"></i><small>AI COACH</small></div><span class="core__ln l1"></span><span class="core__ln l2"></span><span class="core__ln l3"></span></div><p><b>Ask anything about your trading.</b> Answers come from your own trades.</p></article>
+        <article class="bc bc--wide bc--replay"><div class="bc__art"><div class="rp2"><div class="rp2__bar"><span>NQ · 09:42 → 09:51</span><span class="rp2__ctl"><i data-ico="play"></i></span></div><div class="rp2__chart" id="rpChart"></div><div class="rp2__head" id="rpHead"></div></div></div><p><b>Replay any trade bar by bar,</b> with your entry and exit marked. Free.</p></article>
+        <article class="bc bc--wide bc--pipe"><div class="bc__art"><div class="pipe"><div class="pipe__s is-done"><span class="pipe__i"><i data-ico="check"></i></span><div><b>Screenshot added</b><small>positions.png · 09:52</small></div></div><div class="pipe__s is-on"><span class="pipe__i"><i data-ico="coach"></i></span><div><b>Claude is reading it</b><small>NQ short · 2 ct · +$400</small></div><span class="pipe__p"><i></i></span></div><div class="pipe__s"><span class="pipe__i"><i data-ico="journal"></i></span><div><b>Trade logged</b><small>check and save</small></div></div></div></div><p><b>Log a trade from a screenshot.</b> Check the fields, then save.</p></article>
+        <article class="bc bc--flow"><div class="bc__art"><svg class="flow" viewBox="0 0 300 170" aria-hidden="true"><path class="flow__w" d="M70,45 C140,45 150,85 220,85"/><path class="flow__w" d="M70,85 C140,85 150,85 220,85"/><path class="flow__w" d="M70,125 C140,125 150,85 220,85"/><path class="flow__a" d="M70,45 C140,45 150,85 220,85"/><path class="flow__a f2" d="M70,125 C140,125 150,85 220,85"/></svg><div class="nodes"><span class="nd" style="top:28px;left:22px">TV</span><span class="nd" style="top:68px;left:22px">NT</span><span class="nd" style="top:108px;left:22px">MT5</span><span class="nd nd--hub" style="top:60px;left:216px"><img src="brand/mark.svg?v=7" alt=""></span></div></div><p><b>Import or sync</b> from Tradovate, NinjaTrader, MT5 and ProjectX.</p></article>
       </div>
     </section>
 
-    <!-- COACH -->
-    <section class="sec sec--split sec--rev" id="coach">
-      <div class="sec__head sec__head--left"><h2 class="hsplit">A coach that has read every trade.</h2><p>Ask anything about your trading. The coach sees your stats, accounts, rules and notes, and answers with your numbers, not generic tips.</p>
-        <ul class="ticks lp-ticks"><li><span data-ico="check"></span>Weekly review with dollar cost of each leak</li><li><span data-ico="check"></span>Tomorrow's plan from your limits and best setups</li><li><span data-ico="check"></span>Chart screenshot read-back on any trade</li></ul></div>
-      <div class="card chatdemo" id="chat">
-        <div class="msg msg--user">Where am I losing money this month?</div>
-        <div class="msg msg--ai"><h4>Two leaks, $1,540 total</h4><ul><li><b>C-grade trades:</b> 9 trades, 22% win rate, <b>−$1,120</b>. Your A+ trades made +$3,980.</li><li><b>After 2 losses:</b> the third trade of the day lost $420 across 4 sessions.</li></ul><p><b>Next week:</b> skip C-grade setups and stop after two losses. That alone would have kept you 31% further from your drawdown.</p></div>
-        <div class="msg msg--user">Plan tomorrow for my 50K eval.</div>
-        <div class="msg msg--ai typing-msg"><span class="typing"><i></i><i></i><i></i></span></div>
+    <!-- three deep features -->
+    <section class="sx" id="firms">
+      <div class="shead"><span class="pill2">For prop firm traders</span><h2 class="h2">One journal to trade with confidence</h2><p class="lead">The three things that decide whether a funded account survives: drawdown, rules and discipline.</p></div>
+      <div class="rows">
+        <div class="row2">
+          <div class="vis vis--gauge"><span class="vis__n">/01</span><div class="gauge"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="84" class="gauge__bg"/><circle cx="100" cy="100" r="84" class="gauge__fg" id="gaugeFg"/><circle cx="100" cy="100" r="58" class="gauge__in"/></svg><span class="gauge__core"><i data-ico="shield"></i></span><span class="gauge__tag"><i></i>$3,840 buffer</span></div></div>
+          <div class="txt"><span class="pill2">Drawdown guard</span><h3 class="h3">Know your breach line before you click</h3><p>Trailing, end-of-day or static drawdown, tracked per account. Your own daily stop sits on top, and the sidebar tells you how much you can still risk today.</p></div>
+        </div>
+        <div class="row2 row2--rev">
+          <div class="vis vis--demo"><span class="vis__n">/02</span>
+            <div class="demo2" id="demo">
+              <div class="demo__firms" id="dFirms"></div>
+              <div class="demo__row"><div class="seg" id="dProgs"></div></div>
+              <div class="demo__row"><div class="seg" id="dSizes"></div><div class="seg" id="dStage"><button data-v="challenge" class="is-on">Challenge</button><button data-v="funded">Funded</button></div></div>
+              <div class="fp__rules" id="dRules"></div>
+              <div id="dSlider"></div>
+              <div class="demo__ladder"><div class="ladder"><div class="ladder__track"><i class="ladder__fill" id="dFill"></i><span class="ladder__zero" id="dZero"></span><span class="ladder__stop" id="dStop"></span><span class="ladder__dot" id="dDot"></span></div><div class="ladder__lab"><span class="bad" id="dLo"></span><span id="dHi"></span></div></div><p class="demo__cap" id="dCap"></p></div>
+            </div>
+          </div>
+          <div class="txt"><span class="pill2">Firm rules built in</span><h3 class="h3">Pick your firm. The rules come with it.</h3><p>Topstep, Apex, TopOne, Tradeify, MyFundedFutures, Lucid, Take Profit Trader, FTMO and FundingPips, by account type, size and stage. Try it here: change the firm and drag your daily stop.</p><p class="fine2">Rules were checked against public sources in November 2026. Every value stays editable and links to the firm's site.</p></div>
+        </div>
+        <div class="row2">
+          <div class="vis vis--chat"><span class="vis__n">/03</span>
+            <div class="chat2" id="chat">
+              <div class="msg2 msg2--u">Where am I losing money this month?</div>
+              <div class="msg2 msg2--a"><b>Two leaks, $1,540 total</b><ul><li>C-grade trades: 9 trades, 22% win rate, <span class="dn">−$1,120</span></li><li>Third trade after two losses: <span class="dn">−$420</span> over 4 sessions</li></ul><p>Next week: skip C setups and stop after two losses.</p></div>
+              <div class="msg2 msg2--u">Plan tomorrow for my 50K eval.</div>
+              <div class="msg2 msg2--a msg2--typing"><span class="typing"><i></i><i></i><i></i></span></div>
+            </div>
+          </div>
+          <div class="txt"><span class="pill2">AI coach</span><h3 class="h3">A coach that has read every trade</h3><p>Weekly reviews with the dollar cost of each leak, tomorrow's plan from your limits and best setups, and chart screenshots read back on any trade.</p></div>
+        </div>
       </div>
     </section>
 
-    <!-- HOW -->
-    <section class="sec" id="how">
-      <div class="sec__head"><h2 class="hsplit">How it works</h2></div>
-      <div class="steps3">
-        <div class="card step3"><span class="step3__n">1</span><h3>Add your accounts</h3><p>Choose firm, account type and size, or import the spreadsheet you already use.</p></div>
-        <div class="card step3"><span class="step3__n">2</span><h3>Set your risk</h3><p>Daily stop per account, risk per setup grade, the rules you want to be held to.</p></div>
-        <div class="card step3"><span class="step3__n">3</span><h3>Log and learn</h3><p>Log trades or import a CSV. Your stats, calendar and coach update as you go.</p></div>
+    <!-- six more -->
+    <section class="sx">
+      <div class="six">
+        <div class="sixi"><span class="ibox ibox--n"><i data-ico="calendar"></i><em>1</em></span><h3>Calendar &amp; analytics</h3><p>Green and red days at a glance. Your edge by setup, session, hold time and emotion.</p></div>
+        <div class="sixi"><span class="ibox ibox--n"><i data-ico="payouts"></i><em>2</em></span><h3>Prop firm ROI</h3><p>What each firm cost you in fees against what it paid out, in your own currency.</p></div>
+        <div class="sixi"><span class="ibox ibox--n"><i data-ico="brain"></i><em>3</em></span><h3>Mindset score</h3><p>A 0–10 score on every trade from how you felt and how you exited. See which states cost money.</p></div>
+        <div class="sixi"><span class="ibox ibox--n"><i data-ico="agent"></i><em>4</em></span><h3>Agents that watch</h3><p>Risk, habit and auto-tag agents check every trade. Write your own rules in plain words.</p></div>
+        <div class="sixi"><span class="ibox ibox--n"><i data-ico="note"></i><em>5</em></span><h3>Start my day</h3><p>Pre-market checklist, economic calendar, weekly plan and an evening plan-vs-result review.</p></div>
+        <div class="sixi"><span class="ibox ibox--n"><i data-ico="flask"></i><em>6</em></span><h3>AI backtesting</h3><p>Describe a strategy in plain words and test it on price data, free.</p></div>
       </div>
     </section>
+
+    <!-- numbers -->
+    <section class="sx">
+      <div class="nums">
+        <div class="nums__t"><span class="pill2">Systems over feelings</span><h2 class="h2">Set up once. Trade the plan every day.</h2><p class="lead">Built from a real prop account tracking sheet, then made fast.</p></div>
+        <div class="nums__g">
+          <div class="num"><span class="ibox"><i data-ico="clock"></i></span><small>Setup</small><b><span data-count="2">0</span> min</b></div>
+          <div class="num"><span class="ibox"><i data-ico="shield"></i></span><small>Prop firms built in</small><b data-count="9">0</b></div>
+          <div class="num"><span class="ibox"><i data-ico="coach"></i></span><small>Coach questions a day</small><b data-count="60">0</b></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- steps -->
+    <section class="sx">
+      <div class="steps">
+        <div class="steps__h"><h2 class="h2">Get set up in minutes.<br><span class="dim">Stay in control.</span></h2><p class="lead">Add your accounts once. After that the journal keeps score while you trade.</p></div>
+        <div class="steps__g">
+          <div class="st"><span class="st__n">/01</span><h3>Add your accounts</h3><p>Firm, account type and size, or import the spreadsheet you already keep.</p></div>
+          <div class="st"><span class="st__n">/02</span><h3>Set your risk</h3><p>A daily stop per account, risk per setup grade, the rules you want to be held to.</p></div>
+          <div class="st"><span class="st__n">/03</span><h3>Log and learn</h3><p>Log, import or snap a screenshot. Stats, calendar and coach update as you go.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- pricing -->
+    <section class="sx" id="pricing">
+      <div class="shead"><span class="pill2">Pricing</span><h2 class="h2">Free while in beta.<br><span class="dim">Everything included.</span></h2></div>
+      <div class="price"><div class="price__c"><small>Beta</small><b>$0<em>/mo</em></b>
+        <ul><li><i data-ico="check"></i>Unlimited accounts and trades</li><li><i data-ico="check"></i>Prop firm rules and drawdown guard</li><li><i data-ico="check"></i>AI coach, 60 questions a day</li><li><i data-ico="check"></i>Trade replay and AI backtesting</li><li><i data-ico="check"></i>Imports, sync and mentor links</li></ul>
+        <a class="wbtn wbtn--block" href="app.html" data-cta>Start free</a></div></div>
+    </section>
+
+    <!-- comparison -->
+    <section class="sx">
+      <div class="shead"><span class="pill2">Comparison</span><h2 class="h2">Built for prop firms,<br>not just record keeping</h2><p class="lead">What changes when you move off a spreadsheet.</p></div>
+      <div class="cmp" role="table">
+        <div class="cmp__r cmp__h" role="row"><span role="columnheader"></span><b role="columnheader">The Smart Trade</b><b role="columnheader">Spreadsheet</b></div>
+        <div class="cmp__r" role="row"><span role="cell">Firm rules filled in for you</span><i class="y" data-ico="check" role="cell"></i><i class="n" data-ico="close" role="cell"></i></div>
+        <div class="cmp__r" role="row"><span role="cell">Live drawdown per account</span><i class="y" data-ico="check" role="cell"></i><i class="n" data-ico="close" role="cell"></i></div>
+        <div class="cmp__r" role="row"><span role="cell">P&amp;L, win rate and stats</span><i class="y" data-ico="check" role="cell"></i><i class="y" data-ico="check" role="cell"></i></div>
+        <div class="cmp__r" role="row"><span role="cell">Payouts and firm ROI in your currency</span><i class="y" data-ico="check" role="cell"></i><i class="n" data-ico="close" role="cell"></i></div>
+        <div class="cmp__r" role="row"><span role="cell">AI coach that reads your trades</span><i class="y" data-ico="check" role="cell"></i><i class="n" data-ico="close" role="cell"></i></div>
+        <div class="cmp__r" role="row"><span role="cell">Broker import and screenshot logging</span><i class="y" data-ico="check" role="cell"></i><i class="n" data-ico="close" role="cell"></i></div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta2"><div class="beam beam--cta" aria-hidden="true"><i></i></div><h2 class="h2">Ready to trade the plan?<br><span class="dim">Start today.</span></h2><p class="lead">Set up in two minutes. Free while in beta.</p><a class="wbtn" href="app.html" data-cta>Open the journal</a></section>
 
     <!-- FAQ -->
-    <section class="sec sec--narrow" id="faq">
-      <div class="sec__head"><h2 class="hsplit">Good to know</h2></div>
-      <div class="faq">
-        <details class="card"><summary>Is it free?<span data-ico="plus"></span></summary><p>Yes, while it's in beta. Create a free account and start logging; the AI coach is included with a daily limit.</p></details>
-        <details class="card"><summary>Where is my data stored?<span data-ico="plus"></span></summary><p>In your private account, on Cloudflare's network. Only you can see it, unless you create a mentor link, and even then payouts and costs stay private. Export a full backup any time from Settings.</p></details>
-        <details class="card"><summary>Which prop firms are included?<span data-ico="plus"></span></summary><p>Topstep, Apex Trader Funding, TopOne Futures, Tradeify, MyFundedFutures, Lucid Trading, Take Profit Trader, FTMO and FundingPips, plus any other firm whose rules you enter yourself.</p></details>
-        <details class="card"><summary>Are the firm rules always current?<span data-ico="plus"></span></summary><p>They were checked against public sources in November 2026, but firms change rules often. Each account links to the firm's site and every value can be edited.</p></details>
-        <details class="card"><summary>Is The Smart Trade affiliated with any prop firm?<span data-ico="plus"></span></summary><p>No. The Smart Trade is an independent journal and doesn't sell or promote any firm's accounts.</p></details>
-      </div>
-    </section>
-
-    <section class="final">
-      <div class="final__card">
-        <h2 class="hsplit">Your next payout starts with your next trade.</h2>
-        <p>Set up in two minutes. Free while in beta.</p>
-        <a class="btn btn--primary btn--lg" href="app.html" data-cta data-ico-r="right">Open the journal</a>
+    <section class="sx" id="faq">
+      <div class="shead"><span class="pill2">FAQ</span><h2 class="h2">Good to know</h2></div>
+      <div class="faq2">
+        <details><summary><i data-ico="plus"></i>Is it free?<em>/01</em></summary><p>Yes, while it's in beta. Create a free account and start logging; the AI coach is included with a daily limit.</p></details>
+        <details><summary><i data-ico="plus"></i>Where is my data stored?<em>/02</em></summary><p>In your private account, on Cloudflare's network. Only you can see it, unless you create a mentor link, and even then payouts and costs stay private. Export a full backup any time from Settings.</p></details>
+        <details><summary><i data-ico="plus"></i>Which prop firms are included?<em>/03</em></summary><p>Topstep, Apex Trader Funding, TopOne Futures, Tradeify, MyFundedFutures, Lucid Trading, Take Profit Trader, FTMO and FundingPips, plus any other firm whose rules you enter yourself.</p></details>
+        <details><summary><i data-ico="plus"></i>Are the firm rules always current?<em>/04</em></summary><p>They were checked against public sources in November 2026, but firms change rules often. Each account links to the firm's site and every value can be edited.</p></details>
+        <details><summary><i data-ico="plus"></i>Is The Smart Trade affiliated with any prop firm?<em>/05</em></summary><p>No. The Smart Trade is an independent journal and doesn't sell or promote any firm's accounts.</p></details>
       </div>
     </section>
   </main>
 
-  <footer class="lfoot">
-    <span class="lnav__brand"><span class="mark mark--img"><img src="brand/mark.svg?v=7" alt=""></span><span class="wm"><small>THE</small><b>Smart<i>Trade</i></b></span></span>
-    <p>The Smart Trade (thesmarttrade.in) is a journaling tool, not financial advice. It is not affiliated with any prop firm; firm names belong to their owners and rules are summarised from public sources. Exchange rates by <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">ExchangeRate-API</a>. <a href="/blog/">Blog</a> · <a href="/blog/trailing-drawdown-explained">Trailing drawdown</a> · <a href="/blog/prop-firm-consistency-rule">Consistency rule</a> · <a href="/blog/prop-firm-rules-compared-50k">Prop firm rules compared</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></p>
+  <footer class="hf">
+    <div class="hf__top">
+      <div class="hf__brand"><span class="hn__brand"><span class="mark mark--img"><img src="brand/mark.svg?v=7" alt=""></span><span class="wm"><small>THE</small><b>Smart<i>Trade</i></b></span></span><p>The trading journal for prop firm traders.</p></div>
+      <div class="hf__cols">
+        <div><b>Product</b><a href="#features">Features</a><a href="#firms">Prop firms</a><a href="#pricing">Pricing</a><a href="app.html">Open journal</a></div>
+        <div><b>Learn</b><a href="/blog/">Blog</a><a href="/blog/trailing-drawdown-explained">Trailing drawdown</a><a href="/blog/prop-firm-consistency-rule">Consistency rule</a><a href="/blog/prop-firm-rules-compared-50k">Prop firm rules compared</a></div>
+        <div><b>Company</b><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="mailto:adityaps70@gmail.com">Contact</a></div>
+      </div>
+    </div>
+    <p class="hf__fine">The Smart Trade (thesmarttrade.in) is a journaling tool, not financial advice. It is not affiliated with any prop firm; firm names belong to their owners and rules are summarised from public sources. Exchange rates by <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">ExchangeRate-API</a>. Calendar data from Forex Factory.</p>
   </footer>
 </body>
 </html>
