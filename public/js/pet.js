@@ -1,7 +1,7 @@
 // Trading buddy: an optional little character that lives in the corner of the app.
 // It sleeps when you're away, wakes when the mouse comes near, follows the cursor with its eyes,
 // and talks only when something matters: your risk left today, losing streaks, news, your prep, your wins.
-import { S, P, $, esc, money, num, today, sum, net, safeToRisk, saveProfile, icon, API, addDays } from './core.js?v=088d48e3';
+import { S, P, $, esc, money, num, today, sum, net, safeToRisk, saveProfile, icon, API, addDays } from './core.js?v=73b5fe36';
 
 export const PETS = { pip: { name: 'Pip', blurb: 'A little flame. Burns brighter when you stick to the plan.' } };
 
@@ -227,7 +227,7 @@ function menu() {
     e.stopPropagation(); const a = x.dataset.a;
     if (a === 'stay' || a === 'follow') { setFollow(a === 'follow'); b.querySelectorAll('.pet__seg button').forEach((y) => y.classList.toggle('is-on', y === x)); return; }
     hide();
-    if (a === 'log' || a === 'shot') { const V = await import('./views.js?v=088d48e3'); V.tradeModal(null, {}, a === 'shot' ? { shot: true } : {}); }
+    if (a === 'log' || a === 'shot') { const V = await import('./views.js?v=73b5fe36'); V.tradeModal(null, {}, a === 'shot' ? { shot: true } : {}); }
     else if (a === 'coach') location.hash = '#coach'; else if (a === 'journal') location.hash = '#journal';
     else if (a === 'hide') { try { localStorage.setItem(HIDE_KEY, today()); } catch (err) {} if (window.gsap && !reduced.matches) window.gsap.to($('.pet__tilt', el), { scale: 0, duration: 0.3, ease: 'back.in(2)', onComplete: unmountPet }); else unmountPet(); }
   }));

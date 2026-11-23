@@ -1,5 +1,5 @@
 // Glass logo and floating glass candlesticks over a glossy floor, for the landing page.
-// Loaded on demand by home.js when the stage gets near the viewport.
+// Loaded on demand by home.js when the stage gets near the viewport. (scene v2: glass slab logo, reflective floor)
 import * as THREE from '../vendor/three/three.module.min.js';
 import { SVGLoader } from '../vendor/three/SVGLoader.js';
 
