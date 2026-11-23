@@ -932,3 +932,4 @@ body.mp { overflow: auto; background: var(--scene); background-color: var(--bg);
 #detail .vcard__row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: var(--fs-md); } #detail .vcard__row span { color: var(--muted); }
 .nb__ed textarea.nb__body { min-height: 52vh; height: auto; }
 .toast { width: max-content; }
+.econ { color-scheme: light; } /* transparent TradingView iframe needs a matching colour scheme, or browsers paint it white */
