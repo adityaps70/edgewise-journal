@@ -1,11 +1,11 @@
 // Connections (broker sync), file import, trade replay, AI backtesting.
 import {
-  S, P, $, $$, esc, uid, num, sum, clamp, today, addDays, fmtDate, fmtDay, money, pct, tone, net, icon, API, save, saveProfile, pointValue, setupsOf,
-} from './core.js?v=9d40634d';
-import { equityChart } from './charts.js?v=9d40634d';
-import { helpers, modal, confirmBox, tradeList } from './views.js?v=9d40634d';
-import { toast, shake } from './motion.js?v=9d40634d';
-import * as IM from './importers.js?v=9d40634d';
+  S, P, $, $$, esc, uid, num, sum, clamp, today, addDays, fmtDate, fmtDay, money, pct, tone, net, icon, API, save, saveProfile, pointValue, setupsOf, tradesLeft,
+} from './core.js?v=4dac5de5';
+import { equityChart } from './charts.js?v=4dac5de5';
+import { helpers, modal, confirmBox, tradeList } from './views.js?v=4dac5de5';
+import { toast, shake } from './motion.js?v=4dac5de5';
+import * as IM from './importers.js?v=4dac5de5';
 
 const card = (...a) => helpers.card(...a); const phead = (...a) => helpers.phead(...a); const after = (...a) => helpers.after(...a);
 const field = (...a) => helpers.field(...a); const inp = (...a) => helpers.inp(...a); const optionList = (...a) => helpers.optionList(...a); const formData = (...a) => helpers.formData(...a);
@@ -18,8 +18,10 @@ const tzVal = (v) => (/^-?\d+$/.test(String(v)) ? +v : v);
 // ======================================================================= SAVE IMPORTED TRADES
 function commit(trades, { defaultAccount = '' } = {}) {
   const { fresh, dup } = IM.dedupe(trades);
-  fresh.forEach((t) => save('trade', { ...t, id: uid(), accountId: t.accountId || IM.guessAccount(t.brokerAccount) || defaultAccount }));
-  return { added: fresh.length, dup };
+  const room = tradesLeft(); const take = fresh.slice(0, room === Infinity ? fresh.length : room);
+  take.forEach((t) => save('trade', { ...t, id: uid(), accountId: t.accountId || IM.guessAccount(t.brokerAccount) || defaultAccount }));
+  if (take.length < fresh.length) setTimeout(() => dispatchEvent(new CustomEvent('st:upgrade', { detail: { reason: 'trades' } })), 600);
+  return { added: take.length, dup, over: fresh.length - take.length };
 }
 
 // ======================================================================= FILE IMPORT
@@ -56,7 +58,7 @@ export function importModal() {
     Object.entries(map).forEach(([b, id]) => { const a = S.account.find((x) => x.id === id); if (a && a.brokerAccount !== b) save('account', { ...a, brokerAccount: b }); });
     const def = $('#imAcc', m.el).value;
     const r = commit(result.map((t) => ({ ...t, accountId: map[t.brokerAccount] || '' })), { defaultAccount: def });
-    m.close(); H().refresh(); toast(`${r.added} trades imported${r.dup ? `, ${r.dup} duplicates skipped` : ''}`, icon('check'));
+    m.close(); H().refresh(); toast(`${r.added} trades imported${r.dup ? `, ${r.dup} duplicates skipped` : ''}${r.over ? `, ${r.over} over the free limit` : ''}`, icon('check'));
   });
 }
 

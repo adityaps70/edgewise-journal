@@ -35,7 +35,7 @@ export const tradingDaysBetween = (a, b) => {
 
 // ------------------------------------------------------------------ store
 export const S = {
-  user: null, ai: { configured: false }, local: false,
+  user: null, ai: { configured: false }, local: false, sub: null,
   profile: null, account: [], trade: [], payout: [], plan: [], journal: [], setup: [], rule: [], chat: [], firm: [], note: [], bt: [], agent: [],
 };
 const KINDS = ['account', 'trade', 'payout', 'plan', 'journal', 'setup', 'rule', 'chat', 'firm', 'note', 'bt', 'agent'];
@@ -49,11 +49,18 @@ async function api(path, opts = {}) {
   const type = res.headers.get('content-type') || '';
   if (!type.includes('application/json')) throw Object.assign(new Error('Backend not reachable'), { offline: true });
   const data = await res.json();
-  if (!res.ok) throw Object.assign(new Error(data.error || 'Request failed'), { status: res.status });
+  if (!res.ok) { if (res.status === 402 || data.upgrade) dispatchEvent(new CustomEvent('st:upgrade', { detail: { reason: 'ai' } })); throw Object.assign(new Error(data.error || 'Request failed'), { status: res.status, upgrade: !!data.upgrade }); }
   return data;
 }
 export const API = {
   me: () => api('/me'),
+  adminOverview: () => api('/admin/overview'),
+  adminUsers: () => api('/admin/users'),
+  adminSetPlan: (id, b) => api('/admin/users/' + id, { method: 'POST', body: b }),
+  adminDelete: (id) => api('/admin/users/' + id, { method: 'DELETE' }),
+  adminResetAi: (id) => api('/admin/users/' + id + '/reset-ai', { method: 'POST' }),
+  adminSettings: () => api('/admin/settings'),
+  adminSaveSettings: (b) => api('/admin/settings', { method: 'POST', body: b }),
   signup: (b) => api('/auth/signup', { method: 'POST', body: b }),
   login: (b) => api('/auth/login', { method: 'POST', body: b }),
   logout: () => api('/auth/logout', { method: 'POST' }),
@@ -62,7 +69,10 @@ export const API = {
   reset: () => api('/reset', { method: 'POST' }),
   image: (data) => api('/images', { method: 'POST', body: { data } }),
   getImage: (id) => api('/images/' + id),
-  ai: (b) => api('/ai', { method: 'POST', body: b }),
+  ai: async (b) => {
+    if (aiLeft() <= 0) { dispatchEvent(new CustomEvent('st:upgrade', { detail: { reason: 'ai' } })); throw Object.assign(new Error("You've used your free AI requests."), { upgrade: true }); }
+    const r = await api('/ai', { method: 'POST', body: b }); if (S.sub && !S.sub.pro && r.usage?.free) S.sub.ai.used = r.usage.used; dispatchEvent(new CustomEvent('st:usage')); return r;
+  },
   econ: () => api('/econ'),
   shares: () => api('/shares'),
   share: (b) => api('/shares', { method: 'POST', body: b }),
@@ -117,7 +127,12 @@ export async function flush() {
   sync.state = 'saving'; sync.onChange();
   try {
     for (let i = 0; i < Math.max(put.length, del.length); i += 400) {
-      await API.docs({ put: put.slice(i, i + 400), del: del.slice(i, i + 400) });
+      const r = await API.docs({ put: put.slice(i, i + 400), del: del.slice(i, i + 400) });
+      if (r.blocked?.length) { // the free plan is full: the server kept the rest and refused these new trades
+        const no = new Set(r.blocked); S.trade = S.trade.filter((t) => !no.has(String(t.id))); writeCache();
+        if (S.sub) S.sub.trades.used = S.sub.trades.limit;
+        dispatchEvent(new CustomEvent('st:upgrade', { detail: { reason: 'trades', blocked: r.blocked.length } })); dispatchEvent(new CustomEvent('st:refresh'));
+      }
     }
     sync.state = 'saved';
   } catch (e) {
@@ -135,7 +150,15 @@ export function saveProfile(p) {
   queue.put.set('profileme', { kind: 'profile', id: 'me', data: S.profile });
   schedule();
 }
+// ---- plan limits (the server enforces them too)
+export const isPro = () => !S.sub || S.sub.pro;
+export function tradesLeft() { if (isPro()) return Infinity; return Math.max(0, S.sub.trades.limit - S.sub.trades.used); }
+export function aiLeft() { if (isPro()) return Infinity; return Math.max(0, S.sub.ai.limit - S.sub.ai.used); }
 export function save(kind, obj) {
+  if (kind === 'trade' && (!obj.id || !S.trade.some((t) => t.id === obj.id))) {
+    if (tradesLeft() <= 0) { dispatchEvent(new CustomEvent('st:upgrade', { detail: { reason: 'trades' } })); return null; }
+    if (S.sub && !S.sub.pro) S.sub.trades.used++;
+  }
   if (!obj.id) obj.id = uid();
   obj.updatedAt = Date.now();
   const list = S[kind];

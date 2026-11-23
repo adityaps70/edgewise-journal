@@ -251,3 +251,29 @@ body.home {
 }
 @media (max-width: 560px) { .nums__g { grid-template-columns: 1fr; } .cmp__r { font-size: 13.5px; grid-template-columns: 1.4fr .9fr .9fr; } .cmp__h b { font-size: 15px; } .hero2 { padding-top: 120px; } }
 @media (prefers-reduced-motion: reduce) { .beam i, .flow__a, .pipe__p i { animation: none !important; } }
+
+/* ---- revisions ---- */
+.core__ic { width: 40px; height: 40px; }
+.plat { position: relative; width: 100%; max-width: 380px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0; }
+.plat__l { display: grid; gap: 10px; }
+.pn { display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 11px; font-size: 13px; font-weight: 600; color: var(--ink-2); background: #111113; box-shadow: inset 0 0 0 1px var(--line-2); white-space: nowrap; }
+.plat__w { width: 100%; height: 174px; } .flow__a.f3 { animation-delay: .65s; }
+.plat .nd--hub { position: static; }
+.price { grid-template-columns: repeat(2, minmax(0, 340px)); justify-content: center; gap: 16px; display: grid; place-items: stretch; }
+.price__c { width: auto; }
+.price__c:not(.price__c--pro) { box-shadow: inset 0 0 0 1px var(--line); background: linear-gradient(180deg, #ffffff05, #ffffff01); }
+.price__c--pro { box-shadow: inset 0 0 0 1px #ff304866, 0 30px 80px -40px #ff304888; }
+.price__c ul { flex: 1; } .price__c { grid-template-rows: auto auto 1fr auto; }
+.gbtn--block { width: 100%; justify-content: center; }
+.row2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.row2--rev:has(.vis--demo) { grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr); }
+.vis { min-width: 0; }
+.vis--demo .vis__n { display: none; }
+.demo2 { min-width: 0; }
+.demo2 .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; } .demo2 .seg::-webkit-scrollbar { display: none; }
+.demo2 .seg button { white-space: nowrap; }
+.demo2 .sl { width: 100%; box-sizing: border-box; }
+.demo2 .demo__ladder { margin-top: 4px; }
+.demo2 .fp__rules { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 960px) { .row2--rev:has(.vis--demo) { grid-template-columns: 1fr; } .price { grid-template-columns: 1fr; } }
+.price__c ul { align-content: start; }

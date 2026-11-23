@@ -3,15 +3,16 @@ import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
   goalIdea,
-} from './core.js?v=9d40634d';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=9d40634d';
-import { slider, liveRate, fxAgo } from './ui.js?v=9d40634d';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=9d40634d';
+} from './core.js?v=4dac5de5';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=4dac5de5';
+import { slider, liveRate, fxAgo } from './ui.js?v=4dac5de5';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=4dac5de5';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=9d40634d';
-import * as V2 from './views2.js?v=9d40634d';
-import * as V3 from './views3.js?v=9d40634d';
-import * as V4 from './views4.js?v=9d40634d';
+import * as V from './views.js?v=4dac5de5';
+import * as V2 from './views2.js?v=4dac5de5';
+import * as V3 from './views3.js?v=4dac5de5';
+import * as PL from './plan.js?v=4dac5de5';
+import * as V4 from './views4.js?v=4dac5de5';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -35,7 +36,7 @@ async function boot() {
   app.innerHTML = `<div class="boot">${LOGO}</div>`;
   try {
     const me = await API.me();
-    S.user = me.user; S.ai = me.ai || {};
+    S.user = me.user; S.ai = me.ai || {}; S.sub = me.plan || null;
   } catch (e) {
     if (e.offline) { S.local = true; S.user = { id: 'local', name: '' }; S.ai = { configured: false }; }
     else if (e.status === 401) return auth();
@@ -56,7 +57,7 @@ function auth(mode = 'login') {
   app.innerHTML = `<div class="solo"><div class="solo__card" id="authCard">
     ${LOGO}
     <h1>Your trading journal,<br>with a coach built in.</h1>
-    <p>Track every trade, prop account and payout. Claude reads it all and tells you where the money leaks.</p>
+    <p>Track every trade, prop account and payout. The AI coach reads it all and tells you where the money leaks.</p>
     <div id="gBox" class="gbox" hidden><div id="gBtn"></div><div class="or"><span>or with email</span></div></div>
     <div class="seg seg--accent" id="authSeg" style="margin-bottom:18px"><button data-v="login" class="${mode === 'login' ? 'is-on' : ''}">Sign in</button><button data-v="signup" class="${mode === 'signup' ? 'is-on' : ''}">Create account</button></div>
     <form class="stack" id="authForm">
@@ -423,7 +424,7 @@ const VIEWS = {
   mindset: ['Mindset', 'brain', V2.mindset], firms: ['Prop firms', 'shield', V2.firms], reports: ['Reports', 'sheet', V2.reports],
   coach: ['AI coach', 'coach', V.coach], settings: ['Settings', 'settings', V.settings],
   notebook: ['Notebook', 'note', V3.notebook], agents: ['Agents', 'agent', V3.agents], backtest: ['Backtesting', 'flask', V3.backtest],
-  tools: ['Tools', 'calc', V3.tools], mentor: ['Mentor mode', 'users', V3.mentor], connections: ['Connections', 'link', V4.connections], economic: ['Economic calendar', 'calendar', V3.economic],
+  tools: ['Tools', 'calc', V3.tools], mentor: ['Mentor mode', 'users', V3.mentor], connections: ['Connections', 'link', V4.connections], admin: ['Admin', 'shield', PL.admin], economic: ['Economic calendar', 'calendar', V3.economic],
 };
 // ---- menu sections: each groups related pages, shown as tabs at the top of the page
 const HUBS = [
@@ -452,15 +453,18 @@ function navItems() { // every page this trader can open (the menu shows them gr
   if (prop || S.payout.length) list.push('payouts');
   if (prop || p.mission || S.plan.length) list.push('plan');
   list.push('connections', 'agents', 'reports', 'mentor', 'tools', 'economic', 'coach');
+  if (S.user?.admin) list.push('admin');
   return list;
 }
 let current = null;
 function shell(first = false) {
-  import('./pet.js?v=9d40634d').then((m) => m.mountPet()).catch(() => {});
+  setTimeout(paintPlan, 0);
+  import('./pet.js?v=4dac5de5').then((m) => m.mountPet()).catch(() => {});
   const p = P();
   app.innerHTML = `<div class="app"><div class="slab" id="slab">
     <aside class="side"><div class="side__top">${LOGO}<a class="side__name" href="index.html" aria-label="${APP.name} home">${WORDMARK}</a><button class="side__fold" id="fold" aria-label="Collapse sidebar">${icon('fold')}</button></div>
       <nav class="nav" id="nav" aria-label="Sections"><span class="nav__pill"></span></nav>
+      <div id="usage"></div>
       <div class="safe" id="safe"></div>
       <div class="side__me"><span class="av">${esc(initials())}<i class="av__dot"></i></span><span class="me__text"><b>${esc(p.name || 'Trader')}</b><small>${esc(S.local ? 'Local mode' : S.user?.email || '')}</small></span><button class="ibtn" id="meMore" aria-label="Account menu">${icon('more')}</button></div>
     </aside>
@@ -515,11 +519,11 @@ function buildNav() {
   const pending = S.payout.filter((p) => p.status === 'requested').length;
   const cur = hubOf(current)?.[0] || current;
   const hubs = HUBS.filter((h) => h[3].some((x) => items.includes(x)));
-  nav.innerHTML = '<span class="nav__pill"></span>' + [...hubs.map((h) => h[0]), 'settings'].map((hid) => {
+  nav.innerHTML = '<span class="nav__pill"></span>' + [...hubs.map((h) => h[0]), ...(items.includes('admin') ? ['admin'] : []), 'settings'].map((hid) => {
     const h = HUBS.find((x) => x[0] === hid); const label = h ? h[1] : VIEWS[hid][0]; const ic = h ? h[2] : VIEWS[hid][1];
     const subs = h ? h[3].filter((x) => items.includes(x)) : [hid]; const href = lastTab[hid] && subs.includes(lastTab[hid]) ? lastTab[hid] : subs[0];
     const badge = hid === 'trades' && todayN ? `<span class="nav__count">${todayN}</span>` : hid === 'accounts' && atRisk ? `<span class="nav__count" style="background:var(--bad-soft);color:var(--bad)">${atRisk}</span>` : hid === 'accounts' && pending ? `<span class="nav__count">${pending}</span>` : '';
-    return `<a class="nav__item${hid === 'settings' ? ' nav__item--gap' : ''}" href="#${href}" data-id="${hid}" ${hid === cur ? 'aria-current="page"' : ''}>${icon(ic)}<span class="nav__label">${label}</span>${badge}</a>`;
+    return `<a class="nav__item${hid === (items.includes('admin') ? 'admin' : 'settings') ? ' nav__item--gap' : ''}" href="#${href}" data-id="${hid}" ${hid === cur ? 'aria-current="page"' : ''}>${icon(ic)}<span class="nav__label">${label}</span>${badge}</a>`;
   }).join('');
   $$('.nav__item', nav).forEach((a) => a.onclick = () => $('#slab').classList.remove('is-open'));
   requestAnimationFrame(() => movePill(nav, false));
@@ -588,6 +592,16 @@ function route(first = false) {
 }
 window.addEventListener('hashchange', () => { if ($('#main')) route(false); });
 
+function paintPlan() {
+  const u = $('#usage'); if (u) { u.innerHTML = PL.usageHTML(true); PL.bindUsage(u); }
+  const b = S.sub?.banner; const stage = $('.stage'); let bar = $('#banner');
+  let seen = ''; try { seen = localStorage.getItem('st_banner_seen') || ''; } catch (e) {}
+  if (b && b !== seen && stage) { if (!bar) { stage.insertAdjacentHTML('afterbegin', '<div class="banner" id="banner"><span></span><button class="ibtn" aria-label="Dismiss">' + icon('close') + '</button></div>'); bar = $('#banner'); } $('span', bar).textContent = b; $('button', bar).onclick = () => { try { localStorage.setItem('st_banner_seen', b); } catch (e) {} bar.remove(); }; }
+  else if (bar) bar.remove();
+}
+addEventListener('st:upgrade', (e) => PL.upgradeModal(e.detail?.reason));
+addEventListener('st:refresh', () => refresh());
+addEventListener('st:usage', () => paintPlan());
 function refresh() {
   const main = $('#main'); if (!main || !current) return;
   const y = main.scrollTop;
@@ -597,7 +611,7 @@ function refresh() {
   // light re-entrance: headings stay, data re-animates
   const h1 = $('.phead h1', main); if (h1) h1.dataset.split = '1';
   animateData(main);
-  buildNav(); updateSide();
+  buildNav(); updateSide(); paintPlan();
 }
 function rerenderShell() { shell(false); }
 

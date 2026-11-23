@@ -47,6 +47,31 @@ async function currentUser(env, request) {
   return { id: row.id, email: row.email, name: row.name, plan: row.plan };
 }
 
+// ---------------------------------------------------------------- plans, limits, admin
+let colsReady = false;
+async function ensurePlanTables(env) {
+  if (colsReady) return; colsReady = true;
+  for (const sql of ['ALTER TABLE users ADD COLUMN pro_until INTEGER', 'ALTER TABLE users ADD COLUMN last_seen INTEGER', 'ALTER TABLE users ADD COLUMN trades_logged INTEGER DEFAULT 0']) { try { await env.DB.prepare(sql).run(); } catch (e) { /* column exists */ } }
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS app_settings (k TEXT PRIMARY KEY, v TEXT)').run();
+}
+const isAdmin = (env, user) => !!user && String(env.ADMIN_EMAILS || '').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean).includes(String(user.email || '').toLowerCase());
+const SETTING_DEFAULTS = { free_trades: '10', free_ai: '10', pro_price: '20', pay_link: '', banner: '', signup: 'on' };
+async function settings(env) {
+  await ensurePlanTables(env);
+  const { results } = await env.DB.prepare('SELECT k, v FROM app_settings').all();
+  const out = { ...SETTING_DEFAULTS }; for (const r of results) out[r.k] = r.v; return out;
+}
+async function planInfo(env, user) {
+  await ensurePlanTables(env);
+  const u = await env.DB.prepare('SELECT plan, pro_until, trades_logged FROM users WHERE id = ?').bind(user.id).first() || {};
+  const admin = isAdmin(env, user);
+  const pro = admin || (u.plan === 'pro' && (!u.pro_until || u.pro_until > Date.now()));
+  const st = await settings(env);
+  const { n: tradeDocs } = await env.DB.prepare("SELECT COUNT(*) AS n FROM docs WHERE user_id = ? AND kind = 'trade'").bind(user.id).first();
+  const { n: aiTotal } = await env.DB.prepare('SELECT COALESCE(SUM(count), 0) AS n FROM ai_usage WHERE user_id = ?').bind(user.id).first();
+  return { pro, admin, proUntil: u.pro_until || null, trades: { used: Math.max(u.trades_logged || 0, tradeDocs || 0), limit: pro ? null : parseInt(st.free_trades, 10) }, ai: { used: aiTotal || 0, limit: pro ? null : parseInt(st.free_ai, 10) }, settings: st };
+}
+
 async function startSession(env, request, user) {
   const token = randomId(32);
   await env.DB.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)')
@@ -130,14 +155,19 @@ async function callClaude(env, { mode, messages, context, image }) {
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg = body?.error?.message || `Claude API error ${res.status}`;
+    const msg = body?.error?.message || `AI service error ${res.status}`;
     throw Object.assign(new Error(msg), { status: 502 });
   }
   return (body.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim();
 }
 
-async function bumpUsage(env, userId) {
+async function bumpUsage(env, userId, plan) {
   const day = new Date().toISOString().slice(0, 10);
+  if (plan && !plan.pro) {
+    if (plan.ai.used >= plan.ai.limit) return { ok: false, free: true, used: plan.ai.used, limit: plan.ai.limit };
+    await env.DB.prepare('INSERT INTO ai_usage (user_id, day, count) VALUES (?, ?, 1) ON CONFLICT(user_id, day) DO UPDATE SET count = count + 1').bind(userId, day).run();
+    return { ok: true, free: true, used: plan.ai.used + 1, limit: plan.ai.limit };
+  }
   const limit = parseInt(env.AI_DAILY_LIMIT || '60', 10);
   const row = await env.DB.prepare('SELECT count FROM ai_usage WHERE user_id = ? AND day = ?').bind(userId, day).first();
   const used = row ? row.count : 0;
@@ -237,7 +267,7 @@ export async function onRequest(context) {
   try {
     // ---- auth
     if (path === '/auth/signup' && method === 'POST') {
-      if (env.ALLOW_SIGNUP === 'false') return err('Sign-ups are closed.', 403);
+      if (env.ALLOW_SIGNUP === 'false' || (await settings(env)).signup === 'off') return err('Sign-ups are closed.', 403);
       const { email, password, name } = await request.json();
       const e = String(email || '').trim().toLowerCase();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return err('Enter a valid email.');
@@ -266,7 +296,7 @@ export async function onRequest(context) {
       await cache.put(key, res.clone()); return res;
     }
     if (path === '/config' && method === 'GET') {
-      return json({ googleClientId: env.GOOGLE_CLIENT_ID || null, signup: env.ALLOW_SIGNUP !== 'false' });
+      return json({ googleClientId: env.GOOGLE_CLIENT_ID || null, signup: env.ALLOW_SIGNUP !== 'false' && (await settings(env)).signup !== 'off' });
     }
 
     if (path === '/auth/google' && method === 'POST') {
@@ -275,7 +305,7 @@ export async function onRequest(context) {
       const e = String(g.email).trim().toLowerCase();
       const row = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(e).first();
       if (row) return startSession(env, request, { id: row.id, email: row.email, name: row.name, plan: row.plan });
-      if (env.ALLOW_SIGNUP === 'false') return err('Sign-ups are closed.', 403);
+      if (env.ALLOW_SIGNUP === 'false' || (await settings(env)).signup === 'off') return err('Sign-ups are closed.', 403);
       const { hash, salt } = await hashPassword(randomId(24)); // Google accounts get an unguessable password; they sign in with Google
       const user = { id: randomId(12), email: e, name: String(g.name || '').slice(0, 80), plan: 'free' };
       await env.DB.prepare('INSERT INTO users (id, email, name, pass_hash, salt, plan, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(user.id, user.email, user.name, hash, salt, user.plan, Date.now()).run();
@@ -340,7 +370,9 @@ export async function onRequest(context) {
     if (!user) return err('Not signed in.', 401);
 
     if (path === '/me' && method === 'GET') {
-      return json({ user, ai: { configured: !!env.ANTHROPIC_API_KEY, model: env.CLAUDE_MODEL || 'claude-sonnet-5-5' } });
+      const plan = await planInfo(env, user);
+      await env.DB.prepare('UPDATE users SET last_seen = ? WHERE id = ?').bind(Date.now(), user.id).run();
+      return json({ user: { ...user, admin: plan.admin }, plan: { pro: plan.pro, proUntil: plan.proUntil, trades: plan.trades, ai: plan.ai, price: plan.settings.pro_price, payLink: plan.settings.pay_link, banner: plan.settings.banner }, ai: { configured: !!env.ANTHROPIC_API_KEY } });
     }
 
     if (path === '/data' && method === 'GET') {
@@ -356,7 +388,23 @@ export async function onRequest(context) {
       if (put.length + del.length > 500) return err('Too many changes in one request.');
       const now = Date.now();
       const stmts = [];
+      let blocked = [];
+      const newTrades = put.filter((d) => d.kind === 'trade' && d.id);
+      if (newTrades.length) {
+        const plan = await planInfo(env, user);
+        const ids = newTrades.map((d) => String(d.id));
+        const have = new Set();
+        for (let i = 0; i < ids.length; i += 90) { const part = ids.slice(i, i + 90); const { results } = await env.DB.prepare(`SELECT id FROM docs WHERE user_id = ? AND kind = 'trade' AND id IN (${part.map(() => '?').join(',')})`).bind(user.id, ...part).all(); results.forEach((r) => have.add(r.id)); }
+        const fresh = ids.filter((x) => !have.has(x));
+        if (fresh.length) {
+          let room = plan.pro ? fresh.length : Math.max(0, plan.trades.limit - plan.trades.used);
+          const allow = new Set(fresh.slice(0, room)); blocked = fresh.filter((x) => !allow.has(x));
+          if (allow.size) stmts.push(plan.pro ? env.DB.prepare('UPDATE users SET trades_logged = COALESCE(trades_logged, 0) + ? WHERE id = ?').bind(allow.size, user.id) : env.DB.prepare('UPDATE users SET trades_logged = ? WHERE id = ?').bind(plan.trades.used + allow.size, user.id));
+        }
+      }
+      const blockedSet = new Set(blocked);
       for (const d of put) {
+        if (d.kind === 'trade' && blockedSet.has(String(d.id))) continue;
         if (!KINDS.has(d.kind) || !d.id) return err('Bad record kind/id.');
         const s = JSON.stringify(d.data);
         if (s.length > MAX_DOC) return err('Record too large.');
@@ -368,7 +416,69 @@ export async function onRequest(context) {
         stmts.push(env.DB.prepare('DELETE FROM docs WHERE user_id = ? AND kind = ? AND id = ?').bind(user.id, d.kind, String(d.id)));
       }
       if (stmts.length) await env.DB.batch(stmts);
-      return json({ ok: true, saved: put.length, deleted: del.length });
+      return json({ ok: true, saved: put.length - blocked.length, deleted: del.length, blocked });
+    }
+
+    // ---------------------------------------------------------------- admin (ADMIN_EMAILS only)
+    if (path.startsWith('/admin')) {
+      if (!isAdmin(env, user)) return err('Not allowed.', 403);
+      await ensurePlanTables(env);
+      const DAY = 86400000; const now = Date.now();
+      if (path === '/admin/overview' && method === 'GET') {
+        const one = async (sql, ...b) => (await env.DB.prepare(sql).bind(...b).first()) || {};
+        const users = await one('SELECT COUNT(*) AS n FROM users');
+        const new7 = await one('SELECT COUNT(*) AS n FROM users WHERE created_at > ?', now - 7 * DAY);
+        const new30 = await one('SELECT COUNT(*) AS n FROM users WHERE created_at > ?', now - 30 * DAY);
+        const active7 = await one('SELECT COUNT(*) AS n FROM users WHERE last_seen > ?', now - 7 * DAY);
+        const active1 = await one('SELECT COUNT(*) AS n FROM users WHERE last_seen > ?', now - DAY);
+        const pro = await one("SELECT COUNT(*) AS n FROM users WHERE plan = 'pro' AND (pro_until IS NULL OR pro_until > ?)", now);
+        const trades = await one("SELECT COUNT(*) AS n FROM docs WHERE kind = 'trade'");
+        const accounts = await one("SELECT COUNT(*) AS n FROM docs WHERE kind = 'account'");
+        const today = new Date().toISOString().slice(0, 10);
+        const aiToday = await one('SELECT COALESCE(SUM(count), 0) AS n FROM ai_usage WHERE day = ?', today);
+        const ai30 = await one('SELECT COALESCE(SUM(count), 0) AS n FROM ai_usage WHERE day >= ?', new Date(now - 30 * DAY).toISOString().slice(0, 10));
+        const atLimit = await one("SELECT COUNT(*) AS n FROM users u WHERE (u.plan IS NULL OR u.plan != 'pro' OR (u.pro_until IS NOT NULL AND u.pro_until < ?)) AND COALESCE(u.trades_logged, 0) >= ?", now, parseInt((await settings(env)).free_trades, 10));
+        const { results: su } = await env.DB.prepare('SELECT created_at FROM users WHERE created_at > ?').bind(now - 30 * DAY).all();
+        const { results: au } = await env.DB.prepare('SELECT day, SUM(count) AS n FROM ai_usage WHERE day >= ? GROUP BY day').bind(new Date(now - 30 * DAY).toISOString().slice(0, 10)).all();
+        const days = Array.from({ length: 30 }, (_, i) => new Date(now - (29 - i) * DAY).toISOString().slice(0, 10));
+        const signups = days.map((d) => su.filter((r) => new Date(r.created_at).toISOString().slice(0, 10) === d).length);
+        const aiDaily = days.map((d) => (au.find((r) => r.day === d) || {}).n || 0);
+        return json({ users: users.n, new7: new7.n, new30: new30.n, active1: active1.n, active7: active7.n, pro: pro.n, trades: trades.n, accounts: accounts.n, aiToday: aiToday.n, ai30: ai30.n, atLimit: atLimit.n, days, signups, aiDaily });
+      }
+      if (path === '/admin/users' && method === 'GET') {
+        const { results } = await env.DB.prepare(`SELECT u.id, u.email, u.name, u.plan, u.pro_until, u.created_at, u.last_seen, COALESCE(u.trades_logged, 0) AS logged,
+          (SELECT COUNT(*) FROM docs d WHERE d.user_id = u.id AND d.kind = 'trade') AS trades,
+          (SELECT COUNT(*) FROM docs d WHERE d.user_id = u.id AND d.kind = 'account') AS accounts,
+          (SELECT COALESCE(SUM(count), 0) FROM ai_usage a WHERE a.user_id = u.id) AS ai
+          FROM users u ORDER BY u.created_at DESC LIMIT 1000`).all();
+        return json({ users: results.map((r) => ({ ...r, admin: isAdmin(env, r) })) });
+      }
+      const um = path.match(/^\/admin\/users\/([\w-]+)(?:\/(reset-ai|reset-trades))?$/);
+      if (um) {
+        const target = await env.DB.prepare('SELECT id, email FROM users WHERE id = ?').bind(um[1]).first();
+        if (!target) return err('No such user.', 404);
+        if (um[2] === 'reset-ai' && method === 'POST') { await env.DB.prepare('DELETE FROM ai_usage WHERE user_id = ?').bind(target.id).run(); return json({ ok: true }); }
+        if (um[2] === 'reset-trades' && method === 'POST') { const { n } = await env.DB.prepare("SELECT COUNT(*) AS n FROM docs WHERE user_id = ? AND kind = 'trade'").bind(target.id).first(); await env.DB.prepare('UPDATE users SET trades_logged = ? WHERE id = ?').bind(n, target.id).run(); return json({ ok: true }); }
+        if (!um[2] && method === 'POST') {
+          const b = await request.json(); const plan = b.plan === 'pro' ? 'pro' : 'free'; const until = plan === 'pro' && b.proUntil ? Number(b.proUntil) : null;
+          await env.DB.prepare('UPDATE users SET plan = ?, pro_until = ? WHERE id = ?').bind(plan, until, target.id).run(); return json({ ok: true });
+        }
+        if (!um[2] && method === 'DELETE') {
+          if (target.id === user.id || isAdmin(env, target)) return err("You can't delete an admin account here.");
+          await env.DB.batch(['docs', 'images', 'sessions', 'ai_usage'].map((t) => env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(target.id)).concat([env.DB.prepare('DELETE FROM users WHERE id = ?').bind(target.id)]));
+          for (const t of ['shares', 'mentor_notes', 'connections', 'ingest_keys', 'inbox', 'bars']) { try { await env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(target.id).run(); } catch (e) { /* table not created yet */ } }
+          return json({ ok: true });
+        }
+      }
+      if (path === '/admin/settings') {
+        if (method === 'GET') return json({ settings: await settings(env) });
+        if (method === 'POST') {
+          const b = await request.json(); const stmts = [];
+          for (const k of Object.keys(SETTING_DEFAULTS)) if (k in b) stmts.push(env.DB.prepare('INSERT INTO app_settings (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v').bind(k, String(b[k]).slice(0, 500)));
+          if (stmts.length) await env.DB.batch(stmts); return json({ settings: await settings(env) });
+        }
+      }
+      return err('Not found', 404);
     }
 
     if (path === '/reset' && method === 'POST') {
@@ -512,7 +622,8 @@ export async function onRequest(context) {
     if (path === '/ai' && method === 'POST') {
       const body = await request.json();
       if (!env.ANTHROPIC_API_KEY) return err('AI is not configured: set the ANTHROPIC_API_KEY secret.', 503);
-      const usage = await bumpUsage(env, user.id);
+      const usage = await bumpUsage(env, user.id, await planInfo(env, user));
+      if (!usage.ok && usage.free) return json({ error: `You've used your ${usage.limit} free AI requests. Upgrade to Pro for 60 a day.`, upgrade: true }, 402);
       if (!usage.ok) return err(`Daily AI limit reached (${usage.limit}). Resets at 00:00 UTC.`, 429);
       const text = await callClaude(env, body);
       return json({ text, usage });

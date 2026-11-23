@@ -14,6 +14,8 @@ CLAUDE_MODEL = "claude-sonnet-5-5"
 AI_DAILY_LIMIT = "60"
 # Google sign-in (public OAuth client ID, not a secret).
 GOOGLE_CLIENT_ID = "480257317582-51bdjp8su1tve6ue69ukd83kbtm84k0f.apps.googleusercontent.com"
+# Who can open the admin panel (comma separated).
+ADMIN_EMAILS = "adityaps700@gmail.com"
 # Set to "false" to close sign-ups.
 ALLOW_SIGNUP = "true"
 

@@ -170,7 +170,7 @@ def build_post(p, posts):
   </article>
   <aside class="cta">
     <b>Track every prop account in one place</b>
-    <p>The Smart Trade loads your firm's rules, shows how far each account is from breaching, and tracks fees against payouts in your own currency. Free while in beta.</p>
+    <p>The Smart Trade loads your firm's rules, shows how far each account is from breaching, and tracks fees against payouts in your own currency. Start free.</p>
     <a class="btn btn--primary" href="/app">Start journaling free</a>
   </aside>
   {f'<section class="related"><h2>Keep reading</h2><div class="rgrid">{rel_html}</div></section>' if rel_html else ''}
