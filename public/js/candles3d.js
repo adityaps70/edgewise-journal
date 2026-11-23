@@ -1,5 +1,5 @@
 // Glass logo and floating glass candlesticks in a studio lit from the top left.
-// Loaded on demand by home.js when the stage gets near the viewport. (scene v9)
+// Loaded on demand by home.js when the stage gets near the viewport. (scene v10)
 import * as THREE from '../vendor/three/three.module.min.js';
 import { SVGLoader } from '../vendor/three/SVGLoader.js';
 
@@ -38,6 +38,8 @@ function studio(renderer) {
   box(2, 4, 0xffffff, 2.5, [-9, 2, -2]);
   box(0.5, 8, 0xff2a40, 2.2, [9, 3, 2]);
   box(16, 0.35, 0xffffff, 2, [0, 5, -10]);
+  box(0.9, 12, 0xffffff, 7, [-5.5, 3, 9]);   // tall strip front left: the bright stripe down each candle
+  box(0.45, 12, 0xffe8ec, 3.5, [6.5, 3, 8]); // thinner strip front right: the rim on the other side
   const pm = new THREE.PMREMGenerator(renderer); const tex = pm.fromScene(env, 0.01).texture; pm.dispose(); return tex;
 }
 
@@ -81,7 +83,7 @@ function reflMat(color, opacity) {
 }
 
 export function mount(canvas, { reduced = false } = {}) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: location.hash === '#snap3d' });
   renderer.setPixelRatio(Math.min(1.75, window.devicePixelRatio || 1));
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -95,9 +97,23 @@ export function mount(canvas, { reduced = false } = {}) {
 
   // glass
   const glass = (o) => new THREE.MeshPhysicalMaterial({ metalness: 0, roughness: 0.03, transmission: 1, ior: 1.52, clearcoat: 1, clearcoatRoughness: 0.02, specularIntensity: 1, envMapIntensity: 1.5, ...o });
-  const mBull = glass({ color: 0xff4a60, thickness: 0.9, attenuationColor: new THREE.Color('#ff1a38'), attenuationDistance: 0.6 });
-  const mBear = glass({ color: 0xffffff, transmission: 0.82, roughness: 0.38, thickness: 1.2, ior: 1.5, attenuationColor: new THREE.Color('#ffffff'), attenuationDistance: 6, clearcoat: 1, clearcoatRoughness: 0.02, emissive: 0x6a6a70, emissiveIntensity: 1, sheen: 1, sheenRoughness: 0.3, sheenColor: new THREE.Color('#ffffff') });
-  const mWick = glass({ color: 0xffffff, thickness: 0.1, roughness: 0.05, emissive: 0x888888, emissiveIntensity: 0.5 });
+  // candle glass: clear in the middle so the wick shows through, deepening to a dark tinted rim at the
+  // edges (where light travels through more glass), strong refraction, slight rainbow at the edges
+  const edgeGlass = (o, edge, power) => {
+    const m = glass(o); const uEdge = { value: new THREE.Color(edge) };
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.uEdge = uEdge;
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 uEdge;')
+        .replace('#include <transmission_fragment>', `#include <transmission_fragment>
+        float rim = pow(1.0 - saturate(dot(normal, normalize(vViewPosition))), ${power.toFixed(2)});
+        totalDiffuse *= mix(vec3(1.0), uEdge, rim);`);
+    };
+    m.customProgramCacheKey = () => 'edge' + edge + power; return m;
+  };
+  const mBull = edgeGlass({ color: 0xff8a98, roughness: 0, thickness: 1.6, ior: 1.5, dispersion: 0.3, attenuationColor: new THREE.Color('#ff2a44'), attenuationDistance: 2.2, envMapIntensity: 2.4 }, 0x3a0008, 1.6);
+  const mBear = edgeGlass({ color: 0xffffff, roughness: 0.015, thickness: 1.6, ior: 1.5, dispersion: 0.45, attenuationColor: new THREE.Color('#e6ecf6'), attenuationDistance: 2.2, envMapIntensity: 2.6, emissive: 0x08080a }, 0x1a1c22, 1.8);
+  // the wick is a solid glass rod: opaque to the renderer, so it shows through (and is bent by) the candle body
+  const mWick = new THREE.MeshPhysicalMaterial({ color: 0xf2f2f4, roughness: 0.06, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 2.2, emissive: 0x5a5a60, emissiveIntensity: 1 });
   const mRed = glass({ color: 0xff3a52, thickness: 1.4, attenuationColor: new THREE.Color('#e0102e'), attenuationDistance: 0.7 });
   const mClear = glass({ color: 0xffffff, transmission: 0.82, roughness: 0.34, thickness: 1.6, ior: 1.5, attenuationColor: new THREE.Color('#ffffff'), attenuationDistance: 6, clearcoat: 1, clearcoatRoughness: 0.02, emissive: 0x6e6e74, emissiveIntensity: 1, sheen: 1, sheenRoughness: 0.3, sheenColor: new THREE.Color('#ffffff') });
 
