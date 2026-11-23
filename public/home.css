@@ -374,3 +374,7 @@ body.home {
 .rp2__pl.dn { color: var(--dn); }
 @media (max-width: 960px) { .bc--3d { min-height: 360px; } }
 @media (prefers-reduced-motion: reduce) { .chat__q, .chat__a { animation: none; } }
+
+/* nav button never wraps; tighter header on phones */
+.wbtn { white-space: nowrap; flex: none; }
+@media (max-width: 420px) { .hn__in { gap: 12px; padding: 0 16px; } .hn__end { gap: 6px; margin-left: auto; } .hn__end .wbtn--sm { padding: 0 14px; font-size: 13.5px; height: 36px; } }
