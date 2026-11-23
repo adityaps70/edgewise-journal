@@ -434,3 +434,23 @@ body.home {
   .pipd { min-height: 340px; } .pipd__say { right: 50px; left: 0; max-width: none; }
 }
 @media (prefers-reduced-motion: reduce) { .snapd__scan, .pipd__say.is-in { animation: none !important; } }
+
+/* ---------------- phones (Nov 23 audit) ---------------- */
+.dstage.is-crop { overflow: hidden; border-radius: 18px; -webkit-mask-image: linear-gradient(180deg, #000 78%, transparent); mask-image: linear-gradient(180deg, #000 78%, transparent); }
+.dstage.is-crop .dash { box-shadow: none; }
+@media (max-width: 760px) {
+  .st { min-height: 0; padding: 22px; } .st h3 { margin-top: 14px; }
+  .num { padding: 18px; gap: 6px; }
+  .six { gap: 30px; }
+  .hf__cols { gap: 28px 40px; } .hf__cols div { gap: 0; } .hf__cols a { padding: 9px 0; display: block; }
+  .hf__fine { margin-top: 36px; }
+}
+@media (max-width: 560px) {
+  /* the three figures sit in one compact row */
+  .nums__g { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .num { padding: 14px 12px; border-radius: 16px; display: flex; flex-direction: column; justify-content: space-between; }
+  .num > :first-child:not(small):not(b) { display: none; }
+  .num small { font-size: 12px; line-height: 1.3; }
+  .num b { font-size: 28px; }
+}
+@media (max-width: 350px) { .hn__in { padding: 0 12px; gap: 8px; } .hn__end .wbtn--sm { padding: 0 11px; font-size: 13px; } .hn__brand .wm small, .hn .wm small { display: none; } }

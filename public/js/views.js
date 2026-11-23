@@ -6,13 +6,13 @@ import {
   safeToRisk, missionMetrics, planMetrics, aiContext, md, icon, API, flush, wipeAll, tradingDaysBetween,
   FT, exitStats, passForecast, autoTags, runAgents, tagList, accCost, COST_FIELDS, TIMEFRAMES, EXIT_BEHAVIOR, edgeScore, zoneOf, durationMin, durationBucket, setupsOf, severeCombo, lateLoss, mastery, HOT,
   goalIdea, tradesLeft,
-} from './core.js?v=9d689113';
-import { enterPage, animateData, segInit, segSelect, openModal, closeModal, toast, flash, pop, shake, wobble, cardStack, countUp } from './motion.js?v=9d689113';
-import { equityChart, tubes, hbars, bindTips, drill as drillStore, radar, reg } from './charts.js?v=9d689113';
+} from './core.js?v=bd19c77f';
+import { enterPage, animateData, segInit, segSelect, openModal, closeModal, toast, flash, pop, shake, wobble, cardStack, countUp } from './motion.js?v=bd19c77f';
+import { equityChart, tubes, hbars, bindTips, drill as drillStore, radar, reg } from './charts.js?v=bd19c77f';
 const drillMap = () => drillStore;
-import { slider, setSlider, liveRate, fxAgo, soundOn, setSound, refreshDate } from './ui.js?v=9d689113';
-import * as V3m from './views3.js?v=9d689113';
-import { catalog, firmById, planRules, defaultDaily, dailyCap, STAGE_LABEL, mono, firstStage, isInstant } from './firms.js?v=9d689113';
+import { slider, setSlider, liveRate, fxAgo, soundOn, setSound, refreshDate } from './ui.js?v=bd19c77f';
+import * as V3m from './views3.js?v=bd19c77f';
+import { catalog, firmById, planRules, defaultDaily, dailyCap, STAGE_LABEL, mono, firstStage, isInstant } from './firms.js?v=bd19c77f';
 
 let H = { go: () => {}, refresh: () => {}, rerenderShell: () => {} };
 export const setHooks = (h) => (H = h);
@@ -158,7 +158,7 @@ export function overview(el) {
   el.querySelector('[data-act="log"]').onclick = () => tradeModal(); { const b = el.querySelector('[data-act="shot"]'); if (b) b.onclick = () => tradeModal(null, {}, { shot: true }); }
   el.querySelector('[data-act="review"]').onclick = () => H.go('coach', { run: 'week' });
   el.querySelector('[data-act="hide"]').onclick = (e) => { el.classList.toggle('is-masked'); wobble(e.currentTarget); };
-  import('./views3.js?v=9d689113').then((V3) => V3.weeklyDigest($('#digest', el)));
+  import('./views3.js?v=bd19c77f').then((V3) => V3.weeklyDigest($('#digest', el)));
   const ins = el.querySelector('[data-act="insight"]');
   if (ins) ins.onclick = async () => {
     const box = $('#insight', el); box.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>'; wobble(ins);
@@ -259,7 +259,7 @@ export function trades(el) {
     $('#tSum', el).innerHTML = `<div class="grid g-4">${[['Net P&L', st.total, 'moneySign', tone(st.total)], ['Win rate', st.winRate, 'pct', ''], ['Profit factor', Number.isFinite(st.pf) ? st.pf : 99, 'dec', ''], ['Avg trade', st.expectancy, 'moneySign', tone(st.expectancy)]]
       .map(([l, v, f, c]) => `<div class="kpi"><small>${l}</small><b class="${c}">${cnt(v, f)}</b><em>${l === 'Win rate' ? `${st.wins}W · ${st.losses}L · ${st.be}BE` : l === 'Net P&L' ? `${st.n} trades · fees ${money(st.fees)}` : l === 'Profit factor' ? `avg win ${money(st.avgWin)} / loss ${money(st.avgLoss)}` : st.avgR !== null ? `avg ${st.avgR.toFixed(2)}R` : 'per trade'}</em></div>`).join('')}</div>`;
     const rows = list.slice().reverse();
-    $('#tTable', el).innerHTML = rows.length ? `<div class="tablewrap"><table class="t"><thead><tr><th>Date</th><th>Symbol</th><th>Side</th><th class="r">${esc(qty())}</th><th class="r">Entry</th><th class="r">Exit</th><th>Setup</th><th>Grade</th><th>Account</th><th>Emotion</th><th class="r">R</th><th class="r">Net</th></tr></thead><tbody>
+    $('#tTable', el).innerHTML = rows.length ? `<div class="tablewrap"><table class="t t--trades"><thead><tr><th>Date</th><th>Symbol</th><th>Side</th><th class="r">${esc(qty())}</th><th class="r">Entry</th><th class="r">Exit</th><th>Setup</th><th>Grade</th><th>Account</th><th>Emotion</th><th class="r">R</th><th class="r">Net</th></tr></thead><tbody>
       ${rows.slice(0, 400).map((t) => { const n = net(t); const r = rMultiple(t); return `<tr data-trade="${t.id}"><td>${esc(fmtDate(t.date))} <span class="muted">${esc(t.time || '')}</span></td><td><b>${esc(t.symbol)}</b></td><td><span class="pill ${t.side === 'Short' ? 'pill--warn' : 'pill--info'}">${esc(t.side || '')}</span></td><td class="r">${esc(t.qty || '')}</td><td class="r">${esc(t.entry || '')}</td><td class="r">${esc(t.exit || '')}</td><td>${esc(t.setup || '—')}</td><td>${t.grade ? `<span class="gtag g-${t.grade === 'A+' ? 'a' : t.grade.toLowerCase()}">${esc(t.grade)}</span>` : '—'}</td><td>${esc(accName(t.accountId))}</td><td>${esc(t.emotion || '—')}</td><td class="r">${r !== null ? r.toFixed(2) : '—'}</td><td class="r amt ${tone(n)}">${money(n, { sign: true })}</td></tr>`; }).join('')}
       </tbody><tfoot><tr><td colspan="11">${rows.length} trades</td><td class="r ${tone(st.total)}">${money(st.total, { sign: true })}</td></tr></tfoot></table></div>`
       : `<div class="empty">${icon('trades')}<b>No trades match</b>Change the filters or log a trade.</div>`;
@@ -277,7 +277,7 @@ export function trades(el) {
   $('#fOut', el).onchange = (e) => { TF.outcome = e.target.value; draw(); };
   $('#fQ', el).oninput = (e) => { TF.q = e.target.value; draw(); };
   el.querySelector('[data-act="log"]').onclick = () => tradeModal(); { const b = el.querySelector('[data-act="shot"]'); if (b) b.onclick = () => tradeModal(null, {}, { shot: true }); }
-  el.querySelector('[data-act="csv"]').onclick = () => import('./views4.js?v=9d689113').then((V4) => V4.importModal());
+  el.querySelector('[data-act="csv"]').onclick = () => import('./views4.js?v=bd19c77f').then((V4) => V4.importModal());
   draw(); after(el);
 }
 
@@ -379,7 +379,7 @@ export function tradeModal(t0, preset = {}, opts = {}) {
   m.el.addEventListener('click', () => setTimeout(mScore));
   const durHint = () => { const f = formData(m.el); const d = durationMin({ date: f.date, time: f.time, exitTime: f.exitTime }); $('#durHint', m.el).textContent = d !== null ? `held ${d < 60 ? Math.round(d) + ' min' : (d / 60).toFixed(1) + ' h'}` : ''; };
   m.el.addEventListener('input', durHint); durHint(); setTimeout(mScore);
-  $$('#tTabs button', m.el).forEach((b) => b.onclick = () => { $$('#tTabs button', m.el).forEach((x) => x.classList.toggle('is-on', x === b)); $$('[data-pane]', m.el).forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab)); const pane = $(`[data-pane="${b.dataset.tab}"]`, m.el); if (b.dataset.tab === 'e') { read(); import('./views4.js?v=9d689113').then((V4) => V4.replay($('#replayBox', m.el), { ...t }, { onExcursion: ({ mae, mfe }) => { $('[name="mae"]', m.el).value = mae; $('[name="mfe"]', m.el).value = mfe; } })); } if (window.gsap) window.gsap.fromTo(pane, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }); });
+  $$('#tTabs button', m.el).forEach((b) => b.onclick = () => { $$('#tTabs button', m.el).forEach((x) => x.classList.toggle('is-on', x === b)); $$('[data-pane]', m.el).forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab)); const pane = $(`[data-pane="${b.dataset.tab}"]`, m.el); if (b.dataset.tab === 'e') { read(); import('./views4.js?v=bd19c77f').then((V4) => V4.replay($('#replayBox', m.el), { ...t }, { onExcursion: ({ mae, mfe }) => { $('[name="mae"]', m.el).value = mae; $('[name="mfe"]', m.el).value = mfe; } })); } if (window.gsap) window.gsap.fromTo(pane, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }); });
   const gHint = () => { const g = $('#gradeC .is-on', m.el)?.dataset.v; const bg = P().risk?.byGrade; $('#gradeHint', m.el).textContent = g && bg && num(bg[g]) ? `your ${g} risk: ${money(bg[g])}` : g ? '' : 'A+ high conviction · B normal · C low probability'; };
   $$('#gradeC .chip', m.el).forEach((c) => c.onclick = () => { const on = c.classList.contains('is-on'); $$('#gradeC .chip', m.el).forEach((x) => x.classList.remove('is-on')); if (!on) c.classList.add('is-on'); pop(c); gHint(); hint(); });
   gHint();
@@ -594,7 +594,7 @@ export function accounts(el) {
   <div class="grid g-ov" style="margin-top:var(--gap)">
     ${card('Your stack', 'Drag the top card sideways, tap to see rules', `<div class="wallet"><div class="wallet__stack">${accs.map(accountCard).join('') || `<div class="empty">${icon('accounts')}<b>No accounts</b></div>`}</div></div>${accs.length ? `<div class="wallet__bar"><button class="ibtn" data-act="prev">${icon('left')}</button><div class="wallet__dots">${accs.map((_, i) => `<i class="${i ? '' : 'is-on'}"></i>`).join('')}</div><button class="ibtn" data-act="next">${icon('right')}</button><span class="wallet__spacer"></span><button class="btn btn--sm" data-act="edit-top">${icon('edit')}Edit</button></div>` : ''}`)}
     <section class="card"><div class="chead"><div class="chead__text"><h3>All accounts</h3><p>Click one to edit rules, status or cost</p></div></div>
-    ${groups.filter(([, l]) => l.length).map(([g, list]) => `<div class="daygroup"><span>${g}</span><span>${list.length}</span></div><div class="txlist">${list.map((a) => { const x = accountMetrics(a); const danger = x.buffer !== null && x.maxLoss && x.buffer < x.maxLoss * 0.3; return `<div class="txrow" data-acc="${a.id}"><span class="prodico ${a.status === 'failed' ? 'is-loss' : a.type === 'funded' ? '' : 't4'}">${icon(a.type === 'funded' ? 'shield' : a.type === 'personal' ? 'payouts' : 'flag')}</span>
+    ${groups.filter(([, l]) => l.length).map(([g, list]) => `<div class="daygroup"><span>${g}</span><span>${list.length}</span></div><div class="txlist">${list.map((a) => { const x = accountMetrics(a); const danger = x.buffer !== null && x.maxLoss && x.buffer < x.maxLoss * 0.3; return `<div class="txrow txrow--acc" data-acc="${a.id}"><span class="prodico ${a.status === 'failed' ? 'is-loss' : a.type === 'funded' ? '' : 't4'}">${icon(a.type === 'funded' ? 'shield' : a.type === 'personal' ? 'payouts' : 'flag')}</span>
       <span class="cell__text"><b>${esc(a.name)}</b><small>${esc(a.firm || 'Personal')} · ${a.size ? short(a.size) : ''} ${esc(a.type)} · bought ${esc(fmtDate(a.purchaseDate))} for ${money(num(a.cost))}</small>
       ${x.target && isLive(a) ? `<div style="margin-top:6px;max-width:320px">${meter(x.progress)}</div>` : ''}</span>
       ${(() => { const f = a.status === 'active' && x.target ? passForecast(a, { runs: 800 }) : null; return f && !f.insufficient ? `<span class="pill ${f.pass >= 0.6 ? 'pill--good' : f.pass < 0.35 ? 'pill--bad' : ''}" title="${pct(f.fail)} breach, ${pct(f.open)} still open after 60 days${f.medianDays ? ', median ' + f.medianDays + ' trading days to pass' : ''}">Pass ${pct(f.pass)}</span>` : ''; })()}${x.buffer !== null && isLive(a) ? `<span class="pill ${danger ? 'pill--bad' : ''}">Buffer ${money(x.buffer)}</span>` : ''}${statusPill(a.status)}<span class="amt ${tone(x.pnl)}">${money(x.pnl, { sign: true })}</span></div>`; }).join('')}</div>`).join('') || `<div class="empty">${icon('accounts')}<b>Add your first account</b>Prop challenge, funded or your own capital.</div>`}</section>
@@ -1042,11 +1042,11 @@ export function settings(el) {
   $('#sMkSave', el).onclick = () => { const pv = {}; ($('[name=pv]', el).value || '').split(',').forEach((s) => { const [k, v] = s.split('='); if (k && v) pv[k.trim().toUpperCase()] = num(v); }); saveProfile({ ...P(), markets: $$('#sMk .is-on', el).map((c) => c.dataset.v), instruments: $('[name=inst]', el).value.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean), pointValues: pv }); toast('Saved', icon('check')); };
   segBind(el, '#sTheme', (v) => { const b = $('#sTheme .is-on', el).getBoundingClientRect(); window.__switchTheme(v, b.left + b.width / 2, b.top + b.height / 2); });
   $('#sFrost', el).oninput = (e) => { document.documentElement.style.setProperty('--frost', e.target.value); try { localStorage.setItem('ew_frost', e.target.value); } catch (er) {} };
-  { const pm = $('#proMore', el); if (pm) pm.onclick = () => import('./plan.js?v=9d689113').then((m) => m.checkout(pm)); }
-  { const pu = $('#planUse', el); if (pu) import('./plan.js?v=9d689113').then((m) => { pu.innerHTML = m.usageHTML(false) + `<p class="muted" style="margin:10px 0 0;font-size:var(--fs-sm)">Pro is $${S.sub.price}/month: unlimited trades and imports, AI coach 60 requests a day.</p>`; m.bindUsage(pu); }); }
-  { const pv = $('#petPv', el); if (pv) import('./pet.js?v=9d689113').then((m) => (pv.innerHTML = m.petPreview('pip'))); }
-  $('#sPet', el).onclick = (e) => { const on = e.currentTarget.classList.toggle('is-on'); $('#petMoveRow', el).style.display = on ? '' : 'none'; import('./pet.js?v=9d689113').then((m) => m.setPet(on)); };
-  segBind(el, '#sPetMove', (v) => import('./pet.js?v=9d689113').then((m) => m.setFollow(v === 'follow')));
+  { const pm = $('#proMore', el); if (pm) pm.onclick = () => import('./plan.js?v=bd19c77f').then((m) => m.checkout(pm)); }
+  { const pu = $('#planUse', el); if (pu) import('./plan.js?v=bd19c77f').then((m) => { pu.innerHTML = m.usageHTML(false) + `<p class="muted" style="margin:10px 0 0;font-size:var(--fs-sm)">Pro is $${S.sub.price}/month: unlimited trades and imports, AI coach 60 requests a day.</p>`; m.bindUsage(pu); }); }
+  { const pv = $('#petPv', el); if (pv) import('./pet.js?v=bd19c77f').then((m) => (pv.innerHTML = m.petPreview('pip'))); }
+  $('#sPet', el).onclick = (e) => { const on = e.currentTarget.classList.toggle('is-on'); $('#petMoveRow', el).style.display = on ? '' : 'none'; import('./pet.js?v=bd19c77f').then((m) => m.setPet(on)); };
+  segBind(el, '#sPetMove', (v) => import('./pet.js?v=bd19c77f').then((m) => m.setFollow(v === 'follow')));
   $('#sSnd', el).onclick = (e) => { const on = e.currentTarget.classList.toggle('is-on'); setSound(on); };
   $('#sRM', el).onclick = (e) => { e.currentTarget.classList.toggle('is-on'); try { localStorage.setItem('ew_rm', e.currentTarget.classList.contains('is-on') ? '1' : '0'); } catch (er) {} toast('Reload to apply', icon('info')); };
   $('#sExp', el).onclick = () => { const o = { exportedAt: new Date().toISOString(), profile: S.profile }; ['account', 'trade', 'payout', 'plan', 'journal', 'setup', 'rule'].forEach((k) => (o[k] = S[k])); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(o, null, 2)], { type: 'application/json' })); a.download = `smarttrade-${today()}.json`; a.click(); };

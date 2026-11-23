@@ -1199,3 +1199,49 @@ body.mp { overflow: auto; background: var(--scene); background-color: var(--bg);
 .side__me .me__text b { font-size: var(--fs-sm); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .side__me .me__text small { margin-top: 2px; }
 .side__me .ibtn { flex: none; }
+
+/* ---------------- phones (Nov 23 audit) ---------------- */
+.hubtabs.has-more { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
+.hubtabs.has-less.has-more { -webkit-mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
+.hubtabs.has-less:not(.has-more) { -webkit-mask-image: linear-gradient(90deg, transparent, #000 36px); mask-image: linear-gradient(90deg, transparent, #000 36px); }
+@media (max-width: 760px) {
+  .hubtabs a { padding: 11px 12px; }
+  /* trade window: tabs scroll on one line, screenshot box stacks */
+  .tabs#tTabs { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; } .tabs#tTabs::-webkit-scrollbar { display: none; }
+  .tabs#tTabs button { white-space: nowrap; flex: none; display: inline-flex; align-items: center; gap: 6px; }
+  .snap { flex-wrap: wrap; align-items: flex-start; }
+  .snap__t { flex: 1 1 calc(100% - 52px); }
+  .snap > .btn, .snap > label.btn, #snapPick { margin-left: 52px; }
+  /* tables: tighter cells so 5-column tables fit; wider ones still scroll */
+  table.t th, table.t td { padding: 10px 8px; font-size: 13px; }
+  table.t th:first-child, table.t td:first-child { padding-left: 2px; }
+  /* trade log as cards: symbol, side and net on top, date, setup and R below */
+  table.t--trades thead { display: none; }
+  table.t--trades, table.t--trades tbody, table.t--trades tfoot { display: block; }
+  table.t--trades tr { display: grid; grid-template-columns: auto auto 1fr auto; grid-template-areas: "sym side . net" "date date setup r"; align-items: center; column-gap: 8px; row-gap: 4px; padding: 12px 2px; border-bottom: 1px solid var(--line); }
+  table.t--trades td { padding: 0; border: 0; font-size: 13px; }
+  table.t--trades td:nth-child(1) { grid-area: date; color: var(--muted); font-size: 12px; }
+  table.t--trades td:nth-child(2) { grid-area: sym; font-size: 15px; }
+  table.t--trades td:nth-child(3) { grid-area: side; }
+  table.t--trades td:nth-child(4), table.t--trades td:nth-child(5), table.t--trades td:nth-child(6), table.t--trades td:nth-child(8), table.t--trades td:nth-child(9), table.t--trades td:nth-child(10) { display: none; }
+  table.t--trades td:nth-child(7) { grid-area: setup; color: var(--muted); font-size: 12px; text-align: right; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  table.t--trades td:nth-child(11) { grid-area: r; color: var(--muted); font-size: 12px; }
+  table.t--trades td:nth-child(12) { grid-area: net; font-size: 15px; font-weight: 700; }
+  table.t--trades tfoot tr { grid-template-areas: "date date . net"; border-bottom: 0; }
+  table.t--trades tfoot td:first-child { grid-area: date; } table.t--trades tfoot td:last-child { grid-area: net; }
+  /* accounts list: name and progress on one line, pills and P&L underneath */
+  .txrow--acc { flex-wrap: wrap; row-gap: 8px; }
+  .txrow--acc .cell__text { flex: 1 1 calc(100% - 56px); }
+  .txrow--acc > .pill:first-of-type { margin-left: 54px; }
+  .txrow--acc > .amt { margin-left: auto; }
+}
+@media (max-width: 760px) {
+  .head { gap: 6px; padding: 12px 12px; }
+  .head__search { flex: 1 1 auto; width: auto; min-width: 0; margin-left: 0; padding-left: 14px; }
+  .head__search .kbd, .head__sep { display: none; }
+  .head .rbtn { flex: none; }
+}
+@media (max-width: 420px) {
+  #hTheme { display: none; } /* theme is in Settings */
+  .head .rbtn { width: 38px; height: 38px; }
+}

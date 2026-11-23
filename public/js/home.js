@@ -1,9 +1,9 @@
 // Landing page: the hero dashboard assembles from scattered pieces as you scroll, plus reveals and live demos.
-import { icon, $, $$, clamp } from './core.js?v=9d689113';
-import { reduced, segInit } from './motion.js?v=9d689113';
-import { slider } from './ui.js?v=9d689113';
-import { pipSvg } from './pet.js?v=9d689113';
-import { loadFirms, planRules, defaultDaily, dailyCap } from './firms.js?v=9d689113';
+import { icon, $, $$, clamp } from './core.js?v=bd19c77f';
+import { reduced, segInit } from './motion.js?v=bd19c77f';
+import { slider } from './ui.js?v=bd19c77f';
+import { pipSvg } from './pet.js?v=bd19c77f';
+import { loadFirms, planRules, defaultDaily, dailyCap } from './firms.js?v=bd19c77f';
 
 document.documentElement.dataset.theme = 'dark';
 $$('[data-ico]').forEach((el) => (el.innerHTML = icon(el.dataset.ico)));
@@ -36,7 +36,14 @@ $$('#hnLinks a').forEach((a) => (a.onclick = () => hn.classList.remove('is-open'
 // ---------- the assembly ----------
 const stage = $('#dstage'); const scaler = $('#dscale'); const dash = $('#dash');
 let S = 1;
-const fit = () => { S = Math.min(1, stage.clientWidth / 1160); scaler.style.transform = `scale(${S})`; stage.style.height = 790 * S + 'px'; };
+// phones: show the heart of the dashboard (stats, account, equity) big enough to read, instead of the whole thing at a third of its size
+const CROP = { x: 232, w: 640, h: 560 };
+const fit = () => {
+  const crop = innerWidth < 760; stage.classList.toggle('is-crop', crop);
+  S = crop ? stage.clientWidth / CROP.w : Math.min(1, stage.clientWidth / 1160);
+  scaler.style.transform = crop ? `translateX(${-CROP.x * S}px) scale(${S})` : `scale(${S})`;
+  stage.style.height = (crop ? CROP.h : 790) * S + 'px';
+};
 fit(); addEventListener('resize', fit);
 // where each piece waits before the scroll, as a share of the first screen (x, y), with its tilt
 const SCATTER = {
@@ -145,7 +152,7 @@ function assemble() {
   if (!ok) return;
   const io = new IntersectionObserver(async ([e]) => {
     if (!e.isIntersecting) return; io.disconnect();
-    try { const m = await import('./candles3d.js?v=9d689113'); m.mount(cv, { reduced: reduced.matches }); cv.closest('.stage3').classList.add('is-3d'); } catch (err) { console.warn('3D card', err); }
+    try { const m = await import('./candles3d.js?v=bd19c77f'); m.mount(cv, { reduced: reduced.matches }); cv.closest('.stage3').classList.add('is-3d'); } catch (err) { console.warn('3D card', err); }
   }, { rootMargin: '400px' });
   io.observe(cv);
 })();

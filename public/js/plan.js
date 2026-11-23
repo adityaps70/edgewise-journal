@@ -1,7 +1,7 @@
 // Free vs Pro: the upgrade screen, the usage meter, and the admin panel.
-import { S, $, $$, esc, icon, API, isPro, tradesLeft, aiLeft } from './core.js?v=9d689113';
-import { modal, confirmBox, helpers } from './views.js?v=9d689113';
-import { toast } from './motion.js?v=9d689113';
+import { S, $, $$, esc, icon, API, isPro, tradesLeft, aiLeft } from './core.js?v=bd19c77f';
+import { modal, confirmBox, helpers } from './views.js?v=bd19c77f';
+import { toast } from './motion.js?v=bd19c77f';
 
 const SUPPORT = 'support@thesmarttrade.in';
 const price = () => S.sub?.price || '999';

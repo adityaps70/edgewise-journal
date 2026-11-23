@@ -3,16 +3,16 @@ import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
   goalIdea,
-} from './core.js?v=9d689113';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=9d689113';
-import { slider, liveRate, fxAgo } from './ui.js?v=9d689113';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=9d689113';
+} from './core.js?v=bd19c77f';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=bd19c77f';
+import { slider, liveRate, fxAgo } from './ui.js?v=bd19c77f';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=bd19c77f';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=9d689113';
-import * as V2 from './views2.js?v=9d689113';
-import * as V3 from './views3.js?v=9d689113';
-import * as PL from './plan.js?v=9d689113';
-import * as V4 from './views4.js?v=9d689113';
+import * as V from './views.js?v=bd19c77f';
+import * as V2 from './views2.js?v=bd19c77f';
+import * as V3 from './views3.js?v=bd19c77f';
+import * as PL from './plan.js?v=bd19c77f';
+import * as V4 from './views4.js?v=bd19c77f';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -444,6 +444,11 @@ function hubTabs(el, id) {
   const allowed = navItems(); const subs = h[3].filter((x) => allowed.includes(x)); if (subs.length < 2) return;
   const head = $('.phead', el); if (!head) return;
   head.insertAdjacentHTML('afterend', `<nav class="tabs hubtabs" aria-label="${esc(h[1])}">${subs.map((x) => `<a href="#${x}" class="${x === id ? 'is-on' : ''}" ${x === id ? 'aria-current="page"' : ''}>${icon(VIEWS[x][1])}${esc(TAB_LABEL[x] || VIEWS[x][0])}</a>`).join('')}</nav>`);
+  // on narrow screens the tab row scrolls: keep the current tab in view and fade the edge that has more tabs
+  const nav = head.nextElementSibling; const on = nav.querySelector('.is-on');
+  const edge = () => { nav.classList.toggle('has-more', nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 4); nav.classList.toggle('has-less', nav.scrollLeft > 4); };
+  if (on && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = Math.max(0, on.offsetLeft - (nav.clientWidth - on.offsetWidth) / 2);
+  nav.addEventListener('scroll', edge, { passive: true }); requestAnimationFrame(edge);
 }
 function navItems() { // every page this trader can open (the menu shows them grouped by HUBS)
   const p = P(); const prop = (p.funding || []).some((f) => f !== 'own') || S.account.some((a) => a.type !== 'personal');
@@ -459,7 +464,7 @@ function navItems() { // every page this trader can open (the menu shows them gr
 let current = null;
 function shell(first = false) {
   setTimeout(paintPlan, 0);
-  import('./pet.js?v=9d689113').then((m) => m.mountPet()).catch(() => {});
+  import('./pet.js?v=bd19c77f').then((m) => m.mountPet()).catch(() => {});
   const p = P();
   app.innerHTML = `<div class="app"><div class="slab" id="slab">
     <aside class="side"><div class="side__top">${LOGO}<a class="side__name" href="index.html" aria-label="${APP.name} home">${WORDMARK}</a><button class="side__fold" id="fold" aria-label="Collapse sidebar">${icon('fold')}</button></div>
@@ -470,7 +475,7 @@ function shell(first = false) {
     </aside>
     <div class="stage">
       <header class="head"><button class="rbtn head__menu" id="menu" aria-label="Menu">${icon('menu')}</button>
-        <label class="head__search">${icon('search')}<input id="q" placeholder="Search trades, symbols, setups" autocomplete="off"><span class="kbd">⌘K</span></label>
+        <label class="head__search">${icon('search')}<input id="q" placeholder="${innerWidth <= 760 ? 'Search' : 'Search trades, symbols, setups'}" autocomplete="off"><span class="kbd">⌘K</span></label>
         <button class="rbtn rbtn--accent" id="hLog" aria-label="Log trade" title="Log trade">${icon('plus')}</button>
         <button class="rbtn" id="hFilter" aria-label="Filter" title="Filter (F)">${icon('filter')}<i class="rbtn__badge rbtn__badge--n" hidden></i></button>
         <button class="rbtn" id="hAI" aria-label="AI coach" title="AI coach">${icon('coach')}</button>

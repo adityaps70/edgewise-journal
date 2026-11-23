@@ -1,6 +1,6 @@
 // Trade importers: platform exports (CSV / XLSX / HTML), fill pairing (FIFO), and conversion of synced data.
 // Every importer returns either round-trip trades or fills; fills are paired into trades here.
-import { S, P, iso, num, calcPnl, pointValue, sessionFromTime, net } from './core.js?v=9d689113';
+import { S, P, iso, num, calcPnl, pointValue, sessionFromTime, net } from './core.js?v=bd19c77f';
 
 // ------------------------------------------------------------------ reading files
 export function parseDelimited(text) {
