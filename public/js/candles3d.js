@@ -1,5 +1,5 @@
 // Glass logo and floating glass candlesticks in a studio lit from the top left.
-// Loaded on demand by home.js when the stage gets near the viewport. (scene v8)
+// Loaded on demand by home.js when the stage gets near the viewport. (scene v9)
 import * as THREE from '../vendor/three/three.module.min.js';
 import { SVGLoader } from '../vendor/three/SVGLoader.js';
 
@@ -121,24 +121,21 @@ export function mount(canvas, { reduced = false } = {}) {
   logoPivot.position.set(-1.3, (lsz.y * S) / 2 + 0.02, -2.0); logoPivot.rotation.set(-0.06, 0.45, 0);
   world.add(logoPivot);
 
-  // candles float in front of the logo: different sizes, heights and depths, each on its own rhythm
-  // [bull, body, upper wick, lower wick, size, x, clearance above the floor, z]
-  const SPEC = [
-    [1, 0.9, 0.35, 0.25, 1.0, -2.75, 0.45, 1.0], [0, 1.0, 0.3, 0.35, 1.05, -1.95, 1.0, 0.15],
-    [1, 1.4, 0.3, 0.4, 1.25, -1.0, 0.55, 1.25], [0, 0.4, 0.3, 0.25, 0.78, -0.15, 1.75, 0.1],
-    [1, 0.75, 0.25, 0.45, 0.95, 0.7, 1.1, 0.95], [0, 1.35, 0.35, 0.3, 1.25, 1.55, 0.7, 0.55],
-    [1, 1.7, 0.4, 0.3, 1.4, 2.5, 0.95, 1.35], [0, 0.6, 0.3, 0.4, 0.9, 3.4, 1.9, 0.45],
-  ];
-  const R = 0.3, candles = [];
-  SPEC.forEach(([up, body, wu, wd, sz0, x0, clear, z], i) => {
-    const x = x0 * 0.6 - 0.1; // pulled in close to each other
-    const sz = (0.55 + sz0 * 0.45) * 0.62; // overall candle scale
-    const g = new THREE.Group(); const r = R * sz, bh = body * sz, top = bh / 2 + wu * sz, bot = bh / 2 + wd * sz;
-    const bodyM = new THREE.Mesh(roundedCylinder(r, bh, Math.min(0.12, bh * 0.3)), up ? mBull : mBear);
-    const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.03 * sz, 0.03 * sz, top + bot, 16), mWick); wick.position.y = (top - bot) / 2;
+  // candles: one rising row along the foot of the logo, sized from the logo's height
+  // [bull, body bottom above the first, body height], in units of the logo's height
+  const LH = lsz.y * S, LW = lsz.x * S;
+  const ROW = [[1, 0, 0.205], [1, 0.062, 0.205], [0, 0.082, 0.178], [1, 0.123, 0.205], [0, 0.116, 0.151], [1, 0.219, 0.295], [0, 0.329, 0.178], [1, 0.39, 0.24]];
+  const R = 0.06 * LH, WICK = 0.07 * LH, GAP = 0.15 * LH, candles = [];
+  const x0 = -1.3 - LW * 0.36, floorGap = 0.13 * LH;
+  ROW.forEach(([up, b0, bh0], i) => {
+    const bh = bh0 * LH, bot = bh / 2 + WICK, top = bh / 2 + WICK * 1.1;
+    const g = new THREE.Group();
+    const bodyM = new THREE.Mesh(roundedCylinder(R, bh, Math.min(0.14, R * 0.5)), up ? mBull : mBear);
+    const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, top + bot, 16), mWick); wick.position.y = (top - bot) / 2;
     g.add(wick, bodyM);
     const h = (n) => ((Math.sin(i * 12.9898 + n * 78.233) * 43758.5453) % 1 + 1) % 1; // fixed per-candle randomness
-    g.userData = { up: !!up, sz, x, z, y: clear + 0.35 + bot, sp: 0.35 + h(1) * 0.75, ph: h(2) * 6.28, amp: 0.07 + h(3) * 0.17, tilt: 0.03 + h(4) * 0.07, sway: 0.02 + h(5) * 0.06, low: -bot };
+    const x = x0 + i * GAP, z = 0.55 - i * 0.12;
+    g.userData = { up: !!up, sz: R / 0.3, x, z, y: floorGap + WICK + b0 * LH + bh / 2, sp: 0.45 + h(1) * 0.5, ph: h(2) * 6.28, amp: 0.03 + h(3) * 0.05, tilt: 0.015 + h(4) * 0.025, sway: 0.01 + h(5) * 0.02, low: -bot };
     g.position.set(x, g.userData.y, z);
     world.add(g); candles.push(g);
   });
@@ -165,7 +162,7 @@ export function mount(canvas, { reduced = false } = {}) {
     const tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
     const dist = Math.max(12.5, 8.6 / (2 * tanH * a));
     camera.position.set(0.4, 4.3, dist); camera.lookAt(0.4, 2.15, 0); camera.updateProjectionMatrix();
-    const visW = 2 * dist * tanH * a; root.position.x = a > 1.5 ? Math.min(visW * 0.2, 5) : 0;
+    const visW = 2 * dist * tanH * a; root.position.x = a > 1.5 ? Math.min(visW * 0.2, 5) : 0.7;
   };
   frame();
 

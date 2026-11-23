@@ -1,9 +1,9 @@
 // Landing page: the hero dashboard assembles from scattered pieces as you scroll, plus reveals and live demos.
-import { icon, $, $$, clamp } from './core.js?v=43f89264';
-import { reduced, segInit } from './motion.js?v=43f89264';
-import { slider } from './ui.js?v=43f89264';
-import { pipSvg } from './pet.js?v=43f89264';
-import { loadFirms, planRules, defaultDaily, dailyCap } from './firms.js?v=43f89264';
+import { icon, $, $$, clamp } from './core.js?v=8cf13a83';
+import { reduced, segInit } from './motion.js?v=8cf13a83';
+import { slider } from './ui.js?v=8cf13a83';
+import { pipSvg } from './pet.js?v=8cf13a83';
+import { loadFirms, planRules, defaultDaily, dailyCap } from './firms.js?v=8cf13a83';
 
 document.documentElement.dataset.theme = 'dark';
 $$('[data-ico]').forEach((el) => (el.innerHTML = icon(el.dataset.ico)));
@@ -145,7 +145,7 @@ function assemble() {
   if (!ok) return;
   const io = new IntersectionObserver(async ([e]) => {
     if (!e.isIntersecting) return; io.disconnect();
-    try { const m = await import('./candles3d.js?v=43f89264'); m.mount(cv, { reduced: reduced.matches }); cv.closest('.stage3').classList.add('is-3d'); } catch (err) { console.warn('3D card', err); }
+    try { const m = await import('./candles3d.js?v=8cf13a83'); m.mount(cv, { reduced: reduced.matches }); cv.closest('.stage3').classList.add('is-3d'); } catch (err) { console.warn('3D card', err); }
   }, { rootMargin: '400px' });
   io.observe(cv);
 })();
