@@ -36,3 +36,8 @@ details { border-bottom: 1px solid var(--line); padding: 12px 0; } summary { cur
 .bfoot { max-width: 760px; margin: 0 auto; padding: 24px 20px 48px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
 .bfoot a { color: var(--ink-2); }
 @media (max-width: 560px) { .bnav nav a:not(.btn) { display: none; } .bnav nav a[href="/blog/"] { display: inline; } }
+.post .meta a { color: var(--ink-2); }
+.shot { margin: 24px 0; } .shot img { width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--line-2); display: block; }
+.shot figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; }
+.abox { margin-top: 40px; padding: 18px 20px; border-radius: 16px; border: 1px solid var(--line-2); }
+.abox p { margin: 6px 0 0; font-size: 15px; }

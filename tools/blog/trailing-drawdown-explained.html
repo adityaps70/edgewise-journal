@@ -5,7 +5,7 @@
  "description": "What a trailing drawdown is, how end-of-day and intraday trailing differ, when the floor stops trailing, and how Topstep, Apex, Tradeify, Lucid and others set it.",
  "date": "2026-11-23", "minutes": 8, "order": 1,
  "keywords": ["trailing drawdown", "what is a trailing drawdown", "eod drawdown meaning", "eod vs intraday drawdown", "prop firm trailing drawdown explained", "trailing max drawdown"],
- "lede": "Most traders who fail a futures prop firm evaluation don't blow up on one bad trade. They get caught by a drawdown floor that moved up behind them without them noticing. This guide explains how that floor moves.",
+ "lede": "A lot of failed futures evaluations don't end with one huge loss. The account dies because the drawdown floor crept up behind a few good days, and nobody was watching it. Here's how that floor moves, and how to keep an eye on it.",
  "related": ["prop-firm-consistency-rule", "prop-firm-rules-compared-50k", "how-to-pass-prop-firm-challenge"],
  "faq": [
   ["What is a trailing drawdown in a prop firm?", "A trailing drawdown is a maximum loss limit that moves up as your account makes new highs. If your 50K account has a $2,000 trailing drawdown and your balance peaks at $51,000, your breach level moves from $48,000 to $49,000. It never moves back down."],
@@ -24,7 +24,7 @@
   <li>You make $1,200. Your new high is $51,200, so the breach level moves to $49,200.</li>
   <li>You lose $700. Balance is $50,500, but the breach level stays at $49,200. You now have only $1,300 of room, not $2,000.</li>
 </ul>
-<p>That last line is the part that catches people. Your <strong>room</strong> is the gap between your current balance and the floor, and every new high shrinks the floor's distance from where you started.</p>
+<p>That third step is where people get caught. What matters is your <strong>room</strong>: the gap between your balance and the floor. Every new high pulls the floor closer to where you started.</p>
 
 <h2>EOD vs intraday trailing drawdown</h2>
 <p>The difference is <em>when</em> the firm checks for a new high.</p>
@@ -32,7 +32,7 @@
 <p>The floor is recalculated once, from your <strong>closing balance</strong> at the end of the session. If a trade runs to +$900 during the day and you close the day at +$300, only the $300 counts toward moving the floor. You still breach if your balance touches the floor during the day; the floor itself just doesn't move intraday.</p>
 <h3>Intraday trailing</h3>
 <p>The floor follows your <strong>highest equity in real time</strong>, including unrealised profit on open trades. If a position is up $900 at its best and you exit at breakeven, the floor has already moved up $900. You gave back nothing in P&amp;L but lost $900 of room.</p>
-<div class="note"><p><strong>Rule of thumb:</strong> on intraday trailing, every dollar of open profit you give back is a dollar of drawdown room gone. Scale-outs and tighter trailing stops matter far more than on EOD accounts.</p></div>
+<div class="note"><p><strong>Short version:</strong> on intraday trailing, open profit you give back is drawdown room you lose. Partials and tighter trailing stops matter much more here than on EOD accounts.</p></div>
 
 <h3>Worked example: the same day on both account types</h3>
 <p>50K account, $2,000 trailing drawdown, starting the day at $50,000 (floor $48,000). You take one trade that peaks at +$1,000 open profit and you close it at +$200.</p>
@@ -42,15 +42,16 @@
 <tr><td>New floor</td><td>$48,200 (from close)</td><td>$49,000 (from peak)</td></tr>
 <tr><td>Room left tomorrow</td><td><strong>$2,000</strong></td><td><strong>$1,200</strong></td></tr>
 </tbody></table></div>
-<p>Same trade, same P&amp;L, but the intraday account has 40% less room the next morning.</p>
+<p>Same trade, same P&amp;L. The intraday account wakes up with 40% less room.</p>
+{{shot:accounts}}
 
 <h2>When does the trailing drawdown stop?</h2>
-<p>On most futures prop accounts the floor stops trailing once it reaches your <strong>starting balance</strong>, sometimes plus a small buffer (for example, TopOne's Elite Access locks at break-even plus $100). From then on it's a fixed level. On a 50K account with $2,000 drawdown that happens once you've banked about $2,000 of profit (plus any buffer). That point is the most important milestone on a new funded account: before it, every win tightens the noose; after it, profits become real cushion.</p>
+<p>On most futures prop accounts the floor stops trailing once it reaches your <strong>starting balance</strong>, sometimes plus a small buffer (for example, TopOne's Elite Access locks at break-even plus $100). From then on it's a fixed level. On a 50K account with $2,000 drawdown that happens once you've banked about $2,000 of profit (plus any buffer). Getting there is the first real milestone on a new account. Before it, each win tightens things. After it, profit is actual cushion.</p>
 
 <h2>How the major firms set drawdown</h2>
 <p>This table comes from the same firm catalog our journal uses to set up accounts:</p>
 {{table:drawdown}}
-<p>Notice the split: futures firms (Topstep, Apex, Tradeify, Lucid, MyFundedFutures, Take Profit Trader, TopOne) trail, mostly on an end-of-day basis, while the forex firms in our catalog (FTMO, FundingPips) use a <strong>static</strong> max loss measured from the initial balance. Apex offers both an EOD and an intraday version of its evaluation, so check which one you bought.</p>
+<p>The pattern is clear: futures firms (Topstep, Apex, Tradeify, Lucid, MyFundedFutures, Take Profit Trader, TopOne) trail, mostly on an end-of-day basis, while the forex firms in our catalog (FTMO, FundingPips) use a <strong>static</strong> max loss measured from the initial balance. Apex offers both an EOD and an intraday version of its evaluation, so check which one you bought.</p>
 
 <h2>How to trade around a trailing drawdown</h2>
 <ol>
