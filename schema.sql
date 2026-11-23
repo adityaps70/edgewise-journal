@@ -48,3 +48,12 @@ CREATE TABLE IF NOT EXISTS shares (token TEXT PRIMARY KEY, user_id TEXT NOT NULL
 CREATE INDEX IF NOT EXISTS idx_shares_user ON shares(user_id);
 CREATE TABLE IF NOT EXISTS mentor_notes (id TEXT PRIMARY KEY, token TEXT NOT NULL, user_id TEXT NOT NULL, trade_id TEXT, author TEXT, text TEXT NOT NULL, created_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_notes_user ON mentor_notes(user_id);
+
+-- Broker connections (API keys encrypted), add-on sync keys, add-on inbox, uploaded price bars.
+CREATE TABLE IF NOT EXISTS connections (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, kind TEXT NOT NULL, label TEXT, base_url TEXT, username TEXT, secret_enc TEXT, meta TEXT, last_sync INTEGER, created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_conn_user ON connections(user_id);
+CREATE TABLE IF NOT EXISTS ingest_keys (key TEXT PRIMARY KEY, user_id TEXT NOT NULL, created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_ingest_user ON ingest_keys(user_id);
+CREATE TABLE IF NOT EXISTS inbox (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, source TEXT NOT NULL, payload TEXT NOT NULL, created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_inbox_user ON inbox(user_id);
+CREATE TABLE IF NOT EXISTS bars (user_id TEXT NOT NULL, symbol TEXT NOT NULL, day TEXT NOT NULL, data TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY (user_id, symbol, day));

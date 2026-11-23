@@ -67,6 +67,17 @@ export const API = {
   share: (b) => api('/shares', { method: 'POST', body: b }),
   unshare: (token) => api('/shares/' + token, { method: 'DELETE' }),
   mentorNotes: () => api('/mentor-notes'),
+  connections: () => api('/connections'),
+  connect: (b) => api('/connections', { method: 'POST', body: b }),
+  disconnect: (id) => api('/connections/' + id, { method: 'DELETE' }),
+  syncConn: (id, b = {}) => api('/connections/' + id + '/sync', { method: 'POST', body: b }),
+  connBars: (id, b) => api('/connections/' + id + '/bars', { method: 'POST', body: b }),
+  newSyncKey: () => api('/sync-key', { method: 'POST', body: {} }),
+  inbox: () => api('/inbox'),
+  ackInbox: (ids) => api('/inbox/ack', { method: 'POST', body: { ids } }),
+  putBars: (symbol, bars) => api('/bars', { method: 'POST', body: { symbol, bars } }),
+  getBars: (symbol, from, to) => api(`/bars?symbol=${encodeURIComponent(symbol)}&from=${from}&to=${to}`),
+  barSymbols: () => api('/bars'),
 };
 
 const cacheKey = () => 'ew_cache_' + (S.user?.id || 'local');
@@ -421,6 +432,8 @@ const I = {
   link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
   copy: '<rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
   sun2: '<circle cx="12" cy="12" r="4"/>',
+  play: '<path d="M7 4.5v15l13-7.5z"/>',
+  pause: '<path d="M8 5v14M16 5v14"/>',
   logo: '<path d="M4 18 9 11l4 4 7-10"/><path d="M15 5h5v5"/>',
   overview: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
   trades: '<path d="M7 7h10l-3-3"/><path d="M17 17H7l3 3"/>',

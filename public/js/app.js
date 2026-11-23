@@ -10,6 +10,7 @@ window.__segInit = segInit; window.__segSelect = segSelect;
 import * as V from './views.js';
 import * as V2 from './views2.js';
 import * as V3 from './views3.js';
+import * as V4 from './views4.js';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -412,7 +413,7 @@ const VIEWS = {
   mindset: ['Mindset', 'brain', V2.mindset], firms: ['Prop firms', 'shield', V2.firms], reports: ['Reports', 'sheet', V2.reports],
   coach: ['AI coach', 'coach', V.coach], settings: ['Settings', 'settings', V.settings],
   notebook: ['Notebook', 'note', V3.notebook], agents: ['Agents', 'agent', V3.agents], backtest: ['Backtesting', 'flask', V3.backtest],
-  tools: ['Tools', 'calc', V3.tools], mentor: ['Mentor mode', 'users', V3.mentor],
+  tools: ['Tools', 'calc', V3.tools], mentor: ['Mentor mode', 'users', V3.mentor], connections: ['Connections', 'link', V4.connections],
 };
 function navItems() {
   const p = P(); const prop = (p.funding || []).some((f) => f !== 'own') || S.account.some((a) => a.type !== 'personal');
@@ -421,7 +422,7 @@ function navItems() {
   if (prop) list.push('firms');
   if (prop || S.payout.length) list.push('payouts');
   if (prop || p.mission || S.plan.length) list.push('plan');
-  list.push('agents', 'reports', 'mentor', 'tools', 'coach');
+  list.push('connections', 'agents', 'reports', 'mentor', 'tools', 'coach');
   return list;
 }
 let current = null;
@@ -469,7 +470,7 @@ function shell(first = false) {
   };
   sync.onChange = () => { const d = $('.side__me .av__dot'); if (d) d.style.background = sync.state === 'error' ? 'var(--bad)' : sync.state === 'saving' ? 'var(--warn)' : 'var(--mint)'; };
   route(first);
-  if (first) { bootShell(app); refreshFx(); }
+  if (first) { bootShell(app); refreshFx(); setTimeout(() => V4.syncAll(), 1500); }
 }
 async function refreshFx() {
   const L = P().local; if (!L || !L.code || L.auto === false) return;

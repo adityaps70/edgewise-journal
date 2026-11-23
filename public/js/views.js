@@ -260,7 +260,7 @@ export function trades(el) {
       : `<div class="empty">${icon('trades')}<b>No trades match</b>Change the filters or log a trade.</div>`;
     animateData(el); bindCommon(el);
   };
-  el.innerHTML = `<div class="page">${phead('Every fill, every lesson', 'Trades', 'Your full trade log. Click a row to edit it, add the chart, or ask the coach to grade it.', `<button class="btn" data-act="csv">${icon('upload')}Import CSV</button><button class="btn btn--primary" data-act="log">${icon('plus')}Log trade</button>`)}
+  el.innerHTML = `<div class="page">${phead('Every fill, every lesson', 'Trades', 'Your full trade log. Click a row to edit it, add the chart, or ask the coach to grade it.', `<button class="btn" data-act="csv">${icon('upload')}Import</button><button class="btn btn--primary" data-act="log">${icon('plus')}Log trade</button>`)}
     <div class="toolbar"><div class="seg" id="rSeg">${[['all', 'All'], ['today', 'Today'], ['week', 'Week'], ['month', 'Month'], ['90d', '90 days']].map(([v, l]) => `<button data-v="${v}" class="${TF.range === v ? 'is-on' : ''}">${l}</button>`).join('')}</div>
       <select class="in" style="width:auto" id="fAcc"><option value="">All accounts</option>${optionList(S.account.map((a) => [a.id, a.name]), TF.account)}</select>
       <select class="in" style="width:auto" id="fOut">${optionList([['', 'All outcomes'], ['win', 'Winners'], ['loss', 'Losers'], ['broke', 'Rule breaks']], TF.outcome)}</select>
@@ -272,7 +272,7 @@ export function trades(el) {
   $('#fOut', el).onchange = (e) => { TF.outcome = e.target.value; draw(); };
   $('#fQ', el).oninput = (e) => { TF.q = e.target.value; draw(); };
   el.querySelector('[data-act="log"]').onclick = () => tradeModal();
-  el.querySelector('[data-act="csv"]').onclick = () => csvModal();
+  el.querySelector('[data-act="csv"]').onclick = () => import('./views4.js').then((V4) => V4.importModal());
   draw(); after(el);
 }
 
@@ -283,7 +283,7 @@ export function tradeModal(t0, preset = {}) {
   const setups = S.setup.map((s) => s.name);
   const instruments = P().instruments || [];
   const body = `
-  <div class="tabs" id="tTabs"><button class="is-on" data-tab="a">Trade</button><button data-tab="b">Psychology</button><button data-tab="c">Notes &amp; chart</button><button data-tab="d">${icon('coach')} AI review</button></div>
+  <div class="tabs" id="tTabs"><button class="is-on" data-tab="a">Trade</button><button data-tab="b">Psychology</button><button data-tab="c">Notes &amp; chart</button><button data-tab="d">${icon('coach')} AI review</button><button data-tab="e">${icon('play')} Replay</button></div>
   <div data-pane="a"><div class="form">
     ${field('Date', inp('date', t.date, 'type="date"'))}${field('Entry time', inp('time', t.time, 'type="time"'))}${field('Exit time', inp('exitTime', t.exitTime, 'type="time"'), '', '<span id="durHint"></span>')}
     ${field('Account', `<select class="in" name="accountId">${optionList(S.account.map((a) => [a.id, a.name]), t.accountId)}<option value="">No account</option></select>`)}
@@ -325,6 +325,7 @@ export function tradeModal(t0, preset = {}) {
     <div class="drop" id="drop">${icon('image')}<div style="flex:1"><b>Chart screenshot</b><span class="muted" style="font-size:var(--fs-sm)">Drop, paste (⌘V) or choose an image. The coach can read it.</span></div><input type="file" accept="image/*" id="file" hidden><button type="button" class="btn btn--sm" id="pick">Choose</button></div>
     <div id="shotBox"></div>
   </div></div>
+  <div data-pane="e" hidden><div id="replayBox"></div></div>
   <div data-pane="d" hidden><div class="stack">
     ${S.ai.configured ? '' : '<div class="note">' + icon('info') + '<span>AI isn\'t switched on for this workspace yet. Add the <b>ANTHROPIC_API_KEY</b> secret in Cloudflare (see Settings).</span></div>'}
     <div class="row" style="flex-wrap:wrap"><button type="button" class="btn btn--primary" id="aiGrade">${icon('coach')}Grade this trade</button><button type="button" class="btn" id="aiChart">${icon('image')}Read the chart</button></div>
@@ -373,7 +374,7 @@ export function tradeModal(t0, preset = {}) {
   m.el.addEventListener('click', () => setTimeout(mScore));
   const durHint = () => { const f = formData(m.el); const d = durationMin({ date: f.date, time: f.time, exitTime: f.exitTime }); $('#durHint', m.el).textContent = d !== null ? `held ${d < 60 ? Math.round(d) + ' min' : (d / 60).toFixed(1) + ' h'}` : ''; };
   m.el.addEventListener('input', durHint); durHint(); setTimeout(mScore);
-  $$('#tTabs button', m.el).forEach((b) => b.onclick = () => { $$('#tTabs button', m.el).forEach((x) => x.classList.toggle('is-on', x === b)); $$('[data-pane]', m.el).forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab)); const pane = $(`[data-pane="${b.dataset.tab}"]`, m.el); if (window.gsap) window.gsap.fromTo(pane, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }); });
+  $$('#tTabs button', m.el).forEach((b) => b.onclick = () => { $$('#tTabs button', m.el).forEach((x) => x.classList.toggle('is-on', x === b)); $$('[data-pane]', m.el).forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab)); const pane = $(`[data-pane="${b.dataset.tab}"]`, m.el); if (b.dataset.tab === 'e') { read(); import('./views4.js').then((V4) => V4.replay($('#replayBox', m.el), { ...t }, { onExcursion: ({ mae, mfe }) => { $('[name="mae"]', m.el).value = mae; $('[name="mfe"]', m.el).value = mfe; } })); } if (window.gsap) window.gsap.fromTo(pane, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }); });
   const gHint = () => { const g = $('#gradeC .is-on', m.el)?.dataset.v; const bg = P().risk?.byGrade; $('#gradeHint', m.el).textContent = g && bg && num(bg[g]) ? `your ${g} risk: ${money(bg[g])}` : g ? '' : 'A+ high conviction · B normal · C low probability'; };
   $$('#gradeC .chip', m.el).forEach((c) => c.onclick = () => { const on = c.classList.contains('is-on'); $$('#gradeC .chip', m.el).forEach((x) => x.classList.remove('is-on')); if (!on) c.classList.add('is-on'); pop(c); gHint(); hint(); });
   gHint();

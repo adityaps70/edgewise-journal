@@ -8,6 +8,7 @@ import { equityChart, hbars } from './charts.js';
 import { helpers, modal, confirmBox } from './views.js';
 import { segInit, toast, shake } from './motion.js';
 import { slider } from './ui.js';
+import * as V4m from './views4.js';
 
 // views.js imports this module too, so reach helpers lazily (they don't exist yet while modules load)
 const card = (...a) => helpers.card(...a); const phead = (...a) => helpers.phead(...a); const cnt = (...a) => helpers.cnt(...a);
@@ -253,6 +254,9 @@ export function backtest(el) {
   const fmtR = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}R`;
   const all = groupBy(S.bt.map((t) => ({ ...t, pnl: num(t.r), fees: 0 })), (t) => t.strategy).map((g) => ({ ...g, list: undefined }));
   el.innerHTML = `<div class="page">${phead('Prove it before you size it', 'Backtesting', 'Log trades from chart replay (TradingView, NinjaTrader, FX Replay) in R. Kept separate from your live stats, then compared with them.', '')}
+  <div class="chips" id="btMode" style="margin-bottom:var(--gap)"><button type="button" class="chip ${BT.mode !== 'log' ? 'is-on' : ''}" data-m="ai">${icon('coach')} AI backtest</button><button type="button" class="chip ${BT.mode === 'log' ? 'is-on' : ''}" data-m="log">${icon('flask')} Manual log</button></div>
+  ${BT.mode !== 'log' ? V4m.aiBacktestHTML() : ''}
+  <div ${BT.mode !== 'log' ? 'hidden' : ''}>
   <section class="card bt__add"><div class="bt__form" id="btForm">
     ${field('Strategy', `<input class="in" name="strategy" list="btS" value="${esc(BT.strat)}" placeholder="e.g. Opening range break"><datalist id="btS">${strategies.map((s) => `<option value="${esc(s)}">`).join('')}</datalist>`)}
     ${field('Symbol', inp('symbol', list[list.length - 1]?.symbol || P().instruments?.[0] || '', 'placeholder="NQ"'))}
@@ -270,7 +274,9 @@ export function backtest(el) {
       <p class="muted" style="font-size:var(--fs-md);margin:14px 0 0">${!list.length || !liveR.length ? 'Tag live trades with the same setup name to compare.' : (sum(liveR) / liveR.length) < (sum(rs) / list.length) - 0.3 ? 'Live results trail the backtest by a wide margin. Usually execution: late entries, early exits or skipped trades. Check Exit behaviour in Analytics.' : 'Live results are close to the backtest. The edge is carrying over.'}${list.length && list.length < 30 ? ' Fewer than 30 backtest trades: keep going before you trust it.' : ''}</p>`)}
     ${card('All strategies', 'Total R per strategy', all.length ? hbars(all, { fmt: (v) => fmtR(v) }) : '<div class="empty">No backtests yet.</div>')}
     ${card('Trades', `${list.length} in ${esc(BT.strat || '—')}`, list.length ? `<div class="txlist">${list.slice().reverse().slice(0, 40).map((t) => `<div class="txrow" style="cursor:default"><span class="prodico ${num(t.r) < 0 ? 'is-loss' : ''}">${icon(t.side === 'Short' ? 'trades' : 'up')}</span><span class="cell__text"><b>${esc(t.symbol || '')} ${esc(t.side)}</b><small>${esc(fmtDate(t.date, { day: 'numeric', month: 'short', year: 'numeric' }))}${t.note ? ' · ' + esc(t.note) : ''}</small></span><span class="amt ${tone(num(t.r))}">${fmtR(num(t.r))}</span><button class="ibtn" data-del="${t.id}" aria-label="Delete">${icon('trash')}</button></div>`).join('')}</div>` : '<div class="empty">Nothing logged for this strategy.</div>')}
-  </div></div>`;
+  </div></div></div>`;
+  $$('#btMode .chip', el).forEach((c) => (c.onclick = () => { BT.mode = c.dataset.m; H().refresh(); }));
+  if (BT.mode !== 'log') V4m.bindAiBacktest(el);
   const side = $('#btSide', el); segInit(side); $$('button', side).forEach((b) => (b.onclick = () => { $$('button', side).forEach((x) => x.classList.toggle('is-on', x === b)); window.__segSelect?.(side, b); }));
   const add = (r) => {
     const f = formData($('#btForm', el)); const rv = r !== undefined ? r : f.r;
