@@ -1,5 +1,5 @@
 // Glass logo and floating glass candlesticks in a studio lit from the top left.
-// Loaded on demand by home.js when the stage gets near the viewport. (scene v10)
+// Loaded on demand by home.js when the stage gets near the viewport. (scene v11)
 import * as THREE from '../vendor/three/three.module.min.js';
 import { SVGLoader } from '../vendor/three/SVGLoader.js';
 
@@ -112,8 +112,9 @@ export function mount(canvas, { reduced = false } = {}) {
   };
   const mBull = edgeGlass({ color: 0xff8a98, roughness: 0, thickness: 1.6, ior: 1.5, dispersion: 0.3, attenuationColor: new THREE.Color('#ff2a44'), attenuationDistance: 2.2, envMapIntensity: 2.4 }, 0x3a0008, 1.6);
   const mBear = edgeGlass({ color: 0xffffff, roughness: 0.015, thickness: 1.6, ior: 1.5, dispersion: 0.45, attenuationColor: new THREE.Color('#e6ecf6'), attenuationDistance: 2.2, envMapIntensity: 2.6, emissive: 0x08080a }, 0x1a1c22, 1.8);
-  // the wick is a solid glass rod: opaque to the renderer, so it shows through (and is bent by) the candle body
-  const mWick = new THREE.MeshPhysicalMaterial({ color: 0xf2f2f4, roughness: 0.06, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 2.2, emissive: 0x5a5a60, emissiveIntensity: 1 });
+  // wick: a clear glass rod outside the body; inside the body a solid core, so the rod still reads through the glass
+  const mWick = glass({ color: 0xffffff, roughness: 0, thickness: 0.08, ior: 1.5, envMapIntensity: 3.2, emissive: 0x16161a, emissiveIntensity: 1 });
+  const mCore = new THREE.MeshPhysicalMaterial({ color: 0xf2f2f4, roughness: 0.06, metalness: 0, clearcoat: 1, envMapIntensity: 2, emissive: 0x4a4a50, emissiveIntensity: 1 });
   const mRed = glass({ color: 0xff3a52, thickness: 1.4, attenuationColor: new THREE.Color('#e0102e'), attenuationDistance: 0.7 });
   const mClear = glass({ color: 0xffffff, transmission: 0.82, roughness: 0.34, thickness: 1.6, ior: 1.5, attenuationColor: new THREE.Color('#ffffff'), attenuationDistance: 6, clearcoat: 1, clearcoatRoughness: 0.02, emissive: 0x6e6e74, emissiveIntensity: 1, sheen: 1, sheenRoughness: 0.3, sheenColor: new THREE.Color('#ffffff') });
 
@@ -146,9 +147,12 @@ export function mount(canvas, { reduced = false } = {}) {
   ROW.forEach(([up, b0, bh0], i) => {
     const bh = bh0 * LH, bot = bh / 2 + WICK, top = bh / 2 + WICK * 1.1;
     const g = new THREE.Group();
-    const bodyM = new THREE.Mesh(roundedCylinder(R, bh, Math.min(0.14, R * 0.5)), up ? mBull : mBear);
-    const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, top + bot, 16), mWick); wick.position.y = (top - bot) / 2;
-    g.add(wick, bodyM);
+    const bodyM = new THREE.Mesh(roundedCylinder(R, bh, R * 0.2), up ? mBull : mBear);
+    const wr = 0.035, inset = bh / 2 - 0.04;
+    const wUp = new THREE.Mesh(new THREE.CylinderGeometry(wr, wr, top - inset, 16), mWick); wUp.position.y = (top + inset) / 2;
+    const wDn = new THREE.Mesh(new THREE.CylinderGeometry(wr, wr, bot - inset, 16), mWick); wDn.position.y = -(bot + inset) / 2;
+    const core = new THREE.Mesh(new THREE.CylinderGeometry(wr * 0.9, wr * 0.9, inset * 2, 12), mCore);
+    g.add(wUp, wDn, core, bodyM);
     const h = (n) => ((Math.sin(i * 12.9898 + n * 78.233) * 43758.5453) % 1 + 1) % 1; // fixed per-candle randomness
     const x = x0 + i * GAP, z = 0.55 - i * 0.12;
     g.userData = { up: !!up, sz: R / 0.3, x, z, y: floorGap + WICK + b0 * LH + bh / 2, sp: 0.45 + h(1) * 0.5, ph: h(2) * 6.28, amp: 0.03 + h(3) * 0.05, tilt: 0.015 + h(4) * 0.025, sway: 0.01 + h(5) * 0.02, low: -bot };
@@ -157,7 +161,7 @@ export function mount(canvas, { reduced = false } = {}) {
   });
 
   // reflection: a mirrored twin in soft, fading materials (not a crisp copy)
-  const RM = new Map([[mRed, reflMat(0xff2a40, 0.55)], [mClear, reflMat(0xd6d6dc, 0.4)], [mBull, reflMat(0xff2a40, 0.5)], [mBear, reflMat(0xd6d6dc, 0.35)], [mWick, reflMat(0xffffff, 0.25)]]);
+  const RM = new Map([[mRed, reflMat(0xff2a40, 0.55)], [mClear, reflMat(0xd6d6dc, 0.4)], [mBull, reflMat(0xff2a40, 0.5)], [mBear, reflMat(0xd6d6dc, 0.35)], [mWick, reflMat(0xffffff, 0.18)], [mCore, reflMat(0xffffff, 0.2)]]);
   const mirror = world.clone(); mirror.scale.y = -1; root.add(mirror);
   mirror.traverse((o) => { if (o.isMesh) o.material = RM.get(o.material) || o.material; });
   const pairs = []; world.traverse((o) => pairs.push(o)); const twins = []; mirror.traverse((o) => twins.push(o));

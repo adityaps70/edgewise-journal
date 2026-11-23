@@ -1,5 +1,5 @@
 // Shared UI pieces: sliders, glass date picker, live exchange rates.
-import { $, $$, esc, iso, today, parseISO, clamp, num, icon } from './core.js?v=afb563f8';
+import { $, $$, esc, iso, today, parseISO, clamp, num, icon } from './core.js?v=d9a7ea5e';
 
 const G = () => window.gsap;
 const RM = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
