@@ -51,13 +51,13 @@
         "applicationCategory": "FinanceApplication",
         "operatingSystem": "Web",
         "description": "Trading journal for prop firm traders with drawdown tracking, built-in firm rules, payout tracking and an AI coach.",
-        "offers": [{ "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" }, { "@type": "Offer", "name": "Pro", "price": "20", "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "20", "priceCurrency": "USD", "billingDuration": "P1M" } }],
+        "offers": [{ "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" }, { "@type": "Offer", "name": "Pro", "price": "20", "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "20", "priceCurrency": "USD", "billingDuration": "P1M" } }, { "@type": "Offer", "name": "Pro (India)", "price": "999", "priceCurrency": "INR", "eligibleRegion": "IN", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "999", "priceCurrency": "INR", "billingDuration": "P1M" } }],
         "publisher": { "@id": "https://thesmarttrade.in/#org" }
       },
       {
         "@type": "FAQPage",
         "mainEntity": [
-          { "@type": "Question", "name": "Is it free?", "acceptedAnswer": { "@type": "Answer", "text": "You can start free with 10 trade logs and 10 AI coach requests, with every feature to try. Pro is $20 a month for unlimited trades and 60 AI requests a day." } },
+          { "@type": "Question", "name": "Is it free?", "acceptedAnswer": { "@type": "Answer", "text": "You can start free with 10 trade logs and 10 AI coach requests, with every feature to try. Pro is $20 a month (₹999 in India) for unlimited trades and 60 AI requests a day." } },
           { "@type": "Question", "name": "Where is my data stored?", "acceptedAnswer": { "@type": "Answer", "text": "In your private account, on Cloudflare's network. Only you can see it, unless you create a mentor link, and even then payouts and costs stay private. Export a full backup any time from Settings." } },
           { "@type": "Question", "name": "Which prop firms are included?", "acceptedAnswer": { "@type": "Answer", "text": "Topstep, Apex Trader Funding, TopOne Futures, Tradeify, MyFundedFutures, Lucid Trading, Take Profit Trader, FTMO and FundingPips, plus any other firm whose rules you enter yourself." } },
           { "@type": "Question", "name": "Are the firm rules always current?", "acceptedAnswer": { "@type": "Answer", "text": "They were checked against public sources in November 2026, but firms change rules often. Each account links to the firm's site and every value can be edited." } },
@@ -72,11 +72,11 @@
   <link rel="apple-touch-icon" href="brand/mark-180.png?v=8">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="preload" href="vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=d9a7ea5e">
+  <link rel="stylesheet" href="styles.css?v=9d689113">
   <script src="vendor/gsap.min.js" defer></script>
   <script src="vendor/ScrollTrigger.min.js" defer></script>
-  <link rel="stylesheet" href="home.css?v=d9a7ea5e">
-  <script type="module" src="js/home.js?v=d9a7ea5e"></script>
+  <link rel="stylesheet" href="home.css?v=9d689113">
+  <script type="module" src="js/home.js?v=9d689113"></script>
 </head>
 <body class="home">
   <header class="hn" id="hn">
@@ -273,7 +273,7 @@
         <div class="price__c"><small>Free</small><b>$0</b>
           <ul><li><i data-ico="check"></i>10 trade logs</li><li><i data-ico="check"></i>10 AI coach requests</li><li><i data-ico="check"></i>Prop firm rules and drawdown guard</li><li><i data-ico="check"></i>Every feature to try</li></ul>
           <a class="gbtn gbtn--block" href="app.html" data-cta>Start free</a></div>
-        <div class="price__c price__c--pro"><small>Pro</small><b>$20<em>/month</em></b>
+        <div class="price__c price__c--pro"><small>Pro</small><b><span data-price>$20</span><em>/month</em></b>
           <ul><li><i data-ico="check"></i>Unlimited trade logs and imports</li><li><i data-ico="check"></i>AI coach, 60 requests a day</li><li><i data-ico="check"></i>Screenshot logging, trade replay, AI backtests</li><li><i data-ico="check"></i>Broker sync and mentor links</li><li><i data-ico="check"></i>Prop firm ROI in your currency</li></ul>
           <a class="wbtn wbtn--block" href="app.html" data-cta>Start free, upgrade anytime</a></div>
       </div>
@@ -297,7 +297,7 @@
     <section class="sx" id="faq">
       <div class="shead"><h2 class="h2">Good to know</h2></div>
       <div class="faq2">
-        <details><summary><i data-ico="plus"></i>Is it free?<em>/01</em></summary><p>You can start free with 10 trade logs and 10 AI coach requests, with every feature to try. Pro is $20 a month for unlimited trades and 60 AI requests a day.</p></details>
+        <details><summary><i data-ico="plus"></i>Is it free?<em>/01</em></summary><p>You can start free with 10 trade logs and 10 AI coach requests, with every feature to try. Pro is <span data-price>$20</span> a month for unlimited trades and 60 AI requests a day.</p></details>
         <details><summary><i data-ico="plus"></i>Where is my data stored?<em>/02</em></summary><p>In your private account, on Cloudflare's network. Only you can see it, unless you create a mentor link, and even then payouts and costs stay private. Export a full backup any time from Settings.</p></details>
         <details><summary><i data-ico="plus"></i>Which prop firms are included?<em>/03</em></summary><p>Topstep, Apex Trader Funding, TopOne Futures, Tradeify, MyFundedFutures, Lucid Trading, Take Profit Trader, FTMO and FundingPips, plus any other firm whose rules you enter yourself.</p></details>
         <details><summary><i data-ico="plus"></i>Are the firm rules always current?<em>/04</em></summary><p>They were checked against public sources in November 2026, but firms change rules often. Each account links to the firm's site and every value can be edited.</p></details>

@@ -1,10 +1,12 @@
 // Free vs Pro: the upgrade screen, the usage meter, and the admin panel.
-import { S, $, $$, esc, icon, API, isPro, tradesLeft, aiLeft } from './core.js?v=d9a7ea5e';
-import { modal, confirmBox, helpers } from './views.js?v=d9a7ea5e';
-import { toast } from './motion.js?v=d9a7ea5e';
+import { S, $, $$, esc, icon, API, isPro, tradesLeft, aiLeft } from './core.js?v=9d689113';
+import { modal, confirmBox, helpers } from './views.js?v=9d689113';
+import { toast } from './motion.js?v=9d689113';
 
 const SUPPORT = 'support@thesmarttrade.in';
-const price = () => S.sub?.price || '20';
+const price = () => S.sub?.price || '999';
+const inr = () => S.sub?.currency === 'INR';
+const priceTxt = () => (inr() ? '₹' + Number(price()).toLocaleString('en-IN') : '$' + price());
 
 // ---------------------------------------------------------------- Razorpay Checkout
 let rzpLoad = null;
@@ -44,10 +46,10 @@ export function upgradeModal(reason = '') {
     <p class="upg__why">${esc(why)} Pro keeps your journal going with no caps on trades.</p>
     <div class="upg__plans">
       <div class="upg__p"><small>Free</small><b>$0</b><ul><li>${icon('check')}${S.sub?.trades.limit || 10} trade logs</li><li>${icon('check')}${S.sub?.ai.limit || 10} AI coach requests</li><li>${icon('check')}Every feature to try</li></ul></div>
-      <div class="upg__p upg__p--pro"><small>Pro</small><b>$${esc(price())}<em>/month</em></b><ul><li>${icon('check')}Unlimited trade logs and imports</li><li>${icon('check')}AI coach, 60 requests a day</li><li>${icon('check')}Screenshot logging, replay, AI backtests</li><li>${icon('check')}Broker sync and mentor links</li></ul></div>
+      <div class="upg__p upg__p--pro"><small>Pro</small><b>${esc(priceTxt())}<em>/month</em></b><ul><li>${icon('check')}Unlimited trade logs and imports</li><li>${icon('check')}AI coach, 60 requests a day</li><li>${icon('check')}Screenshot logging, replay, AI backtests</li><li>${icon('check')}Broker sync and mentor links</li></ul></div>
     </div>
-    <p class="upg__fine">${co ? 'Secure payment by Razorpay: cards and international cards. Pro switches on right after payment. Cancel any time; see the <a href="/refund" target="_blank" rel="noopener">refund policy</a>.' : pay ? 'You pay on a secure checkout page. Your account switches to Pro as soon as the payment is confirmed.' : `Write to ${SUPPORT} and we'll switch your account to Pro.`}</p>
-  </div>`, `<button class="btn" data-act="x">Not now</button>${co ? `<button class="btn btn--primary" data-act="buy">Upgrade for $${esc(price())}/month</button>` : pay ? `<a class="btn btn--primary" href="${esc(pay)}" target="_blank" rel="noopener" data-act="pay">Upgrade for $${esc(price())}/month</a>` : `<a class="btn btn--primary" href="mailto:${SUPPORT}?subject=${encodeURIComponent('Upgrade to Pro')}&body=${encodeURIComponent('Please switch my account to Pro: ' + (S.user?.email || ''))}">Email to upgrade</a>`}`);
+    <p class="upg__fine">${co ? (inr() ? 'Secure payment by Razorpay: UPI, cards, netbanking and wallets. ' : 'Secure payment by Razorpay. ') + 'Pro switches on right after payment. Cancel any time; see the <a href="/refund" target="_blank" rel="noopener">refund policy</a>.' : !inr() && S.sub?.currency ? `Card payments from outside India are coming soon. Write to ${SUPPORT} and we'll upgrade you by email today.` : pay ? 'You pay on a secure checkout page. Your account switches to Pro as soon as the payment is confirmed.' : `Write to ${SUPPORT} and we'll switch your account to Pro.`}</p>
+  </div>`, `<button class="btn" data-act="x">Not now</button>${co ? `<button class="btn btn--primary" data-act="buy">Upgrade for ${esc(priceTxt())}/month</button>` : pay ? `<a class="btn btn--primary" href="${esc(pay)}" target="_blank" rel="noopener" data-act="pay">Upgrade for ${esc(priceTxt())}/month</a>` : `<a class="btn btn--primary" href="mailto:${SUPPORT}?subject=${encodeURIComponent('Upgrade to Pro')}&body=${encodeURIComponent('Please switch my account to Pro: ' + (S.user?.email || ''))}">Email to upgrade</a>`}`);
   m.el.parentElement.style.zIndex = '400'; // above any open form
   const done = () => (open = false);
   const obs = new MutationObserver(() => { if (!document.body.contains(m.el)) { done(); obs.disconnect(); } }); obs.observe(document.body, { childList: true });
@@ -104,7 +106,8 @@ export async function admin(el) {
         <form class="grid g-3 adset" id="adSet">
           <label class="field"><span>Free trade logs</span><input class="in" name="free_trades" type="number" min="0" value="${esc(st.free_trades)}"></label>
           <label class="field"><span>Free AI requests</span><input class="in" name="free_ai" type="number" min="0" value="${esc(st.free_ai)}"></label>
-          <label class="field"><span>Pro price (USD a month)</span><input class="in" name="pro_price" type="number" min="0" value="${esc(st.pro_price)}"></label>
+          <label class="field"><span>Pro price in India (₹ a month)</span><input class="in" name="pro_price" type="number" min="0" value="${esc(st.pro_price)}"></label>
+          <label class="field"><span>Pro price outside India ($ a month)</span><input class="in" name="pro_price_usd" type="number" min="0" value="${esc(st.pro_price_usd || '20')}"></label>
           <label class="field" style="grid-column:1/-1"><span>Checkout link</span><input class="in" name="pay_link" placeholder="https://rzp.io/… or a Stripe payment link" value="${esc(st.pay_link)}"><small class="muted">Where "Upgrade" sends people. After a payment, give that user Pro here.</small></label>
           <label class="field" style="grid-column:1/-1"><span>Announcement banner</span><input class="in" name="banner" maxlength="200" placeholder="Shown at the top of the app for everyone. Leave empty for none." value="${esc(st.banner)}"></label>
           <label class="field"><span>New sign-ups</span><select class="in" name="signup"><option value="on" ${st.signup !== 'off' ? 'selected' : ''}>Open</option><option value="off" ${st.signup === 'off' ? 'selected' : ''}>Closed</option></select></label>

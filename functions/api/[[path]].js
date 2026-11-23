@@ -55,7 +55,7 @@ async function ensurePlanTables(env) {
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS app_settings (k TEXT PRIMARY KEY, v TEXT)').run();
 }
 const isAdmin = (env, user) => !!user && String(env.ADMIN_EMAILS || '').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean).includes(String(user.email || '').toLowerCase());
-const SETTING_DEFAULTS = { free_trades: '10', free_ai: '10', pro_price: '20', pay_link: '', banner: '', signup: 'on' };
+const SETTING_DEFAULTS = { free_trades: '10', free_ai: '10', pro_price: '999', pro_price_usd: '20', pay_link: '', banner: '', signup: 'on' };
 async function settings(env) {
   await ensurePlanTables(env);
   const { results } = await env.DB.prepare('SELECT k, v FROM app_settings').all();
@@ -75,6 +75,12 @@ async function planInfo(env, user) {
 
 // ---------------------------------------------------------------- payments (Razorpay Checkout, one month of Pro per payment)
 const rzpOn = (env) => !!(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET);
+// India pays in rupees (UPI, Indian cards); everyone else sees dollars. Dollar checkout only once INTL_PAYMENTS = "on".
+function payCfg(env, request, st) {
+  const country = request.cf?.country || '';
+  if (country === 'IN') return { country, currency: 'INR', price: st.pro_price || '999', checkout: rzpOn(env) };
+  return { country, currency: 'USD', price: st.pro_price_usd || '20', checkout: rzpOn(env) && env.INTL_PAYMENTS === 'on' };
+}
 async function hmacHex(secret, msg) {
   const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   return [...new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(msg)))].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -408,6 +414,12 @@ export async function onRequest(context) {
       return json({ ok: true });
     }
 
+    // public: which price this visitor sees (landing page pricing)
+    if (path === '/geo' && method === 'GET') {
+      const pc = payCfg(env, request, await settings(env));
+      return new Response(JSON.stringify({ country: pc.country, currency: pc.currency, price: pc.price }), { headers: { 'content-type': 'application/json', 'cache-control': 'private, max-age=3600', vary: 'cf-ipcountry' } });
+    }
+
     // ---- everything below needs a session
     const user = await currentUser(env, request);
     if (!user) return err('Not signed in.', 401);
@@ -415,14 +427,15 @@ export async function onRequest(context) {
     if (path === '/me' && method === 'GET') {
       const plan = await planInfo(env, user);
       await env.DB.prepare('UPDATE users SET last_seen = ? WHERE id = ?').bind(Date.now(), user.id).run();
-      return json({ user: { ...user, admin: plan.admin }, plan: { pro: plan.pro, proUntil: plan.proUntil, trades: plan.trades, ai: plan.ai, price: plan.settings.pro_price, payLink: plan.settings.pay_link, banner: plan.settings.banner, checkout: rzpOn(env), currency: env.PAY_CURRENCY || 'USD' }, ai: { configured: !!env.ANTHROPIC_API_KEY } });
+      return json({ user: { ...user, admin: plan.admin }, plan: { pro: plan.pro, proUntil: plan.proUntil, trades: plan.trades, ai: plan.ai, payLink: plan.settings.pay_link, banner: plan.settings.banner, ...(({ currency, price, checkout, country }) => ({ currency, price, checkout, country }))(payCfg(env, request, plan.settings)) }, ai: { configured: !!env.ANTHROPIC_API_KEY } });
     }
 
     if (path === '/pay/order' && method === 'POST') {
-      if (!rzpOn(env)) return err('Payments are not set up yet. Email support@thesmarttrade.in to upgrade.', 503);
-      const st = await settings(env); const body = await request.json().catch(() => ({}));
+      const st = await settings(env); const pc = payCfg(env, request, st);
+      if (!pc.checkout) return err(pc.currency === 'USD' && rzpOn(env) ? 'Card payments from outside India are coming soon. Email support@thesmarttrade.in and we\'ll upgrade you now.' : 'Payments are not set up yet. Email support@thesmarttrade.in to upgrade.', 503);
+      const body = await request.json().catch(() => ({}));
       const months = [1, 3, 12].includes(+body.months) ? +body.months : 1;
-      const currency = env.PAY_CURRENCY || 'USD'; const amount = Math.round((parseFloat(st.pro_price) || 20) * months * 100);
+      const currency = pc.currency; const amount = Math.round((parseFloat(pc.price) || (currency === 'INR' ? 999 : 20)) * months * 100);
       const order = await rzp(env, '/orders', { amount, currency, receipt: 'st_' + Date.now().toString(36) + '_' + user.id.slice(0, 8), notes: { user_id: user.id, email: user.email, months: String(months), product: 'The Smart Trade Pro' } });
       return json({ key: env.RAZORPAY_KEY_ID, orderId: order.id, amount, currency, months, email: user.email, name: user.name || '' });
     }
