@@ -1,8 +1,9 @@
 // Landing page: the hero dashboard assembles from scattered pieces as you scroll, plus reveals and live demos.
-import { icon, $, $$, clamp } from './core.js?v=1bfbada6';
-import { reduced, segInit } from './motion.js?v=1bfbada6';
-import { slider } from './ui.js?v=1bfbada6';
-import { loadFirms, planRules, defaultDaily, dailyCap } from './firms.js?v=1bfbada6';
+import { icon, $, $$, clamp } from './core.js?v=26fd6771';
+import { reduced, segInit } from './motion.js?v=26fd6771';
+import { slider } from './ui.js?v=26fd6771';
+import { pipSvg } from './pet.js?v=26fd6771';
+import { loadFirms, planRules, defaultDaily, dailyCap } from './firms.js?v=26fd6771';
 
 document.documentElement.dataset.theme = 'dark';
 $$('[data-ico]').forEach((el) => (el.innerHTML = icon(el.dataset.ico)));
@@ -144,9 +145,54 @@ function assemble() {
   if (!ok) return;
   const io = new IntersectionObserver(async ([e]) => {
     if (!e.isIntersecting) return; io.disconnect();
-    try { const m = await import('./candles3d.js?v=1bfbada6'); m.mount(cv, { reduced: reduced.matches }); cv.closest('.stage3').classList.add('is-3d'); } catch (err) { console.warn('3D card', err); }
+    try { const m = await import('./candles3d.js?v=26fd6771'); m.mount(cv, { reduced: reduced.matches }); cv.closest('.stage3').classList.add('is-3d'); } catch (err) { console.warn('3D card', err); }
   }, { rootMargin: '400px' });
   io.observe(cv);
+})();
+
+// ---------- /01: a screenshot is read and the trade form fills itself ----------
+(function snapDemo() {
+  const box = $('#snapd'); if (!box) return;
+  const flds = $$('.fld', box); const st = $('#snapSt');
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const set = (state) => { box.dataset.s = state; st.textContent = state === 'read' ? 'Reading' : state === 'done' ? 'Filled in' : 'Screenshot added'; };
+  if (reduced.matches) { set('done'); flds.forEach((f) => f.classList.add('is-on')); return; }
+  let live = false; new IntersectionObserver(([e]) => (live = e.isIntersecting), { rootMargin: '100px' }).observe(box);
+  (async () => {
+    for (;;) {
+      if (!live) { await wait(400); continue; }
+      flds.forEach((f) => f.classList.remove('is-on', 'is-new')); set('add'); await wait(900);
+      set('read'); await wait(1700);
+      for (const f of flds) { f.classList.add('is-on', 'is-new'); setTimeout(() => f.classList.remove('is-new'), 900); await wait(150); }
+      set('done'); await wait(4200);
+    }
+  })();
+})();
+
+// ---------- /03: Pip, the trading buddy, says what matters ----------
+(function pipDemo() {
+  const host = $('#pipd'); if (!host) return;
+  const pet = $('#pipPet'), say = $('#pipSay'), txt = $('#pipTxt'), acts = $('#pipActs'), risk = $('#pipRisk');
+  $('#pipBody').innerHTML = pipSvg();
+  const chip = (ico, t) => `<span class="pipd__chip">${icon(ico)}${t}</span>`;
+  const lines = [
+    ['calm', 'You can still risk <b>$650</b> today, 2 trades left.', '', '$650'],
+    ['worried', 'USD CPI in 12 min. Flat before the release?', chip('calendar', 'Calendar'), '$650'],
+    ['worried', '2 losses in a row. Breathe. Is the next one really an A+ setup?', '', '$290'],
+    ['happy', '+$480. Nice. Was it in your plan?', '', '$770'],
+    ['calm', 'Risk left today: <b>$770</b>', chip('plus', 'Log trade') + chip('image', 'From screenshot') + chip('coach', 'Ask coach') + chip('note', 'Start my day'), '$770'],
+  ];
+  const show = ([mood, t, a, r]) => {
+    ['calm', 'worried', 'happy', 'sad'].forEach((m) => pet.classList.toggle('m-' + m, m === mood));
+    txt.innerHTML = t; acts.innerHTML = a; acts.hidden = !a; risk.textContent = r; risk.className = parseInt(r.slice(1), 10) < 400 ? 'dn' : '';
+    say.classList.remove('is-in'); void say.offsetWidth; say.classList.add('is-in');
+    if (mood === 'happy' && window.gsap) window.gsap.fromTo(pet.querySelector('.pet__body'), { y: 0 }, { keyframes: [{ y: 3, scaleY: 0.9, duration: 0.1 }, { y: -18, scaleY: 1.06, duration: 0.22, ease: 'power2.out' }, { y: 0, scaleY: 1, duration: 0.3, ease: 'bounce.out' }] });
+  };
+  show(lines[0]); if (reduced.matches) return;
+  let k = 0, live = false; new IntersectionObserver(([e]) => (live = e.isIntersecting), { rootMargin: '100px' }).observe(host);
+  setInterval(() => { if (live) show(lines[(k = (k + 1) % lines.length)]); }, 3600);
+  // Pip's eyes follow the cursor around the card, like in the app
+  host.addEventListener('pointermove', (e) => { const r = pet.getBoundingClientRect(); pet.style.setProperty('--lx', clamp((e.clientX - r.left - r.width / 2) / 200, -1, 1)); pet.style.setProperty('--ly', clamp((e.clientY - r.top - r.height / 2) / 200, -1, 1)); });
 })();
 
 // ---------- breach line chart (50K, $2,000 trailing, locks at the start balance) ----------
@@ -196,11 +242,6 @@ function reveals() {
   g.set('.tri, .bc, .sixi, .num, .st, .price__c, .cmp__r, .faq2 details, .row2 .vis, .row2 .txt', { opacity: 0 });
   // counters
   $$('[data-count]').forEach((el) => { const to = +el.dataset.count; const s = { v: 0 }; el.textContent = '0'; g.to(s, { v: to, duration: 1.6, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 90%' }, onUpdate: () => (el.textContent = Math.round(s.v)) }); });
-  // chat plays in
-  const msgs = $$('#chat .msg2'); g.set(msgs, { opacity: 0, y: 14 });
-  const ctl = g.timeline({ scrollTrigger: { trigger: '#chat', start: 'top 75%' } });
-  msgs.forEach((m, i) => ctl.to(m, { opacity: 1, y: 0, duration: 0.55, ease: 'back.out(1.6)' }, i * 0.9));
-  ctl.add(() => { const last = $('#chat .msg2--typing'); last.innerHTML = '<b>Tomorrow, 50K eval</b><ul><li>Max loss today: <b>$650</b> (your stop; the firm allows $1,250)</li><li>A+ setups only before 11:30 ET, three trades at most</li><li>Risk $250 on A+, skip C</li></ul>'; g.fromTo(last, { opacity: 0.4 }, { opacity: 1, duration: 0.5 }); }, '+=0.6');
   // magnetic white buttons
   $$('.wbtn').forEach((b) => { const mx = g.quickTo(b, 'x', { duration: 0.4, ease: 'power3.out' }); const my = g.quickTo(b, 'y', { duration: 0.4, ease: 'power3.out' }); b.addEventListener('pointermove', (e) => { const r = b.getBoundingClientRect(); mx((e.clientX - r.left - r.width / 2) * 0.15); my((e.clientY - r.top - r.height / 2) * 0.25); }); b.addEventListener('pointerleave', () => { mx(0); my(0); }); });
   // FAQ

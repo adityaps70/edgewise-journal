@@ -1,5 +1,5 @@
 // Glass logo and floating glass candlesticks in a studio lit from the top left.
-// Loaded on demand by home.js when the stage gets near the viewport. (scene v3)
+// Loaded on demand by home.js when the stage gets near the viewport. (scene v4)
 import * as THREE from '../vendor/three/three.module.min.js';
 import { SVGLoader } from '../vendor/three/SVGLoader.js';
 
@@ -9,12 +9,6 @@ const LIGHT = new THREE.Vector3(-7, 10, 6); // the big soft box everything is li
 const LOGO = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
 <path id="r" d="M44.75 12.5a4.5 4.5 0 0 1 0 9H26.75a3 3 0 0 0 0 6H33.75L26.75 36.5a12 12 0 0 1 0 -24Z"/>
 <path id="w" d="M19.25 51.5a4.5 4.5 0 0 1 0 -9H37.25a3 3 0 0 0 0 -6H30.25L37.25 27.5a12 12 0 0 1 0 24Z"/></svg>`;
-
-// open, close, low, high: an uptrend with pullbacks
-const BARS = [
-  [1.0, 1.7, 0.75, 2.0], [1.7, 1.3, 1.1, 1.9], [1.3, 2.05, 1.2, 2.3], [2.05, 1.75, 1.6, 2.25],
-  [1.75, 2.5, 1.65, 2.75], [2.5, 2.2, 2.05, 2.7], [2.2, 3.05, 2.1, 3.3], [3.05, 2.75, 2.6, 3.2], [2.75, 3.6, 2.65, 3.85],
-];
 
 const easeOut = (t) => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
 
@@ -102,10 +96,10 @@ export function mount(canvas, { reduced = false } = {}) {
   // glass
   const glass = (o) => new THREE.MeshPhysicalMaterial({ metalness: 0, roughness: 0.03, transmission: 1, ior: 1.52, clearcoat: 1, clearcoatRoughness: 0.02, specularIntensity: 1, envMapIntensity: 1.5, ...o });
   const mBull = glass({ color: 0xff4a60, thickness: 0.9, attenuationColor: new THREE.Color('#ff1a38'), attenuationDistance: 0.6 });
-  const mBear = glass({ color: 0xffffff, transmission: 0.7, roughness: 0.06, thickness: 0.9, attenuationColor: new THREE.Color('#ececf2'), attenuationDistance: 3, emissive: 0x2e2e34, emissiveIntensity: 1 });
+  const mBear = glass({ color: 0xffffff, transmission: 0.82, roughness: 0.38, thickness: 1.2, ior: 1.5, attenuationColor: new THREE.Color('#ffffff'), attenuationDistance: 6, clearcoat: 1, clearcoatRoughness: 0.02, emissive: 0x6a6a70, emissiveIntensity: 1, sheen: 1, sheenRoughness: 0.3, sheenColor: new THREE.Color('#ffffff') });
   const mWick = glass({ color: 0xffffff, thickness: 0.1, roughness: 0.05, emissive: 0x888888, emissiveIntensity: 0.5 });
   const mRed = glass({ color: 0xff3a52, thickness: 1.4, attenuationColor: new THREE.Color('#e0102e'), attenuationDistance: 0.7 });
-  const mClear = glass({ color: 0xffffff, transmission: 0.7, roughness: 0.07, thickness: 1.4, attenuationColor: new THREE.Color('#f4f4f8'), attenuationDistance: 4, emissive: 0x3a3a40, emissiveIntensity: 1 });
+  const mClear = glass({ color: 0xffffff, transmission: 0.82, roughness: 0.34, thickness: 1.6, ior: 1.5, attenuationColor: new THREE.Color('#ffffff'), attenuationDistance: 6, clearcoat: 1, clearcoatRoughness: 0.02, emissive: 0x6e6e74, emissiveIntensity: 1, sheen: 1, sheenRoughness: 0.3, sheenColor: new THREE.Color('#ffffff') });
 
   const root = new THREE.Group(); scene.add(root);  // pointer parallax spins this (around y only, so the mirror stays true)
   root.add(cyclorama());
@@ -127,15 +121,23 @@ export function mount(canvas, { reduced = false } = {}) {
   logoPivot.position.set(-1.3, (lsz.y * S) / 2 + 0.02, -2.0); logoPivot.rotation.set(-0.06, 0.45, 0);
   world.add(logoPivot);
 
-  // candles float in front of the logo, each on its own rhythm
-  const K = 0.62, R = 0.25, candles = [];
-  BARS.forEach(([o, c, l, h], i) => {
-    const up = c >= o; const g = new THREE.Group();
-    const bh = Math.max(0.3, Math.abs(c - o) * K * 1.35);
-    const mid = ((o + c) / 2) * K; const body = new THREE.Mesh(roundedCylinder(R, bh, 0.09), up ? mBull : mBear); body.position.y = mid;
-    const wl = Math.max(bh + 0.5, (h - l) * K * 1.35); const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, wl, 16), mWick); wick.position.y = mid;
-    g.add(wick, body); g.userData = { up, x: -2.3 + i * 0.66, z: 0.8 - (i % 2) * 0.3 - i * 0.04, y: 0.75, sp: 0.55 + ((i * 37) % 10) / 20, ph: i * 1.7, amp: 0.07 + (i % 3) * 0.025, low: mid - wl / 2 };
-    g.position.set(g.userData.x, g.userData.y, g.userData.z);
+  // candles float in front of the logo: different sizes, heights and depths, each on its own rhythm
+  // [bull, body, upper wick, lower wick, size, x, clearance above the floor, z]
+  const SPEC = [
+    [1, 0.9, 0.35, 0.25, 1.0, -2.75, 0.45, 1.0], [0, 1.0, 0.3, 0.35, 1.05, -1.95, 1.0, 0.15],
+    [1, 1.4, 0.3, 0.4, 1.25, -1.0, 0.55, 1.25], [0, 0.4, 0.3, 0.25, 0.78, -0.15, 1.75, 0.1],
+    [1, 0.75, 0.25, 0.45, 0.95, 0.7, 1.1, 0.95], [0, 1.35, 0.35, 0.3, 1.25, 1.55, 0.7, 0.55],
+    [1, 1.7, 0.4, 0.3, 1.4, 2.5, 0.95, 1.35], [0, 0.6, 0.3, 0.4, 0.9, 3.4, 1.9, 0.45],
+  ];
+  const R = 0.3, candles = [];
+  SPEC.forEach(([up, body, wu, wd, sz, x, clear, z], i) => {
+    const g = new THREE.Group(); const r = R * sz, bh = body * sz, top = bh / 2 + wu * sz, bot = bh / 2 + wd * sz;
+    const bodyM = new THREE.Mesh(roundedCylinder(r, bh, Math.min(0.12, bh * 0.3)), up ? mBull : mBear);
+    const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.03 * sz, 0.03 * sz, top + bot, 16), mWick); wick.position.y = (top - bot) / 2;
+    g.add(wick, bodyM);
+    const h = (n) => ((Math.sin(i * 12.9898 + n * 78.233) * 43758.5453) % 1 + 1) % 1; // fixed per-candle randomness
+    g.userData = { up: !!up, sz, x, z, y: clear + bot, sp: 0.35 + h(1) * 0.75, ph: h(2) * 6.28, amp: 0.07 + h(3) * 0.17, tilt: 0.03 + h(4) * 0.07, sway: 0.02 + h(5) * 0.06, low: -bot };
+    g.position.set(x, g.userData.y, z);
     world.add(g); candles.push(g);
   });
 
@@ -153,7 +155,7 @@ export function mount(canvas, { reduced = false } = {}) {
   };
   const logoSpillR = spill(0xff2040, 4.2, 1.5, 0.5); logoSpillR.position.set(0.6, 0.012, -0.4);
   const logoSpillW = spill(0xffe6ea, 3.4, 1.2, 0.22); logoSpillW.position.set(0.9, 0.011, 0.5);
-  candles.forEach((g) => { g.userData.spill = spill(g.userData.up ? 0xff2040 : 0xffffff, 1.5, 1.3, 0.3); });
+  candles.forEach((g) => { const z = g.userData.sz; g.userData.spill = spill(g.userData.up ? 0xff2040 : 0xffffff, 1.5 * z, 1.3 * z, 0.3); });
 
   // framing: on wide screens the scene sits right of the heading; on narrow ones it is centred
   const frame = () => {
@@ -175,7 +177,8 @@ export function mount(canvas, { reduced = false } = {}) {
     candles.forEach((g, i) => {
       const u = g.userData; const k = reduced ? 1 : easeOut((s - 0.2 - i * 0.1) / 0.9);
       g.position.y = u.y + (reduced ? 0 : Math.sin(s * u.sp + u.ph) * u.amp) - (1 - k) * 0.8;
-      g.rotation.z = reduced ? 0 : Math.sin(s * u.sp * 0.7 + u.ph) * 0.035; g.rotation.x = reduced ? 0 : Math.cos(s * u.sp * 0.6 + u.ph) * 0.03;
+      g.position.x = u.x + (reduced ? 0 : Math.sin(s * u.sp * 0.45 + u.ph * 1.3) * u.sway);
+      g.rotation.z = reduced ? 0 : Math.sin(s * u.sp * 0.7 + u.ph) * u.tilt; g.rotation.x = reduced ? 0 : Math.cos(s * u.sp * 0.55 + u.ph * 0.7) * u.tilt * 0.7;
       g.scale.setScalar(Math.max(0.001, 0.6 + 0.4 * k)); g.visible = k > 0.01;
       // spill: offset away from the light, wider and fainter the higher the candle floats
       const lift = g.position.y + u.low * g.scale.y; const sp = u.spill;

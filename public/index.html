@@ -72,11 +72,11 @@
   <link rel="apple-touch-icon" href="brand/mark-180.png?v=8">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="preload" href="vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=1bfbada6">
+  <link rel="stylesheet" href="styles.css?v=26fd6771">
   <script src="vendor/gsap.min.js" defer></script>
   <script src="vendor/ScrollTrigger.min.js" defer></script>
-  <link rel="stylesheet" href="home.css?v=1bfbada6">
-  <script type="module" src="js/home.js?v=1bfbada6"></script>
+  <link rel="stylesheet" href="home.css?v=26fd6771">
+  <script type="module" src="js/home.js?v=26fd6771"></script>
 </head>
 <body class="home">
   <header class="hn" id="hn">
@@ -172,17 +172,33 @@
 
     <!-- three deep features -->
     <section class="sx" id="firms">
-      <div class="shead"><h2 class="h2">One journal to trade with confidence</h2><p class="lead">The three things that decide whether a funded account survives: drawdown, rules and discipline.</p></div>
+      <div class="shead"><h2 class="h2">One journal to trade with confidence</h2><p class="lead">New in the journal: log a trade from a screenshot, every firm's rules built in, and a buddy that keeps you inside them.</p></div>
       <div class="rows">
         <div class="row2">
-          <div class="vis vis--dd"><span class="vis__n">/01</span>
-            <div class="dd">
-              <div class="dd__k"><div><small>Balance</small><b id="ddBal">$52,310</b></div><div><small>Breach line</small><b class="bad" id="ddBr">$50,000</b></div><div><small>Room left</small><b class="good" id="ddRoom">$2,310</b></div></div>
-              <svg class="dd__c" id="ddChart" viewBox="0 0 420 200" aria-hidden="true"></svg>
-              <div class="dd__leg"><span><i class="l-eq"></i>Balance</span><span><i class="l-br"></i>Breach line, trails your peak</span><span><i class="l-st"></i>Your daily stop</span></div>
+          <div class="vis vis--snap"><span class="vis__n">/01</span>
+            <div class="snapd" id="snapd" aria-hidden="true">
+              <div class="snapd__img">
+                <div class="snapd__bar"><i></i><i></i><i></i><span>NQZ6 fills · 50K eval</span></div>
+                <div class="snapd__t">
+                  <div class="snapd__r snapd__h"><span>Time</span><span>Side</span><span>Qty</span><span>Price</span></div>
+                  <div class="snapd__r"><span>09:41</span><span class="dn">Sell</span><span>2</span><span>18,421.50</span></div>
+                  <div class="snapd__r"><span>09:58</span><span class="up">Buy</span><span>2</span><span>18,404.25</span></div>
+                </div>
+                <div class="snapd__pl">Realized P&amp;L <b class="up">+$690.00</b></div>
+                <i class="snapd__scan"></i>
+              </div>
+              <div class="snapd__mid"><span class="snapd__ai"><i data-ico="coach"></i></span><small id="snapSt">Reading</small></div>
+              <div class="snapd__form">
+                <div class="fld"><small>Symbol</small><b>NQ</b></div><div class="fld"><small>Side</small><b class="dn">Short</b></div>
+                <div class="fld"><small>Contracts</small><b>2</b></div><div class="fld"><small>Time</small><b>09:41</b></div>
+                <div class="fld"><small>Entry</small><b>18,421.50</b></div><div class="fld"><small>Exit</small><b>18,404.25</b></div>
+                <div class="fld fld--w"><small>Account</small><b>Topstep 50K · Combine</b></div>
+                <div class="fld fld--w fld--pl"><small>Net P&amp;L</small><b class="up">+$690.00</b></div>
+                <span class="snapd__save">Check and save</span>
+              </div>
             </div>
           </div>
-          <div class="txt"><h3 class="h3">Know your breach line before you click</h3><p>Trailing, end-of-day or static drawdown, tracked per account. Your own daily stop sits on top, and the sidebar tells you how much you can still risk today.</p></div>
+          <div class="txt"><span class="pill2">New</span><h3 class="h3">Snap a screenshot. The trade logs itself.</h3><p>Drop or paste a screenshot of your fills, positions or chart. The AI reads the symbol, side, size, prices and P&amp;L and fills the trade in, and finds every trade if there are several. You check the highlighted fields and save. The screenshot stays on the trade as its chart.</p></div>
         </div>
         <div class="row2 row2--rev">
           <div class="vis vis--demo"><span class="vis__n">/02</span>
@@ -197,15 +213,19 @@
           <div class="txt"><h3 class="h3">Pick your firm. The rules come with it.</h3><p>Topstep, Apex, TopOne, Tradeify, MyFundedFutures, Lucid, Take Profit Trader, FTMO and FundingPips, by account type, size and stage. Try it here: change the firm and drag your daily stop.</p><p class="fine2">Rules were checked against public sources in November 2026. Every value stays editable and links to the firm's site.</p></div>
         </div>
         <div class="row2">
-          <div class="vis vis--chat"><span class="vis__n">/03</span>
-            <div class="chat2" id="chat">
-              <div class="msg2 msg2--u">Where am I losing money this month?</div>
-              <div class="msg2 msg2--a"><b>Two leaks, $1,540 total</b><ul><li>C-grade trades: 9 trades, 22% win rate, <span class="dn">−$1,120</span></li><li>Third trade after two losses: <span class="dn">−$420</span> over 4 sessions</li></ul><p>Next week: skip C setups and stop after two losses.</p></div>
-              <div class="msg2 msg2--u">Plan tomorrow for my 50K eval.</div>
-              <div class="msg2 msg2--a msg2--typing"><span class="typing"><i></i><i></i><i></i></span></div>
+          <div class="vis vis--pip"><span class="vis__n">/03</span>
+            <div class="pipd" id="pipd" aria-hidden="true">
+              <div class="pipd__app">
+                <div class="pipd__top"><b>Today</b><span>Risk left <em id="pipRisk">$650</em></span></div>
+                <div class="pipd__row"><span>NQ · Short 2</span><span class="up">+$690</span></div>
+                <div class="pipd__row"><span>ES · Long 1</span><span class="dn">−$212</span></div>
+                <div class="pipd__row"><span>NQ · Long 1</span><span class="dn">−$148</span></div>
+              </div>
+              <div class="pipd__say" id="pipSay"><p id="pipTxt">You can still risk <b>$650</b> today, 2 trades left.</p><div class="pipd__acts" id="pipActs"></div></div>
+              <div class="pet pet--demo m-calm" id="pipPet"><div class="pet__tilt"><div class="pet__body" id="pipBody"></div><span class="pet__shadow"></span></div></div>
             </div>
           </div>
-          <div class="txt"><h3 class="h3">A coach that has read every trade</h3><p>Weekly reviews with the dollar cost of each leak, tomorrow's plan from your limits and best setups, and chart screenshots read back on any trade.</p></div>
+          <div class="txt"><span class="pill2">New</span><h3 class="h3">Meet Pip, your trading buddy</h3><p>An optional little flame that lives in the corner of your journal. It tells you how much you can still risk today, warns you before high-impact news and after a losing streak, nudges you to do your prep, and logs a trade in one click. It stays quiet when nothing needs saying.</p></div>
         </div>
       </div>
     </section>
