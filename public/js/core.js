@@ -36,9 +36,9 @@ export const tradingDaysBetween = (a, b) => {
 // ------------------------------------------------------------------ store
 export const S = {
   user: null, ai: { configured: false }, local: false,
-  profile: null, account: [], trade: [], payout: [], plan: [], journal: [], setup: [], rule: [], chat: [],
+  profile: null, account: [], trade: [], payout: [], plan: [], journal: [], setup: [], rule: [], chat: [], firm: [], note: [], bt: [], agent: [],
 };
-const KINDS = ['account', 'trade', 'payout', 'plan', 'journal', 'setup', 'rule', 'chat', 'firm'];
+const KINDS = ['account', 'trade', 'payout', 'plan', 'journal', 'setup', 'rule', 'chat', 'firm', 'note', 'bt', 'agent'];
 
 async function api(path, opts = {}) {
   const res = await fetch(new URL('api' + path, document.baseURI), {
@@ -63,6 +63,10 @@ export const API = {
   image: (data) => api('/images', { method: 'POST', body: { data } }),
   getImage: (id) => api('/images/' + id),
   ai: (b) => api('/ai', { method: 'POST', body: b }),
+  shares: () => api('/shares'),
+  share: (b) => api('/shares', { method: 'POST', body: b }),
+  unshare: (token) => api('/shares/' + token, { method: 'DELETE' }),
+  mentorNotes: () => api('/mentor-notes'),
 };
 
 const cacheKey = () => 'ew_cache_' + (S.user?.id || 'local');
@@ -408,6 +412,15 @@ export function md(text) {
 
 // ------------------------------------------------------------------ icons (lucide-style paths)
 const I = {
+  filter: '<path d="M4 5h16l-6 7.5V19l-4 1.5v-8z"/>',
+  note: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h5"/>',
+  agent: '<rect x="4" y="7" width="16" height="12" rx="4"/><path d="M12 3v4M9 12.5v1M15 12.5v1M9.5 16.5h5"/>',
+  flask: '<path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7 15h10"/>',
+  calc: '<rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M8.5 6.5h7M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 14.5h.01M12 14.5h.01M15.5 14.5h.01M8.5 18h.01M12 18h3.5"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+  sun2: '<circle cx="12" cy="12" r="4"/>',
   logo: '<path d="M4 18 9 11l4 4 7-10"/><path d="M15 5h5v5"/>',
   overview: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
   trades: '<path d="M7 7h10l-3-3"/><path d="M17 17H7l3 3"/>',
@@ -508,3 +521,139 @@ export function mastery(trades) {
 // ------------------------------------------------------------------ account costs
 export const COST_FIELDS = [['cost', 'Evaluation'], ['activationFee', 'Activation'], ['subscriptionFees', 'Subscriptions'], ['platformFees', 'Platform / data'], ['resetCost', 'Resets'], ['otherFees', 'Other']];
 export const accCost = (a) => sum(COST_FIELDS, ([k]) => num(a[k]));
+
+
+// ------------------------------------------------------------------ global filter
+// One filter for every analysis page. Lives in sessionStorage so it survives navigation but not a new session.
+export const F = (() => { try { return JSON.parse(sessionStorage.getItem('st_filter') || '{}'); } catch (e) { return {}; } })();
+export function setFilter(f) { Object.keys(F).forEach((k) => delete F[k]); Object.assign(F, f || {}); try { sessionStorage.setItem('st_filter', JSON.stringify(F)); } catch (e) {} }
+export const tagList = (t) => String(t.tags || '').split(',').map((x) => x.trim()).filter(Boolean);
+const FKEYS = ['accounts', 'symbols', 'setups', 'side', 'grades', 'tags', 'from', 'to', 'result'];
+export const filterCount = () => FKEYS.filter((k) => (Array.isArray(F[k]) ? F[k].length : F[k])).length;
+export function FT(list = S.trade) {
+  if (!filterCount()) return list;
+  return list.filter((t) => (!F.accounts?.length || F.accounts.includes(t.accountId || '')) && (!F.symbols?.length || F.symbols.includes(t.symbol))
+    && (!F.setups?.length || setupsOf(t).some((x) => F.setups.includes(x))) && (!F.side || t.side === F.side)
+    && (!F.grades?.length || F.grades.includes(t.grade || '—')) && (!F.tags?.length || tagList(t).some((x) => F.tags.includes(x)))
+    && (!F.from || t.date >= F.from) && (!F.to || t.date <= F.to) && (!F.result || (F.result === 'win' ? net(t) > 0 : net(t) < 0)));
+}
+export function filterLabels() {
+  const out = [];
+  if (F.accounts?.length) out.push(['accounts', F.accounts.map((id) => accName(id)).join(', ')]);
+  if (F.from || F.to) out.push(['dates', `${F.from ? fmtDate(F.from) : 'start'} → ${F.to ? fmtDate(F.to) : 'today'}`]);
+  if (F.symbols?.length) out.push(['symbols', F.symbols.join(', ')]);
+  if (F.setups?.length) out.push(['setups', F.setups.join(', ')]);
+  if (F.side) out.push(['side', F.side]);
+  if (F.grades?.length) out.push(['grades', F.grades.map((g) => g + ' grade').join(', ')]);
+  if (F.tags?.length) out.push(['tags', '#' + F.tags.join(' #')]);
+  if (F.result) out.push(['result', F.result === 'win' ? 'Winners' : 'Losers']);
+  return out;
+}
+
+// ------------------------------------------------------------------ exit quality (MAE / MFE)
+// mae/mfe are the worst and best open P&L during the trade, in account currency.
+export function exitStats(trades) {
+  const withMfe = trades.filter((t) => num(t.mfe) > 0);
+  const winners = withMfe.filter((t) => net(t) > 0);
+  const eff = winners.map((t) => clamp(num(t.pnl) / num(t.mfe), 0, 1));
+  const leftOnTable = sum(withMfe, (t) => Math.max(0, num(t.mfe) - Math.max(0, num(t.pnl))));
+  const losersThatWereUp = withMfe.filter((t) => net(t) < 0 && num(t.mfe) >= Math.max(riskAmount(t), 1) * 0.5);
+  const withMae = trades.filter((t) => t.mae !== undefined && t.mae !== '' && num(t.mae) !== 0);
+  const heat = withMae.map((t) => { const r = riskAmount(t); return r ? Math.abs(num(t.mae)) / r : null; }).filter((x) => x !== null);
+  const winnersHeat = withMae.filter((t) => net(t) > 0).map((t) => Math.abs(num(t.mae)));
+  return {
+    n: withMfe.length, nMae: withMae.length, efficiency: eff.length ? sum(eff) / eff.length : null, leftOnTable,
+    losersThatWereUp, avgHeatR: heat.length ? sum(heat) / heat.length : null,
+    maxWinnerHeat: winnersHeat.length ? Math.max(...winnersHeat) : null,
+  };
+}
+
+// ------------------------------------------------------------------ prop pass forecast
+// Monte Carlo: resample your own recent trades per day until the account hits the target or the drawdown.
+export function passForecast(a, { runs = 2000, maxDays = 60 } = {}) {
+  const m = accountMetrics(a);
+  if (!m.target || !m.maxLoss || a.status !== 'active') return null;
+  const pool = (S.trade.filter((t) => t.accountId === a.id).length >= 8 ? S.trade.filter((t) => t.accountId === a.id) : S.trade).slice(-120);
+  if (pool.length < 8) return { insufficient: true, need: 8 - pool.length };
+  const days = {}; pool.forEach((t) => { (days[t.date] ||= []).push(net(t)); });
+  const dayPnls = Object.values(days).map((l) => sum(l));
+  const stop = num(a.personalDaily) || num(a.dailyLimit) || 0;
+  let pass = 0; let fail = 0; const daysToPass = [];
+  const lock = num(a.size) && a.ddLock !== false ? 0 : Infinity;
+  const floorOf = (peak) => (a.ddType === 'static' ? -m.maxLoss : Math.min(peak - m.maxLoss, lock));
+  const daysNeeded = Math.max(0, num(a.minDays) - m.tradingDays);
+  for (let i = 0; i < runs; i++) {
+    let pnl = m.pnl; let peak = Math.max(m.pnl, num(a.peakPnl)); let d = 0;
+    while (d < maxDays) {
+      let day = dayPnls[(Math.random() * dayPnls.length) | 0];
+      if (stop && day < -stop) day = -stop; // you stop at your own daily stop
+      pnl += day; d++;
+      if (pnl <= floorOf(peak) || (num(a.dailyLimit) && day < -num(a.dailyLimit) && !stop)) { fail++; break; }
+      peak = Math.max(peak, pnl);
+      if (pnl >= m.target && d >= daysNeeded) { pass++; daysToPass.push(d); break; }
+    }
+  }
+  daysToPass.sort((x, y) => x - y);
+  return { pass: pass / runs, fail: fail / runs, open: (runs - pass - fail) / runs, medianDays: daysToPass.length ? daysToPass[daysToPass.length >> 1] : null, sample: dayPnls.length, own: S.trade.filter((t) => t.accountId === a.id).length >= 8 };
+}
+
+// ------------------------------------------------------------------ agents
+// Built-in agents run on every trade save and on demand. Custom agents are no-code rules the user writes.
+export const AGENT_METRICS = [
+  ['tradesToday', 'Trades today'], ['lossesInRow', 'Losses in a row'], ['dayPnl', 'Today\'s P&L'], ['tradeLoss', 'Loss on one trade'],
+  ['minutesSinceLoss', 'Minutes since last loss'], ['entryHour', 'Entry hour (0–23)'], ['qty', 'Position size'], ['weekPnl', 'This week\'s P&L'],
+];
+export const AGENT_OPS = [['>=', 'is at least'], ['<=', 'is at most'], ['>', 'is above'], ['<', 'is below']];
+function metricNow(key, t) {
+  const day = (t?.date) || today(); const list = S.trade.filter((x) => x.date === day).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  if (key === 'tradesToday') return list.length;
+  if (key === 'dayPnl') return sum(list, net);
+  if (key === 'weekPnl') return sum(inRange(S.trade, weekStart(day), day), net);
+  if (key === 'tradeLoss') return t ? Math.max(0, -net(t)) : 0;
+  if (key === 'qty') return t ? num(t.qty) : 0;
+  if (key === 'entryHour') return t?.time ? +t.time.slice(0, 2) : -1;
+  if (key === 'lossesInRow') { let n = 0; for (let i = list.length - 1; i >= 0; i--) { if (net(list[i]) < 0) n++; else break; } return n; }
+  if (key === 'minutesSinceLoss') { const prev = list.filter((x) => x !== t && net(x) < 0 && (!t || (x.time || '') <= (t.time || ''))).pop(); if (!prev || !t?.time || !prev.time) return 9999; const mm = (s) => +s.slice(0, 2) * 60 + +s.slice(3, 5); return mm(t.time) - mm(prev.exitTime || prev.time); }
+  return 0;
+}
+const cmp = (a, op, b) => (op === '>=' ? a >= b : op === '<=' ? a <= b : op === '>' ? a > b : a < b);
+export function agentState() { return P().agents || { risk: true, habit: true, autotag: true, sentiment: true }; }
+// returns [{level,title,body,agent}] for the trade just saved (or for "now" when t is null)
+export function runAgents(t = null) {
+  const on = agentState(); const out = []; const p = P(); const r = p.risk || {};
+  if (on.risk) {
+    const dayLoss = -metricNow('dayPnl', t); const lossRow = metricNow('lossesInRow', t); const n = metricNow('tradesToday', t);
+    if (num(r.maxDailyLoss) && dayLoss >= num(r.maxDailyLoss) * 0.8) out.push(['bad', 'Risk agent', dayLoss >= num(r.maxDailyLoss) ? 'Daily max loss reached' : `${Math.round(dayLoss / num(r.maxDailyLoss) * 100)}% of today's max loss used`, 'Stop here or cut size to your C-grade risk.']);
+    if (lossRow >= 2) out.push(['warn', 'Risk agent', `${lossRow} losses in a row`, 'Your rule of thumb: walk away for 15 minutes before the next entry.']);
+    if (num(r.maxTrades) && n >= num(r.maxTrades)) out.push(['warn', 'Risk agent', `Trade ${n} of ${r.maxTrades} today`, n > num(r.maxTrades) ? 'You are over your max trades.' : 'That was your last one for today.']);
+    if (t && r.mode === 'grade' && r.byGrade && t.grade && num(r.byGrade[t.grade]) && net(t) < -num(r.byGrade[t.grade]) * 1.25) out.push(['bad', 'Risk agent', `Lost more than your ${t.grade} risk`, `${money(-net(t))} lost vs ${money(r.byGrade[t.grade])} planned. Check your stop.`]);
+    S.account.filter(isLive).forEach((a) => { const m = accountMetrics(a); if (m.buffer !== null && m.maxLoss && m.buffer < m.maxLoss * 0.25) out.push(['bad', 'Risk agent', `${a.name}: ${money(m.buffer)} from breach`, 'Trade your smallest size here until the cushion is back.']); });
+  }
+  if (on.habit) {
+    const d = today(); const j = S.journal.find((x) => x.date === d);
+    const hadTrades = S.trade.some((x) => x.date === d);
+    if (hadTrades && !(j && (j.pre || j.checklist?.length))) out.push(['info', 'Habit agent', 'No pre-market plan today', 'Trades without a plan tend to drift. Two minutes in Start my day.']);
+    const yd = (() => { let x = addDays(d, -1); while ([0, 6].includes(parseISO(x).getDay())) x = addDays(x, -1); return x; })();
+    if (S.trade.some((x) => x.date === yd) && !S.journal.some((x) => x.date === yd && (x.post || x.review))) out.push(['info', 'Habit agent', 'Yesterday has no session review', 'Close the loop while you still remember it.']);
+  }
+  S.agent.filter((a) => a.on !== false).forEach((a) => { const v = metricNow(a.metric, t); if (cmp(v, a.op, num(a.value))) out.push([a.level || 'warn', a.name || 'Your agent', a.message || `${(AGENT_METRICS.find(([k]) => k === a.metric) || [0, a.metric])[1]} ${a.op} ${a.value}`, `Triggered at ${a.metric === 'dayPnl' || a.metric === 'weekPnl' || a.metric === 'tradeLoss' ? money(v) : v}.`]); });
+  return out;
+}
+// Auto-tagger: adds tags from your own behaviour so you never have to.
+export function autoTags(t) {
+  if (!agentState().autotag) return [];
+  const tags = [];
+  const others = S.trade.filter((x) => x.date === t.date && x.id !== t.id && (x.time || '') < (t.time || '')).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  let lossRow = 0; for (let i = others.length - 1; i >= 0; i--) { if (net(others[i]) < 0) lossRow++; else break; }
+  if (lossRow >= 2) tags.push('after-2-losses');
+  const lastLoss = others.filter((x) => net(x) < 0).pop();
+  if (lastLoss && t.time && (lastLoss.exitTime || lastLoss.time)) { const mm = (s) => +s.slice(0, 2) * 60 + +s.slice(3, 5); if (mm(t.time) - mm(lastLoss.exitTime || lastLoss.time) <= 5) tags.push('quick-reentry'); }
+  if (others.length >= Math.max(3, num(P().risk?.maxTrades))) tags.push('overtrading');
+  const r = P().risk || {}; const planned = t.grade && r.byGrade ? num(r.byGrade[t.grade]) : num(r.perTrade);
+  if (planned && net(t) < -planned * 1.25) tags.push('oversized-loss');
+  if (num(t.mfe) > 0 && net(t) < 0 && num(t.mfe) >= Math.abs(net(t))) tags.push('winner-to-loser');
+  const h = t.time ? +t.time.slice(0, 2) : null; const o = P().sessionOpen || '09:30';
+  if (t.time && t.time >= o && t.time < (() => { const [hh, mm] = o.split(':').map(Number); const x = hh * 60 + mm + 5; return `${String(x / 60 | 0).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`; })()) tags.push('first-5-min');
+  void h;
+  return tags;
+}

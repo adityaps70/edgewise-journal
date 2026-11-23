@@ -170,12 +170,12 @@ export function closeModal(scrim, done) {
 }
 
 // ---------------------------------------------------------------- toast
-export function toast(msg, ico = '') {
+export function toast(msg, ico = '', hold = 1.9) {
   let host = $('.toasts'); if (!host) { host = document.createElement('div'); host.className = 'toasts'; document.body.append(host); }
   const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = ico + `<span>${msg}</span>`; host.append(t);
   const g = G();
-  if (!g || reduced.matches) { setTimeout(() => t.remove(), 2600); return; }
-  g.fromTo(t, { opacity: 0, y: 6, xPercent: -50, scale: 0.9 }, { keyframes: [{ opacity: 1, y: -12, scale: 1, duration: 0.35, ease: 'back.out(2)' }, { opacity: 0, y: -40, duration: 0.8, ease: 'power2.in', delay: 1.9 }], onComplete: () => t.remove() });
+  if (!g || reduced.matches) { setTimeout(() => t.remove(), 700 + hold * 1000); return; }
+  g.fromTo(t, { opacity: 0, y: 6, xPercent: -50, scale: 0.9 }, { keyframes: [{ opacity: 1, y: -12, scale: 1, duration: 0.35, ease: 'back.out(2)' }, { opacity: 0, y: -40, duration: 0.8, ease: 'power2.in', delay: hold }], onComplete: () => t.remove() });
 }
 
 // ---------------------------------------------------------------- theme reveal

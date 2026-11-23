@@ -1,7 +1,7 @@
 // App shell: boot, auth, onboarding, sidebar + router, header tools.
 import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
-  saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net,
+  saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
 } from './core.js';
 import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js';
 import { slider, liveRate, fxAgo } from './ui.js';
@@ -9,6 +9,7 @@ import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js';
 window.__segInit = segInit; window.__segSelect = segSelect;
 import * as V from './views.js';
 import * as V2 from './views2.js';
+import * as V3 from './views3.js';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -392,15 +393,17 @@ const VIEWS = {
   analytics: ['Analytics', 'analytics', V.analytics], journal: ['Journal', 'journal', V.journal], playbook: ['Playbook', 'playbook', V.playbook],
   mindset: ['Mindset', 'brain', V2.mindset], firms: ['Prop firms', 'shield', V2.firms], reports: ['Reports', 'sheet', V2.reports],
   coach: ['AI coach', 'coach', V.coach], settings: ['Settings', 'settings', V.settings],
+  notebook: ['Notebook', 'note', V3.notebook], agents: ['Agents', 'agent', V3.agents], backtest: ['Backtesting', 'flask', V3.backtest],
+  tools: ['Tools', 'calc', V3.tools], mentor: ['Mentor mode', 'users', V3.mentor],
 };
 function navItems() {
   const p = P(); const prop = (p.funding || []).some((f) => f !== 'own') || S.account.some((a) => a.type !== 'personal');
-  const list = ['overview', 'trades', 'calendar', 'analytics', 'mindset', 'playbook', 'journal'];
+  const list = ['overview', 'trades', 'calendar', 'analytics', 'mindset', 'playbook', 'journal', 'notebook', 'backtest'];
   if (S.account.length) list.push('accounts');
   if (prop) list.push('firms');
   if (prop || S.payout.length) list.push('payouts');
   if (prop || p.mission || S.plan.length) list.push('plan');
-  list.push('reports', 'coach');
+  list.push('agents', 'reports', 'mentor', 'tools', 'coach');
   return list;
 }
 let current = null;
@@ -416,12 +419,14 @@ function shell(first = false) {
       <header class="head"><button class="rbtn head__menu" id="menu" aria-label="Menu">${icon('menu')}</button>
         <label class="head__search">${icon('search')}<input id="q" placeholder="Search trades, symbols, setups" autocomplete="off"><span class="kbd">⌘K</span></label>
         <button class="rbtn rbtn--accent" id="hLog" aria-label="Log trade" title="Log trade">${icon('plus')}</button>
+        <button class="rbtn" id="hFilter" aria-label="Filter" title="Filter (F)">${icon('filter')}<i class="rbtn__badge rbtn__badge--n" hidden></i></button>
         <button class="rbtn" id="hAI" aria-label="AI coach" title="AI coach">${icon('coach')}</button>
         <span class="head__sep"></span>
         <button class="rbtn rbtn--plain" id="hTheme" aria-label="Switch theme" title="Switch theme">${icon(root.dataset.theme === 'dark' ? 'sun' : 'moon')}</button>
         <button class="rbtn rbtn--plain" id="hBell" aria-label="Alerts">${icon('bell')}<i class="rbtn__badge" hidden></i></button>
         <button class="rbtn head__me" id="hMe" aria-label="Settings"><span class="av" style="width:44px;height:44px">${esc(initials())}</span></button>
       </header>
+      <div class="fbar" id="fbar" hidden></div>
       <main class="main" id="main"></main>
     </div></div></div>`;
   buildNav();
@@ -432,6 +437,8 @@ function shell(first = false) {
   $('#hLog').onclick = (e) => { wobble(e.currentTarget.firstElementChild); V.tradeModal(); };
   $('#hAI').onclick = (e) => { wobble(e.currentTarget.firstElementChild); go('coach'); };
   $('#hMe').onclick = () => go('settings');
+  $('#hFilter').onclick = (e) => { wobble(e.currentTarget.firstElementChild); V3.filterModal(); };
+  if (!S.local) API.mentorNotes().then((r) => { S.mentorNotes = r.notes; }).catch(() => {});
   $('#meMore').onclick = () => go('settings');
   $('#hTheme').onclick = (e) => { const next = root.dataset.theme === 'dark' ? 'light' : 'dark'; const r = e.currentTarget.getBoundingClientRect(); switchTheme(next, r.left + r.width / 2, r.top + r.height / 2); e.currentTarget.innerHTML = icon(next === 'dark' ? 'sun' : 'moon'); pop(e.currentTarget); };
   $('#hBell').onclick = (e) => { wobble(e.currentTarget.firstElementChild); alertsModal(); };
@@ -439,6 +446,7 @@ function shell(first = false) {
   q.onkeydown = (e) => { if (e.key === 'Enter') { V.setTradeQuery(q.value.trim()); go('trades', {}, true); q.blur(); } if (e.key === 'Escape') q.blur(); };
   document.onkeydown = (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); q.focus(); q.select(); }
+    if (e.key === 'f' && !e.metaKey && !e.ctrlKey && !/input|textarea|select/i.test(document.activeElement.tagName) && !$('.scrim')) { e.preventDefault(); V3.filterModal(); }
     if (e.key === 'n' && !e.metaKey && !e.ctrlKey && !/input|textarea|select/i.test(document.activeElement.tagName) && !$('.scrim')) { e.preventDefault(); V.tradeModal(); }
   };
   sync.onChange = () => { const d = $('.side__me .av__dot'); if (d) d.style.background = sync.state === 'error' ? 'var(--bad)' : sync.state === 'saving' ? 'var(--warn)' : 'var(--mint)'; };
@@ -487,6 +495,7 @@ function getAlerts() {
   S.payout.filter((p) => p.status === 'requested').forEach((p) => out.push(['warn', 'payouts', `Payout pending: ${money(p.amount || p.estimate)}`, `${accName2(p.accountId)} · requested ${fmtDate(p.reqDate)}`]));
   const m = missionMetrics(); if (m && m.elapsed > m.progress + 0.25 && m.daysLeft > 0) out.push(['warn', 'target', `${m.name} is behind pace`, `${pct(m.elapsed)} of the time gone, ${pct(m.progress)} of the goal paid out.`]);
   if (S.trade.some((t) => t.date === today()) && !S.journal.some((j) => j.date === today())) out.push(['info', 'journal', 'Journal today\'s session', 'Five minutes now saves the lesson.']);
+  runAgents(null).filter(([, agent]) => agent !== 'Risk agent').forEach(([lvl, agent, title, body]) => out.push([lvl, agent === 'Habit agent' ? 'coffee' : 'agent', title, `${agent}: ${body}`]));
   return out;
 }
 const accName2 = (id) => S.account.find((a) => a.id === id)?.name || '—';
@@ -513,6 +522,7 @@ function route(first = false) {
     movePill($('#nav'), !first);
     main.scrollTop = 0;
     VIEWS[id][2](main, pendingOpts); pendingOpts = {};
+    V3.renderFilterBar(id);
     document.title = `${VIEWS[id][0]} · ${APP.name}`;
     enterPage(main, { first });
   };
@@ -525,6 +535,7 @@ function refresh() {
   const y = main.scrollTop;
   VIEWS[current][2](main, {});
   main.scrollTop = y;
+  V3.renderFilterBar(current);
   // light re-entrance: headings stay, data re-animates
   const h1 = $('.phead h1', main); if (h1) h1.dataset.split = '1';
   animateData(main);

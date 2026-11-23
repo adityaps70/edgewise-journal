@@ -4,12 +4,13 @@ import {
   money, short, local, pct, tone, cur, sym, save, remove, saveProfile, MARKETS, EMOTIONS, MISTAKES, SESSIONS, DEFAULT_SETUPS,
   net, stats, groupBy, inRange, rangeFor, rMultiple, calcPnl, pointValue, sessionFromTime, accName, accById, isLive, accountMetrics,
   safeToRisk, missionMetrics, planMetrics, aiContext, md, icon, API, flush, wipeAll, tradingDaysBetween,
-  accCost, COST_FIELDS, TIMEFRAMES, EXIT_BEHAVIOR, edgeScore, zoneOf, durationMin, durationBucket, setupsOf, severeCombo, lateLoss, mastery, HOT,
+  FT, exitStats, passForecast, autoTags, runAgents, tagList, accCost, COST_FIELDS, TIMEFRAMES, EXIT_BEHAVIOR, edgeScore, zoneOf, durationMin, durationBucket, setupsOf, severeCombo, lateLoss, mastery, HOT,
 } from './core.js';
 import { enterPage, animateData, segInit, segSelect, openModal, closeModal, toast, flash, pop, shake, wobble, cardStack, countUp } from './motion.js';
 import { equityChart, tubes, hbars, bindTips, drill as drillStore, radar, reg } from './charts.js';
 const drillMap = () => drillStore;
 import { slider, setSlider, liveRate, fxAgo } from './ui.js';
+import * as V3m from './views3.js';
 import { catalog, firmById, planRules, defaultDaily, dailyCap, STAGE_LABEL, mono, firstStage, isInstant } from './firms.js';
 
 let H = { go: () => {}, refresh: () => {}, rerenderShell: () => {} };
@@ -42,7 +43,7 @@ function segBind(el, sel, fn) {
 
 // ======================================================================= OVERVIEW
 export function overview(el) {
-  const all = S.trade; const st = stats(all);
+  const all = FT(); const st = stats(all);
   const m = missionMetrics();
   const rT = (k) => sum(inRange(all, ...rangeFor(k)), net);
   const month = rT('month');
@@ -119,6 +120,7 @@ export function overview(el) {
     ${card('Latest trades', 'Every account, newest first', tradeList(all.slice(-7).reverse()), `<button class="linkbtn" data-go="trades">See all</button>`)}
   </div>
   ${S.ai.configured ? `<section class="card" style="margin-top:var(--gap)"><div class="ai-insight"><span class="spark">${icon('coach')}</span><div style="flex:1"><div class="chead" style="margin:0 0 4px"><div class="chead__text"><h3>Coach's note</h3></div><button class="ibtn" data-act="insight" aria-label="Refresh">${icon('refresh')}</button></div><div class="ai-out" id="insight">${insightCache() || '<span class="muted">Tap refresh for a fresh read on your journal.</span>'}</div></div></div></section>` : ''}
+  ${S.ai.configured ? '<section class="card" id="digest" style="margin-top:var(--gap)" hidden></section>' : ''}
   </div>`;
 
   // tubes with range switch
@@ -155,6 +157,7 @@ export function overview(el) {
   el.querySelector('[data-act="log"]').onclick = () => tradeModal();
   el.querySelector('[data-act="review"]').onclick = () => H.go('coach', { run: 'week' });
   el.querySelector('[data-act="hide"]').onclick = (e) => { el.classList.toggle('is-masked'); wobble(e.currentTarget); };
+  import('./views3.js').then((V3) => V3.weeklyDigest($('#digest', el)));
   const ins = el.querySelector('[data-act="insight"]');
   if (ins) ins.onclick = async () => {
     const box = $('#insight', el); box.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>'; wobble(ins);
@@ -182,7 +185,7 @@ function accountCard(a, i) {
     <div class="vcard__face">
       ${spark ? `<svg class="vcard__spark" viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true"><path d="${spark}L300,100L0,100Z" class="vcard__area"/><path d="${spark}" class="vcard__line"/></svg>` : ''}
       <div class="vcard__top"><span class="fmono">${esc(mono(a))}</span><div class="vcard__id"><b>${esc(a.name)}</b><small>${esc(plan)}</small></div><span class="vstage vstage--${stage.toLowerCase().replace(/\s/g, '')}">${stage}</span></div>
-      <div class="vcard__pnl"><small>Account P&amp;L</small><b>${money(x.pnl, { sign: true })}</b><em>${x.target ? `${pct(Math.max(0, x.pnl) / x.target)} of ${money(x.target)} target` : x.todayPnl ? `today ${money(x.todayPnl, { sign: true })}` : 'no target on this stage'}</em></div>
+      <div class="vcard__pnl"><small>Account P&amp;L</small><b>${money(x.pnl, { sign: true })}</b><em>${x.target ? `${pct(Math.max(0, x.pnl) / x.target)} of ${money(x.target)} target${(() => { const f = a.status === 'active' ? passForecast(a, { runs: 800 }) : null; return f && !f.insufficient ? ` · <b title="Simulated from your own day-by-day results">${pct(f.pass)} pass odds</b>` : ''; })()}` : x.todayPnl ? `today ${money(x.todayPnl, { sign: true })}` : 'no target on this stage'}</em></div>
       <div class="ladder"><div class="ladder__track"><i class="ladder__fill" style="left:${Math.min(zero, pos)}%;width:${Math.abs(pos - zero)}%" data-neg="${x.pnl < 0 ? 1 : 0}"></i><span class="ladder__zero" style="left:${zero}%"></span><span class="ladder__dot" style="left:${pos}%"></span></div>
         <div class="ladder__lab"><span class="bad">${x.buffer !== null ? 'Breach ' + money(lo, { sign: true }) : '—'}</span><span>${x.target ? 'Target ' + money(hi, { sign: true }) : ''}</span></div></div>
       <div class="vcard__stats"><div><small>Daily left</small><b>${x.dailyLeft !== null ? money(x.dailyLeft) : '—'}</b></div><div><small>DD buffer</small><b>${x.buffer !== null ? money(x.buffer) : '—'}</b></div><div><small>Days</small><b>${x.tradingDays}${num(a.minDays) ? '/' + a.minDays : ''}</b></div></div>
@@ -241,7 +244,7 @@ const TF = { range: 'all', account: '', q: '', outcome: '' };
 export function setTradeQuery(q) { TF.q = q; }
 export function trades(el) {
   const draw = () => {
-    let list = inRange(S.trade, ...rangeFor(TF.range));
+    let list = inRange(FT(), ...rangeFor(TF.range));
     if (TF.account) list = list.filter((t) => t.accountId === TF.account);
     if (TF.outcome === 'win') list = list.filter((t) => net(t) > 0);
     if (TF.outcome === 'loss') list = list.filter((t) => net(t) < 0);
@@ -291,6 +294,8 @@ export function tradeModal(t0, preset = {}) {
     ${field('Stop', inp('stop', t.stop, 'type="number" step="any" inputmode="decimal"'))}${field('Target', inp('target', t.target, 'type="number" step="any" inputmode="decimal"'))}
     ${field(`P&amp;L (${esc(cur())})`, inp('pnl', t.pnl, 'type="number" step="any" inputmode="decimal" placeholder="auto"'), '', '<span id="pnlHint"></span>')}
     ${field('R multiple', inp('r', t.r, 'type="number" step="any" placeholder="auto"'), '', '<span id="rHint"></span>')}
+    ${field('Worst open P&amp;L <em class="muted" style="font-style:normal">MAE</em>', inp('mae', t.mae, 'type="number" step="any" placeholder="e.g. -180"'), '', 'deepest it went against you')}
+    ${field('Best open P&amp;L <em class="muted" style="font-style:normal">MFE</em>', inp('mfe', t.mfe, 'type="number" step="any" placeholder="e.g. 420"'), '', 'most it was up before you exited')}
     ${field('Session', `<select class="in" name="session"><option value="">auto</option>${optionList(SESSIONS, t.session)}</select>`)}
     ${field('Entry timeframe', `<select class="in" name="tf"><option value="">—</option>${optionList(TIMEFRAMES, t.tf)}</select>`)}
     <div class="field full"><span>Setups <em class="muted" style="font-style:normal;font-weight:500">first one is the entry setup; add others as confirmation</em></span><div class="chips" id="setC">${[...new Set([...setups, ...setupsOf(t)])].map((n) => `<button type="button" class="chip ${setupsOf(t).includes(n) ? 'is-on' : ''}" data-v="${esc(n)}">${esc(n)}${setupsOf(t)[0] === n ? ' <i class="prim">entry</i>' : ''}</button>`).join('')}<button type="button" class="chip chip--add" id="setAdd">${icon('plus')} New setup</button></div></div>
@@ -309,6 +314,7 @@ export function tradeModal(t0, preset = {}) {
     <div class="row row--between"><div class="field"><span>Execution rating</span><div class="stars" id="stars">${[1, 2, 3, 4, 5].map((i) => `<button type="button" data-v="${i}" class="${i <= (t.rating || 0) ? 'is-on' : ''}" aria-label="${i} stars">${icon('star')}</button>`).join('')}</div></div><div class="mscore" id="mscore"></div></div>
   </div></div>
   <div data-pane="c" hidden><div class="stack">
+    ${(S.mentorNotes || []).filter((n) => n.trade_id && n.trade_id === t.id).map((n) => `<div class="mnote"><span class="av" style="width:32px;height:32px;font-size:12px">${esc((n.author || 'M').slice(0, 1).toUpperCase())}</span><div><b>${esc(n.author || 'Mentor')}</b><small> · ${esc(fmtDate(new Date(n.created_at).toISOString().slice(0, 10)))}</small><p>${esc(n.text)}</p></div></div>`).join('')}
     <div class="grid g-3" style="gap:12px">
     ${field('Pre-trade plan', `<textarea class="in" name="notePlan" rows="4" placeholder="What did you expect, and why this level?">${esc(t.notePlan || '')}</textarea>`)}
     ${field('Execution', `<textarea class="in" name="noteExec" rows="4" placeholder="How did the entry, management and exit actually go?">${esc(t.noteExec || '')}</textarea>`)}
@@ -412,8 +418,12 @@ export function tradeModal(t0, preset = {}) {
     read();
     if (!t.symbol) { const s = $('[name="symbol"]', m.el); shake(s); s.focus(); $$('#tTabs button', m.el)[0].click(); return; }
     if (t.pnl === '' || !Number.isFinite(parseFloat(t.pnl))) { const s = $('[name="pnl"]', m.el); shake(s); s.focus(); $$('#tTabs button', m.el)[0].click(); toast('Add P&L or entry/exit/qty', icon('info')); return; }
-    const { _img, ...clean } = t; save('trade', clean); m.close(); H.refresh();
-    toast(`${clean.symbol} ${money(net(clean), { sign: true })} saved`, icon('check'));
+    const { _img, ...clean } = t;
+    const auto = autoTags(clean); if (auto.length) clean.tags = [...new Set([...tagList(clean), ...auto])].join(', ');
+    save('trade', clean); m.close(); H.refresh();
+    toast(`${clean.symbol} ${money(net(clean), { sign: true })} saved${auto.length ? ' · tagged ' + auto.map((x) => '#' + x).join(' ') : ''}`, icon('check'));
+    const fired = runAgents(clean).filter(([lvl]) => lvl !== 'info');
+    fired.slice(0, 2).forEach(([lvl, agent, title, body], i) => setTimeout(() => toast(`<b>${esc(agent)}:</b> ${esc(title)}. ${esc(body)}`, icon(lvl === 'bad' ? 'shield' : 'flag'), 4.5), 1400 + i * 5000));
   });
   m.on('dup', () => { read(); const { _img, id, aiReview, ...c } = t; m.close(); setTimeout(() => tradeModal(null, { ...c, time: new Date().toTimeString().slice(0, 5) }), 260); });
   m.on('del', () => confirmBox('Delete this trade?', 'It will be removed from every stat.', () => { remove('trade', t.id); m.close(); H.refresh(); toast('Trade deleted', icon('trash')); }));
@@ -485,8 +495,8 @@ let calMonth = today().slice(0, 7);
 export function calendar(el) {
   const [y, mo] = calMonth.split('-').map(Number);
   const first = new Date(y, mo - 1, 1); const start = weekStart(iso(first));
-  const monthTrades = S.trade.filter((t) => monthKey(t.date) === calMonth); const st = stats(monthTrades);
-  const byDay = {}; S.trade.forEach((t) => { (byDay[t.date] ||= []).push(t); });
+  const monthTrades = FT().filter((t) => monthKey(t.date) === calMonth); const st = stats(monthTrades);
+  const byDay = {}; FT().forEach((t) => { (byDay[t.date] ||= []).push(t); });
   let cells = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => `<div class="cal__h">${d}</div>`).join('') + '<div class="cal__h cal__h--w">Week</div>';
   let d = start;
   for (let w = 0; w < 6; w++) {
@@ -531,7 +541,7 @@ export function accounts(el) {
     ${groups.filter(([, l]) => l.length).map(([g, list]) => `<div class="daygroup"><span>${g}</span><span>${list.length}</span></div><div class="txlist">${list.map((a) => { const x = accountMetrics(a); const danger = x.buffer !== null && x.maxLoss && x.buffer < x.maxLoss * 0.3; return `<div class="txrow" data-acc="${a.id}"><span class="prodico ${a.status === 'failed' ? 'is-loss' : a.type === 'funded' ? '' : 't4'}">${icon(a.type === 'funded' ? 'shield' : a.type === 'personal' ? 'payouts' : 'flag')}</span>
       <span class="cell__text"><b>${esc(a.name)}</b><small>${esc(a.firm || 'Personal')} · ${a.size ? short(a.size) : ''} ${esc(a.type)} · bought ${esc(fmtDate(a.purchaseDate))} for ${money(num(a.cost))}</small>
       ${x.target && isLive(a) ? `<div style="margin-top:6px;max-width:320px">${meter(x.progress)}</div>` : ''}</span>
-      ${x.buffer !== null && isLive(a) ? `<span class="pill ${danger ? 'pill--bad' : ''}">Buffer ${money(x.buffer)}</span>` : ''}${statusPill(a.status)}<span class="amt ${tone(x.pnl)}">${money(x.pnl, { sign: true })}</span></div>`; }).join('')}</div>`).join('') || `<div class="empty">${icon('accounts')}<b>Add your first account</b>Prop challenge, funded or your own capital.</div>`}</section>
+      ${(() => { const f = a.status === 'active' && x.target ? passForecast(a, { runs: 800 }) : null; return f && !f.insufficient ? `<span class="pill ${f.pass >= 0.6 ? 'pill--good' : f.pass < 0.35 ? 'pill--bad' : ''}" title="${pct(f.fail)} breach, ${pct(f.open)} still open after 60 days${f.medianDays ? ', median ' + f.medianDays + ' trading days to pass' : ''}">Pass ${pct(f.pass)}</span>` : ''; })()}${x.buffer !== null && isLive(a) ? `<span class="pill ${danger ? 'pill--bad' : ''}">Buffer ${money(x.buffer)}</span>` : ''}${statusPill(a.status)}<span class="amt ${tone(x.pnl)}">${money(x.pnl, { sign: true })}</span></div>`; }).join('')}</div>`).join('') || `<div class="empty">${icon('accounts')}<b>Add your first account</b>Prop challenge, funded or your own capital.</div>`}</section>
   </div></div>`;
   if (accs.length) {
     let top = 0;
@@ -761,7 +771,7 @@ export function plan(el) {
 // ======================================================================= ANALYTICS
 let AR = 'all';
 export function analytics(el) {
-  const list = inRange(S.trade, ...rangeFor(AR)); const st = stats(list);
+  const list = inRange(FT(), ...rangeFor(AR)); const st = stats(list);
   const wd = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const byWd = wd.map((d, i) => { const l = list.filter((t) => (parseISO(t.date).getDay() + 6) % 7 === i); return { label: d, value: sum(l, net), sub: `${l.length} trades`, trades: l, tip: d }; }).filter((x, i) => i < 5 || x.value);
   const hrs = {}; list.forEach((t) => { if (!t.time) return; const h = t.time.slice(0, 2); (hrs[h] ||= []).push(t); });
@@ -793,6 +803,8 @@ export function analytics(el) {
     ${card('By emotion', 'How you felt going in', hbars(groupBy(list, (t) => t.emotion || 'Not logged')))}
     ${card('Detached vs attached', 'Were you calm about the outcome?', hbars(groupBy(list, (t) => (t.neutral === true ? 'Detached' : t.neutral === false ? 'Attached to the result' : 'Not logged'))))}
     ${card('Long vs short', '', hbars(groupBy(list, (t) => t.side)))}
+    ${card('Exit quality', 'From the best (MFE) and worst (MAE) open P&amp;L you log on each trade', (() => { const x = exitStats(list); if (!x.n && !x.nMae) return '<div class="empty">Log “Best open P&amp;L” and “Worst open P&amp;L” on your trades to see how much you leave on the table.</div>'; return `<div class="grid g-2" style="gap:10px"><div class="kpi"><small>Exit efficiency</small><b>${x.efficiency !== null ? pct(x.efficiency) : '—'}</b><em>of the best open profit kept on winners</em></div><div class="kpi"><small>Left on the table</small><b class="bad">${money(x.leftOnTable)}</b><em>across ${x.n} trades with MFE</em></div><div class="kpi"><small>Winners turned losers</small><b>${x.losersThatWereUp.length}</b><em>${money(sum(x.losersThatWereUp, net), { sign: true })} after being up ½R or more</em></div><div class="kpi"><small>Average heat</small><b>${x.avgHeatR !== null ? x.avgHeatR.toFixed(2) + 'R' : '—'}</b><em>${x.maxWinnerHeat !== null ? 'winners went up to ' + money(x.maxWinnerHeat) + ' against you' : 'how far trades go against you'}</em></div></div>${x.losersThatWereUp.length ? `<p class="muted" style="font-size:var(--fs-md);margin:12px 0 0">Try moving the stop to break-even at +1R: it would have saved most of the ${x.losersThatWereUp.length} winners you gave back.</p>` : ''}`; })())}
+    ${card('Auto-tags', 'Behaviours the auto-tagger caught', hbars(groupBy(list, (t) => tagList(t).filter((g) => ['after-2-losses', 'quick-reentry', 'overtrading', 'oversized-loss', 'winner-to-loser', 'first-5-min'].includes(g)))))}
     ${card('R distribution', 'How many trades landed in each R bucket', tubes(rDist, { h: 170 }).replace(/[−+]?\$/g, ''))}
   </div></div>`;
   segBind(el, '#aSeg', (v) => { AR = v; H.refresh(); });
@@ -809,6 +821,7 @@ export function journal(el) {
   const moods = ['Rough', 'Low', 'Okay', 'Good', 'Great'];
   el.innerHTML = `<div class="page">${phead('Pre-market plan, post-market truth', 'Daily journal', 'Two minutes before the open, five minutes after the close. The coach reads this too.', `<input type="date" class="in" style="width:auto" id="jd" value="${jDate}">`)}
   <div class="grid g-ov">
+    <div class="grid" style="align-content:start">${V3m ? V3m.startDayHTML(j) : ''}
     <section class="card"><div class="chead"><div class="chead__text"><h3>${esc(fmtDay(jDate))}</h3><p>${dayTrades.length} trades · <b class="${tone(dn)}">${money(dn, { sign: true })}</b></p></div>${S.ai.configured ? `<button class="btn btn--sm" id="jAI">${icon('coach')}Reflect with coach</button>` : ''}</div>
       <div class="stack">
         <div class="field"><span>Mood</span><div class="seg seg--accent" id="mood">${moods.map((x, i) => `<button type="button" data-v="${i + 1}" class="${+j.mood === i + 1 ? 'is-on' : ''}">${x}</button>`).join('')}</div></div>
@@ -821,15 +834,17 @@ export function journal(el) {
         <div class="row row--between"><span class="field"><span>Followed my plan today</span></span><button type="button" class="switch ${j.followedPlan !== false ? 'is-on' : ''}" id="jPlan"></button></div>
         <div class="row" style="justify-content:flex-end"><button class="btn btn--primary" id="jSave">${icon('check')}Save entry</button></div>
         <div class="ai-out" id="jOut">${j.ai ? md(j.ai) : ''}</div>
-      </div></section>
+      </div></section></div>
     <div class="grid" style="align-content:start">
+      ${V3m ? V3m.sessionReviewHTML(j, jDate) + V3m.habitHTML() : ''}
       ${card('That day\'s trades', '', tradeList(dayTrades))}
       ${card('Past entries', `${S.journal.length} days journaled`, past.length ? `<div class="txlist">${past.map((x) => { const n = sum(S.trade.filter((t) => t.date === x.date), net); return `<div class="txrow" data-jd="${x.date}"><span class="prodico t2">${icon('journal')}</span><span class="cell__text"><b>${esc(fmtDay(x.date))}</b><small>${esc((x.lesson || x.post || x.pre || '').slice(0, 70))}</small></span><span class="pill">${moods[(x.mood || 3) - 1]}</span><span class="amt ${tone(n)}">${money(n, { sign: true })}</span></div>`; }).join('')}</div>` : '<div class="empty">Your entries will stack up here.</div>')}
     </div></div></div>`;
   segInit($('#mood', el)); segBind(el, '#mood', () => {});
   $('#jd', el).onchange = (e) => { jDate = e.target.value || today(); H.refresh(); };
   $('#jPlan', el).onclick = (e) => e.currentTarget.classList.toggle('is-on');
-  const collect = () => ({ ...j, ...formData(el.querySelector('.stack')), id: j.id || 'j' + jDate, date: jDate, mood: +($('#mood .is-on', el)?.dataset.v || 3), followedPlan: $('#jPlan', el).classList.contains('is-on') });
+  const collect = () => ({ ...j, ...formData(el.querySelector('.card .stack')), ...(V3m ? V3m.readStartDay(el) : {}), id: j.id || 'j' + jDate, date: jDate, mood: +($('#mood .is-on', el)?.dataset.v || 3), followedPlan: $('#jPlan', el).classList.contains('is-on') });
+  if (V3m) V3m.bindStartDay(el, j, () => { const e = collect(); save('journal', e); Object.assign(j, e); const p = el.querySelector('.sday .chead p'); if (p) p.textContent = `${e.checklist.length}/${V3m.checklistItems().length} checked${e.bias ? ' · bias ' + e.bias : ''}`; });
   $('#jSave', el).onclick = () => { save('journal', collect()); toast('Journal saved', icon('check')); H.refresh(); };
   $$('[data-jd]', el).forEach((r) => r.onclick = () => { jDate = r.dataset.jd; H.refresh(); });
   const ai = $('#jAI', el);
@@ -845,7 +860,7 @@ export function journal(el) {
 export function playbook(el) {
   const r = P().risk || {};
   el.innerHTML = `<div class="page">${phead('Only trade what you\'ve defined', 'Playbook', 'Your setups with their live stats, and the rules every trade is checked against.', `<button class="btn" data-act="rule">${icon('plus')}Rule</button><button class="btn btn--primary" data-act="setup">${icon('plus')}Setup</button>`)}
-  <div class="grid g-2 pbgrid">${S.setup.map((s, i) => { const l = S.trade.filter((t) => setupsOf(t)[0] === s.name); const st = stats(l);
+  <div class="grid g-2 pbgrid">${S.setup.map((s, i) => { const l = FT().filter((t) => setupsOf(t)[0] === s.name); const st = stats(l);
     const mini = (title, fn, map = {}) => { const rows = groupBy(l, fn).sort((x, y) => y.n - x.n).slice(0, 3); return `<div class="pbm"><small>${title}</small>${rows.length ? rows.map((r) => `<div class="pbm__r" data-drill="${reg(r.list, s.name + ' · ' + (map[r.key] || r.key))}"><span>${esc(map[r.key] || r.key)}</span><b class="${r.winRate >= 0.5 ? 'good' : 'bad'}">${pct(r.winRate)}</b><em>${r.list.filter((t) => net(t) > 0).length}W / ${r.list.filter((t) => net(t) < 0).length}L</em></div>`).join('') : '<div class="pbm__r muted">—</div>'}</div>`; };
     return `<section class="card pbcard" data-setup="${s.id}"><div class="chead"><span class="prodico t${(i % 4) + 1}">${icon(setupIcons[i % setupIcons.length])}</span><div class="chead__text"><h3>${esc(s.name)}</h3><p>${l.length} trades${s.criteria ? ' · ' + esc(s.criteria).slice(0, 80) : ''}</p></div><span class="amt ${tone(st.total)}">${money(st.total, { sign: true })}</span></div>
       <div class="pbstats">${[['Win rate', pct(st.winRate)], ['Profit factor', Number.isFinite(st.pf) ? st.pf.toFixed(2) : st.n ? '∞' : '—'], ['Expectancy', money(st.expectancy, { sign: true })], ['Avg winner', money(st.avgWin)], ['Avg loser', money(st.avgLoss)], ['Avg R', st.avgR !== null ? st.avgR.toFixed(2) : '—']].map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>

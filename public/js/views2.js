@@ -2,7 +2,7 @@
 import {
   S, P, $, $$, esc, num, sum, clamp, iso, today, addDays, parseISO, weekStart, monthKey, fmtDate, fmtDay, money, short, pct, tone, cur, sym,
   net, stats, groupBy, inRange, rangeFor, rMultiple, accName, accountMetrics, isLive, icon, API, aiContext, md,
-  edgeScore, zoneOf, severeCombo, lateLoss, durationMin, durationBucket, setupsOf, mastery, HOT, EXIT_BEHAVIOR, accCost, COST_FIELDS,
+  FT, edgeScore, zoneOf, severeCombo, lateLoss, durationMin, durationBucket, setupsOf, mastery, HOT, EXIT_BEHAVIOR, accCost, COST_FIELDS,
 } from './core.js';
 import { equityChart, tubes, hbars, bindTips, reg, radar } from './charts.js';
 import { helpers, tradeList, accountModal, modal } from './views.js';
@@ -14,7 +14,7 @@ const H = () => helpers.hooks();
 // ======================================================================= MINDSET
 let MR = 'all';
 export function mindset(el) {
-  const list = inRange(S.trade, ...rangeFor(MR)); const scored = list.filter((t) => edgeScore(t) !== null);
+  const list = inRange(FT(), ...rangeFor(MR)); const scored = list.filter((t) => edgeScore(t) !== null);
   const avg = scored.length ? sum(scored, edgeScore) / scored.length : null; const z = avg !== null ? zoneOf(avg) : null;
   const byEmo = groupBy(list.filter((t) => t.emotion), (t) => t.emotion);
   const top = byEmo.slice().sort((a, b) => b.n - a.n)[0];
@@ -86,7 +86,7 @@ function scoreBars(days) {
 }
 
 // ======================================================================= PROP FIRMS (finances)
-let FT = 'overview';
+let FTAB = 'overview';
 export function firms(el) {
   const accs = S.account.filter((a) => a.type !== 'personal');
   const paid = (a) => sum(S.payout.filter((p) => p.accountId === a.id && p.status === 'credited'), (p) => p.amount);
@@ -115,9 +115,9 @@ export function firms(el) {
       <section class="card" style="margin-top:var(--gap)">${breached.length ? `<div class="tablewrap"><table class="t"><thead><tr><th>Account</th><th>Firm</th><th>Size</th><th>Bought</th><th class="r">Traded P&amp;L</th><th class="r">Lost</th></tr></thead><tbody>${breached.map((a) => `<tr data-acc="${a.id}"><td><b>${esc(a.name)}</b></td><td>${esc(a.firm || '')}</td><td>${a.size ? short(a.size) : '—'}</td><td>${fmtDate(a.purchaseDate)}</td><td class="r ${tone(accountMetrics(a).pnl)}">${money(accountMetrics(a).pnl, { sign: true })}</td><td class="r bad">−${money(accCost(a))}</td></tr>`).join('')}</tbody></table></div>` : `<div class="empty">${icon('shield')}<b>No breached accounts</b>Long may it last.</div>`}</section>` };
   el.innerHTML = `<div class="page">${phead('Run it like a business', 'Prop firms', 'What every firm has cost you, what it has paid you, and your return on each.', `<button class="btn btn--primary" data-act="add">${icon('plus')}Add account</button>`)}
     <div class="grid g-4">${[['Payouts received', rev, 'money', 'good'], ['Total costs', exp, 'money', ''], ['Net profit', netP, 'moneySign', tone(netP)], ['Return on costs', exp ? netP / exp : 0, 'pct', tone(netP)]].map(([l, v, f, c]) => `<div class="kpi"><small>${l}</small><b class="${c}">${cnt(v, f)}</b></div>`).join('')}</div>
-    <div class="toolbar" style="margin-top:var(--gap)"><div class="seg seg--accent" id="fTab">${[['overview', 'Overview'], ['expenses', 'Costs'], ['breached', `Breached${breached.length ? ' · ' + breached.length : ''}`]].map(([v, l]) => `<button data-v="${v}" class="${FT === v ? 'is-on' : ''}">${l}</button>`).join('')}</div></div>
-    <div id="fBody">${tabs[FT]()}</div></div>`;
-  segBind(el, '#fTab', (v) => { FT = v; const b = $('#fBody', el); b.innerHTML = tabs[v](); bindRows(); animateData(b); bindTips(b); if (window.gsap) window.gsap.fromTo(b.children, { opacity: 0, y: 14 }, { opacity: 1, y: 0, stagger: 0.05, duration: 0.5, ease: 'expo.out' }); });
+    <div class="toolbar" style="margin-top:var(--gap)"><div class="seg seg--accent" id="fTab">${[['overview', 'Overview'], ['expenses', 'Costs'], ['breached', `Breached${breached.length ? ' · ' + breached.length : ''}`]].map(([v, l]) => `<button data-v="${v}" class="${FTAB === v ? 'is-on' : ''}">${l}</button>`).join('')}</div></div>
+    <div id="fBody">${tabs[FTAB]()}</div></div>`;
+  segBind(el, '#fTab', (v) => { FTAB = v; const b = $('#fBody', el); b.innerHTML = tabs[v](); bindRows(); animateData(b); bindTips(b); if (window.gsap) window.gsap.fromTo(b.children, { opacity: 0, y: 14 }, { opacity: 1, y: 0, stagger: 0.05, duration: 0.5, ease: 'expo.out' }); });
   const bindRows = () => $$('[data-acc]', el).forEach((r) => (r.onclick = () => accountModal(S.account.find((a) => a.id === r.dataset.acc))));
   bindRows();
   el.querySelector('[data-act="add"]').onclick = () => accountModal();
@@ -151,7 +151,7 @@ export function csvOf(trades) {
 export function download(name, text, type = 'text/csv') { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
 export function reports(el) {
   const opts = periodsFor(RP.type); if (!opts.some(([k]) => k === RP.key)) RP.key = opts[0]?.[0];
-  const [from, to] = rangeOf(RP.type, RP.key); const list = inRange(S.trade, from, to); const st = stats(list);
+  const [from, to] = rangeOf(RP.type, RP.key); const list = inRange(FT(), from, to); const st = stats(list);
   const label = opts.find(([k]) => k === RP.key)?.[1] || '';
   const durs = list.map(durationMin).filter((d) => d !== null); const avgHold = durs.length ? sum(durs, (d) => d) / durs.length : null;
   const scored = list.filter((t) => edgeScore(t) !== null);

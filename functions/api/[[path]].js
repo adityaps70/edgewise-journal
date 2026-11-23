@@ -2,7 +2,7 @@
 // Bindings: DB (D1). Secrets: ANTHROPIC_API_KEY. Vars: CLAUDE_MODEL, AI_DAILY_LIMIT, ALLOW_SIGNUP.
 
 const SESSION_DAYS = 30;
-const KINDS = new Set(['profile', 'account', 'trade', 'payout', 'plan', 'journal', 'setup', 'rule', 'chat', 'firm']);
+const KINDS = new Set(['profile', 'account', 'trade', 'payout', 'plan', 'journal', 'setup', 'rule', 'chat', 'firm', 'note', 'bt', 'agent']);
 const MAX_DOC = 200_000;      // bytes per record
 const MAX_IMAGE = 450_000;    // bytes per screenshot data URL
 
@@ -132,6 +132,35 @@ async function bumpUsage(env, userId) {
   return { ok: true, used: used + 1, limit };
 }
 
+
+// ---------------------------------------------------------------- mentor sharing
+// A share is a read-only link to your journal. Mentors can leave notes on it without an account.
+async function ensureShareTables(env) {
+  await env.DB.batch([
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS shares (token TEXT PRIMARY KEY, user_id TEXT NOT NULL, label TEXT, include_journal INTEGER DEFAULT 0, created_at INTEGER NOT NULL)'),
+    env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_shares_user ON shares(user_id)'),
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS mentor_notes (id TEXT PRIMARY KEY, token TEXT NOT NULL, user_id TEXT NOT NULL, trade_id TEXT, author TEXT, text TEXT NOT NULL, created_at INTEGER NOT NULL)'),
+    env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_notes_user ON mentor_notes(user_id)'),
+  ]);
+}
+const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
+const TRADE_KEYS = ['id', 'date', 'time', 'exitTime', 'accountId', 'symbol', 'side', 'qty', 'entry', 'exit', 'stop', 'target', 'pnl', 'fees', 'r', 'risk', 'session', 'tf', 'setup', 'setups', 'grade', 'trend', 'emotion', 'exitBehavior', 'neutral', 'mistakes', 'rulesOk', 'followedPlan', 'rating', 'notes', 'notePlan', 'noteExec', 'noteLesson', 'tags', 'mae', 'mfe'];
+const ACC_KEYS = ['id', 'name', 'firm', 'firmId', 'size', 'status', 'type', 'stage', 'target', 'maxLoss', 'ddType', 'dailyLimit', 'personalDaily', 'minDays', 'consistency', 'startPnl', 'startDays'];
+async function sharedPayload(env, share) {
+  const { results } = await env.DB.prepare("SELECT kind, data FROM docs WHERE user_id = ? AND kind IN ('profile','trade','account','setup','journal')").bind(share.user_id).all();
+  const out = { trade: [], account: [], setup: [], journal: [] }; let profile = {};
+  for (const r of results) {
+    const d = JSON.parse(r.data);
+    if (r.kind === 'profile') profile = d;
+    else if (r.kind === 'trade') out.trade.push(pick(d, TRADE_KEYS));
+    else if (r.kind === 'account') out.account.push(pick(d, ACC_KEYS));
+    else if (r.kind === 'setup') out.setup.push(pick(d, ['id', 'name', 'criteria', 'stopRule', 'mgmt']));
+    else if (r.kind === 'journal' && share.include_journal) out.journal.push(pick(d, ['id', 'date', 'mood', 'pre', 'post', 'lesson', 'followedPlan', 'checklist', 'review']));
+  }
+  const { results: notes } = await env.DB.prepare('SELECT id, trade_id, author, text, created_at FROM mentor_notes WHERE token = ? ORDER BY created_at').bind(share.token).all();
+  return { trader: { name: profile.name || 'Trader', currency: profile.currency || 'USD', risk: pick(profile.risk || {}, ['maxDailyLoss', 'maxTrades', 'mode', 'byGrade']) }, label: share.label, data: out, notes };
+}
+
 // ---------------------------------------------------------------- router
 
 export async function onRequest(context) {
@@ -171,6 +200,26 @@ export async function onRequest(context) {
       const token = getCookie(request, 'ew_sid');
       if (token) await env.DB.prepare('DELETE FROM sessions WHERE token = ?').bind(token).run();
       return json({ ok: true }, 200, { 'set-cookie': sessionCookie(request, '', 0) });
+    }
+
+    // ---- mentor view (public, token is the secret)
+    const sm = path.match(/^\/shared\/([A-Za-z0-9_-]{16,})(\/notes)?$/);
+    if (sm) {
+      await ensureShareTables(env);
+      const share = await env.DB.prepare('SELECT * FROM shares WHERE token = ?').bind(sm[1]).first();
+      if (!share) return err('This link was turned off or never existed.', 404);
+      if (!sm[2] && method === 'GET') return json(await sharedPayload(env, share));
+      if (sm[2] && method === 'POST') {
+        const { author, tradeId, text } = await request.json();
+        const t = String(text || '').trim().slice(0, 2000); if (!t) return err('Write a note first.');
+        const day = Date.now() - 86400000;
+        const { n } = await env.DB.prepare('SELECT COUNT(*) AS n FROM mentor_notes WHERE token = ? AND created_at > ?').bind(share.token, day).first();
+        if (n >= 200) return err('Note limit reached for today.', 429);
+        const note = { id: randomId(9), trade_id: tradeId ? String(tradeId).slice(0, 64) : null, author: String(author || 'Mentor').slice(0, 60), text: t, created_at: Date.now() };
+        await env.DB.prepare('INSERT INTO mentor_notes (id, token, user_id, trade_id, author, text, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(note.id, share.token, share.user_id, note.trade_id, note.author, note.text, note.created_at).run();
+        return json({ note });
+      }
+      return err('Not found', 404);
     }
 
     // ---- everything below needs a session
@@ -238,6 +287,32 @@ export async function onRequest(context) {
     }
 
     // ---- AI
+    if (path === '/shares' && method === 'GET') {
+      await ensureShareTables(env);
+      const { results } = await env.DB.prepare('SELECT token, label, include_journal, created_at FROM shares WHERE user_id = ? ORDER BY created_at DESC').bind(user.id).all();
+      return json({ shares: results });
+    }
+    if (path === '/shares' && method === 'POST') {
+      await ensureShareTables(env);
+      const { label, includeJournal } = await request.json();
+      const { n } = await env.DB.prepare('SELECT COUNT(*) AS n FROM shares WHERE user_id = ?').bind(user.id).first();
+      if (n >= 20) return err('You can have up to 20 share links. Turn one off first.');
+      const share = { token: randomId(18), label: String(label || 'Mentor').slice(0, 60), include_journal: includeJournal ? 1 : 0, created_at: Date.now() };
+      await env.DB.prepare('INSERT INTO shares (token, user_id, label, include_journal, created_at) VALUES (?, ?, ?, ?, ?)').bind(share.token, user.id, share.label, share.include_journal, share.created_at).run();
+      return json({ share });
+    }
+    const del = path.match(/^\/shares\/([A-Za-z0-9_-]{16,})$/);
+    if (del && method === 'DELETE') {
+      await ensureShareTables(env);
+      await env.DB.batch([env.DB.prepare('DELETE FROM shares WHERE token = ? AND user_id = ?').bind(del[1], user.id), env.DB.prepare('DELETE FROM mentor_notes WHERE token = ? AND user_id = ?').bind(del[1], user.id)]);
+      return json({ ok: true });
+    }
+    if (path === '/mentor-notes' && method === 'GET') {
+      await ensureShareTables(env);
+      const { results } = await env.DB.prepare('SELECT n.id, n.token, n.trade_id, n.author, n.text, n.created_at, s.label FROM mentor_notes n LEFT JOIN shares s ON s.token = n.token WHERE n.user_id = ? ORDER BY n.created_at DESC LIMIT 300').bind(user.id).all();
+      return json({ notes: results });
+    }
+
     if (path === '/ai' && method === 'POST') {
       const body = await request.json();
       if (!env.ANTHROPIC_API_KEY) return err('AI is not configured: set the ANTHROPIC_API_KEY secret.', 503);
