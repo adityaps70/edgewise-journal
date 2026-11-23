@@ -3,15 +3,15 @@ import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
   goalIdea,
-} from './core.js?v=55516bb3';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=55516bb3';
-import { slider, liveRate, fxAgo } from './ui.js?v=55516bb3';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=55516bb3';
+} from './core.js?v=eeb11cdb';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=eeb11cdb';
+import { slider, liveRate, fxAgo } from './ui.js?v=eeb11cdb';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=eeb11cdb';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=55516bb3';
-import * as V2 from './views2.js?v=55516bb3';
-import * as V3 from './views3.js?v=55516bb3';
-import * as V4 from './views4.js?v=55516bb3';
+import * as V from './views.js?v=eeb11cdb';
+import * as V2 from './views2.js?v=eeb11cdb';
+import * as V3 from './views3.js?v=eeb11cdb';
+import * as V4 from './views4.js?v=eeb11cdb';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -126,6 +126,7 @@ async function onboarding() {
     <ol class="steps" style="margin-top:22px">${STEPS.map((s) => `<li title="${s}"><i></i></li>`).join('')}</ol>
     <div id="obBody"></div>
     <div class="row row--between ob-nav"><button class="btn btn--ghost" id="obBack">${icon('left')}Back</button><button class="btn btn--primary btn--lg" id="obNext">Continue${icon('right')}</button></div>
+    ${S.local ? '' : `<p class="ob-who">Signed in as <b>${esc(S.user?.email || S.user?.name || 'you')}</b><span>·</span>Not you? <button type="button" class="linkbtn" id="obOut">${icon('logout')}Sign out</button></p>`}
   </div></div>`;
   if (window.gsap && !reduced.matches) window.gsap.fromTo('#ob', { opacity: 0, y: 30, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.9, ease: 'expo.out' });
   $('#obBack').onclick = () => obGo(-1);
@@ -155,6 +156,7 @@ function bindRate() {
 }
 function obRender(dir) {
   const s = ob.step; const body = $('#obBody');
+  { const o = $('#obOut'); if (o && !o.onclick) o.onclick = async () => { o.disabled = true; try { await API.logout(); } catch (e) {} location.replace('app'); }; }
   $('#obCount').innerHTML = `<b>${STEPS[s]}</b> · ${s + 1} of ${STEPS.length}`;
   $$('.steps li').forEach((li, i) => { const fill = li.firstElementChild; const done = i <= s; if (window.gsap && !reduced.matches) window.gsap.to(fill, { scaleX: done ? 1 : 0, duration: 0.7, ease: 'expo.out' }); else fill.style.transform = `scaleX(${done ? 1 : 0})`; });
   $('#obBack').style.visibility = s ? 'visible' : 'hidden';
