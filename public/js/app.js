@@ -2,15 +2,15 @@
 import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
-} from './core.js';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js';
-import { slider, liveRate, fxAgo } from './ui.js';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js';
+} from './core.js?v=e0e79e9b';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=e0e79e9b';
+import { slider, liveRate, fxAgo } from './ui.js?v=e0e79e9b';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=e0e79e9b';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js';
-import * as V2 from './views2.js';
-import * as V3 from './views3.js';
-import * as V4 from './views4.js';
+import * as V from './views.js?v=e0e79e9b';
+import * as V2 from './views2.js?v=e0e79e9b';
+import * as V3 from './views3.js?v=e0e79e9b';
+import * as V4 from './views4.js?v=e0e79e9b';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {

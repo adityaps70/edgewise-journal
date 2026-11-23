@@ -3,10 +3,10 @@ import {
   S, P, $, $$, esc, num, sum, clamp, iso, today, addDays, parseISO, weekStart, monthKey, fmtDate, fmtDay, money, short, pct, tone, cur, sym,
   net, stats, groupBy, inRange, rangeFor, rMultiple, accName, accountMetrics, isLive, icon, API, aiContext, md,
   FT, edgeScore, zoneOf, severeCombo, lateLoss, durationMin, durationBucket, setupsOf, mastery, HOT, EXIT_BEHAVIOR, accCost, COST_FIELDS,
-} from './core.js';
-import { equityChart, tubes, hbars, bindTips, reg, radar } from './charts.js';
-import { helpers, tradeList, accountModal, modal } from './views.js';
-import { segInit, animateData } from './motion.js';
+} from './core.js?v=e0e79e9b';
+import { equityChart, tubes, hbars, bindTips, reg, radar } from './charts.js?v=e0e79e9b';
+import { helpers, tradeList, accountModal, modal } from './views.js?v=e0e79e9b';
+import { segInit, animateData } from './motion.js?v=e0e79e9b';
 
 const { card, phead, cnt, meter, after, segBind, bindCommon } = helpers;
 const H = () => helpers.hooks();
