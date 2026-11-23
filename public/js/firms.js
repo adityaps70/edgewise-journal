@@ -1,6 +1,6 @@
 // Prop firm catalog + picker. Rules live in data/firms.json so they can be updated without touching code.
-import { $, $$, esc, uid, num, today, money, short, icon, S, P } from './core.js?v=5c59a044';
-import { slider } from './ui.js?v=5c59a044';
+import { $, $$, esc, uid, num, today, money, short, icon, S, P } from './core.js?v=cfa49f3d';
+import { slider } from './ui.js?v=cfa49f3d';
 
 let CAT = null;
 export async function loadFirms() {
@@ -140,7 +140,7 @@ export function mountPicker(box, state) {
     $$('[data-rm]', box).forEach((b) => (b.onclick = () => { state.accounts.splice(+b.dataset.rm, 1); draw(); state.onChange?.(); }));
   };
   // user-added firm or plan: saved once, then it's in the list like any other
-  const addMissing = (firm) => import('./views.js?v=5c59a044').then((V) => V.planModal({ firm, size: sel?.size || 50000, onSave: ({ firmId, programId, size }) => {
+  const addMissing = (firm) => import('./views.js?v=cfa49f3d').then((V) => V.planModal({ firm, size: sel?.size || 50000, onSave: ({ firmId, programId, size }) => {
     shown = shownF(); const f = firmById(firmId); const p = f.programs.find((x) => x.id === programId);
     sel = { firm: f, program: p, size, stage: firstStage(p, 'challenge'), qty: 1 }; draw(); anim();
   } }));

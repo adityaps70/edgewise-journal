@@ -1024,3 +1024,14 @@ body.mp { overflow: auto; background: var(--scene); background-color: var(--bg);
 .fp__total { font-size: var(--fs-sm); color: var(--muted); padding-bottom: 22px; } .fp__total b { color: var(--ink); }
 .rp--list { opacity: .7; }
 .facc__paid { gap: 4px; } .facc__paid input { width: 70px; border: 0; background: none; color: var(--ink); font: inherit; font-weight: 700; outline: none; padding: 0; }
+/* log from a screenshot */
+.snap { display: flex; align-items: center; gap: 14px; padding: 14px 16px; margin-bottom: 18px; border-radius: 16px; border: 1px dashed var(--line-2); background: var(--card-2); transition: border-color .2s, background .2s; }
+.snap.is-over { border-color: var(--accent); background: var(--accent-soft, var(--card-3)); }
+.snap.is-done { border-style: solid; border-color: var(--line-2); }
+.snap__ic { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--card-3); flex: none; } .snap__ic svg { width: 18px; height: 18px; }
+.snap__t { flex: 1; min-width: 0; display: grid; gap: 3px; } .snap__t b { font-size: var(--fs-md); } .snap__t > span { font-size: var(--fs-sm); color: var(--muted); }
+.snap.is-busy .snap__ic { animation: snapPulse 1.2s ease-in-out infinite; } @keyframes snapPulse { 50% { opacity: .45; } }
+.snap.is-done #snapPick, .snap.is-busy #snapPick { display: none; }
+.snap__pick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+.in.is-ai { box-shadow: inset 0 0 0 1.5px var(--accent); transition: box-shadow .6s; }
+.dp__btn.is-ai, button.is-ai { box-shadow: inset 0 0 0 1.5px var(--accent); }

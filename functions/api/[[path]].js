@@ -84,6 +84,10 @@ const MODES = {
 Conditions are ALL required on the same bar close; entry is at the next bar's open. Each condition: {"left": OPERAND, "op": ">"|"<"|">="|"<="|"crosses_above"|"crosses_below", "right": OPERAND}.
 OPERAND is one of: a number; {"price": "open"|"high"|"low"|"close"}; {"ema": N}; {"sma": N}; {"rsi": N}; {"atr": N}; {"vwap": true}; {"highest": N, "of": "high"|"close"} (previous N bars, excluding current); {"lowest": N, "of": "low"|"close"}; {"range": "high"|"low", "start": "HH:MM", "end": "HH:MM"} (high/low of that window today, only valid after it ends); {"prevday": "high"|"low"|"close"}; {"clock": true} (the bar's time of day) compared against {"time": "HH:MM"} (a fixed time of day); {"volume": true}; {"sma_volume": N}.
 "range" stop means the opposite side of the opening range used in the entry. "swing" stop means lowest low (long) / highest high (short) of the last "period" bars. Pick reasonable defaults when the trader is vague and say so in summary.`,
+  readtrade: `Task: the trader attached a screenshot from their trading platform (fills, orders, positions, account history, a P&L summary, or a chart with entry/exit markers). Read the trade(s) it shows. Reply with ONLY a JSON object, no prose, no code fences:
+{"trades": [{"symbol": string, "side": "Long"|"Short", "qty": number|null, "entry": number|null, "exit": number|null, "date": "YYYY-MM-DD"|null, "time": "HH:MM"|null, "exitTime": "HH:MM"|null, "pnl": number|null, "fees": number|null, "stop": number|null, "target": number|null, "account": string|null}],
+ "platform": string|null, "confidence": "high"|"medium"|"low", "notes": one short sentence on anything you were unsure about, or ""}
+Rules: read only what is visible; never invent numbers, use null instead. A buy then sell is Long, sell then buy is Short. Combine partial fills of the same position into one trade with average prices and total quantity. pnl is the realised P&L as shown (negative for losses; "(200.00)" means -200); if fees/commissions are shown separately put them in fees. Times in 24-hour HH:MM exactly as displayed; dates as YYYY-MM-DD (use the year given in the trader's message if the screenshot omits it). Symbols in the short form traders use (e.g. "MNQ" for "MNQZ6" or "MNQ 12-26", "XAUUSD" for "XAUUSD.m"). List trades oldest first, at most 20. If the screenshot shows no trade at all, return {"trades": [], "confidence": "low", "notes": "what the image shows instead"}.`,
   insight: `Task: give ONE sharp insight for the dashboard (max 40 words, no headers, no bullets) — the single most useful observation from this data right now.`,
 };
 
@@ -119,7 +123,7 @@ async function callClaude(env, { mode, messages, context, image }) {
     body: JSON.stringify({
       model: env.CLAUDE_MODEL || 'claude-sonnet-5-5',
       max_tokens: mode === 'insight' ? 200 : 1500,
-      system: mode === 'firmrules' ? MODES.firmrules : mode === 'backtest' ? MODES.backtest : system,
+      system: mode === 'firmrules' ? MODES.firmrules : mode === 'backtest' ? MODES.backtest : mode === 'readtrade' ? MODES.readtrade : system,
       messages: msgs,
       ...(mode === 'firmrules' ? { tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 4 }] } : {}),
     }),

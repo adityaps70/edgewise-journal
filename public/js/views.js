@@ -6,13 +6,13 @@ import {
   safeToRisk, missionMetrics, planMetrics, aiContext, md, icon, API, flush, wipeAll, tradingDaysBetween,
   FT, exitStats, passForecast, autoTags, runAgents, tagList, accCost, COST_FIELDS, TIMEFRAMES, EXIT_BEHAVIOR, edgeScore, zoneOf, durationMin, durationBucket, setupsOf, severeCombo, lateLoss, mastery, HOT,
   goalIdea,
-} from './core.js?v=5c59a044';
-import { enterPage, animateData, segInit, segSelect, openModal, closeModal, toast, flash, pop, shake, wobble, cardStack, countUp } from './motion.js?v=5c59a044';
-import { equityChart, tubes, hbars, bindTips, drill as drillStore, radar, reg } from './charts.js?v=5c59a044';
+} from './core.js?v=cfa49f3d';
+import { enterPage, animateData, segInit, segSelect, openModal, closeModal, toast, flash, pop, shake, wobble, cardStack, countUp } from './motion.js?v=cfa49f3d';
+import { equityChart, tubes, hbars, bindTips, drill as drillStore, radar, reg } from './charts.js?v=cfa49f3d';
 const drillMap = () => drillStore;
-import { slider, setSlider, liveRate, fxAgo, soundOn, setSound } from './ui.js?v=5c59a044';
-import * as V3m from './views3.js?v=5c59a044';
-import { catalog, firmById, planRules, defaultDaily, dailyCap, STAGE_LABEL, mono, firstStage, isInstant } from './firms.js?v=5c59a044';
+import { slider, setSlider, liveRate, fxAgo, soundOn, setSound, refreshDate } from './ui.js?v=cfa49f3d';
+import * as V3m from './views3.js?v=cfa49f3d';
+import { catalog, firmById, planRules, defaultDaily, dailyCap, STAGE_LABEL, mono, firstStage, isInstant } from './firms.js?v=cfa49f3d';
 
 let H = { go: () => {}, refresh: () => {}, rerenderShell: () => {} };
 export const setHooks = (h) => (H = h);
@@ -84,7 +84,7 @@ export function overview(el) {
 
   el.innerHTML = `<div class="page">
   ${phead(new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }), `${hello()}, ${firstName()}`, sub,
-    `<button class="btn" data-act="review">${icon('coach')}AI review</button><button class="btn btn--primary" data-act="log">${icon('plus')}Log trade</button>`)}
+    `<button class="btn" data-act="review">${icon('coach')}AI review</button><button class="btn" data-act="shot">${icon('image')}From screenshot</button><button class="btn btn--primary" data-act="log">${icon('plus')}Log trade</button>`)}
   <div class="grid g-ov">
     ${card('Accounts', accs.length ? 'Throw the top card aside, or tap it to flip' : 'Add your first account', `
       <div class="wallet"><div class="wallet__stack">${accs.map(accountCard).join('') || `<div class="empty">${icon('accounts')}<b>No accounts yet</b>Add a challenge, funded or personal account.</div>`}</div></div>
@@ -155,10 +155,10 @@ export function overview(el) {
     el.querySelector('[data-act="prev"]').onclick = stack.prev;
     el.querySelector('[data-act="flip"]').onclick = stack.flip;
   }
-  el.querySelector('[data-act="log"]').onclick = () => tradeModal();
+  el.querySelector('[data-act="log"]').onclick = () => tradeModal(); { const b = el.querySelector('[data-act="shot"]'); if (b) b.onclick = () => tradeModal(null, {}, { shot: true }); }
   el.querySelector('[data-act="review"]').onclick = () => H.go('coach', { run: 'week' });
   el.querySelector('[data-act="hide"]').onclick = (e) => { el.classList.toggle('is-masked'); wobble(e.currentTarget); };
-  import('./views3.js?v=5c59a044').then((V3) => V3.weeklyDigest($('#digest', el)));
+  import('./views3.js?v=cfa49f3d').then((V3) => V3.weeklyDigest($('#digest', el)));
   const ins = el.querySelector('[data-act="insight"]');
   if (ins) ins.onclick = async () => {
     const box = $('#insight', el); box.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>'; wobble(ins);
@@ -265,7 +265,7 @@ export function trades(el) {
       : `<div class="empty">${icon('trades')}<b>No trades match</b>Change the filters or log a trade.</div>`;
     animateData(el); bindCommon(el);
   };
-  el.innerHTML = `<div class="page">${phead('Every fill, every lesson', 'Trades', 'Your full trade log. Click a row to edit it, add the chart, or ask the coach to grade it.', `<button class="btn" data-act="csv">${icon('upload')}Import</button><button class="btn btn--primary" data-act="log">${icon('plus')}Log trade</button>`)}
+  el.innerHTML = `<div class="page">${phead('Every fill, every lesson', 'Trades', 'Your full trade log. Click a row to edit it, add the chart, or ask the coach to grade it.', `<button class="btn" data-act="csv">${icon('upload')}Import</button><button class="btn" data-act="shot">${icon('image')}From screenshot</button><button class="btn btn--primary" data-act="log">${icon('plus')}Log trade</button>`)}
     <div class="toolbar"><div class="seg" id="rSeg">${[['all', 'All'], ['today', 'Today'], ['week', 'Week'], ['month', 'Month'], ['90d', '90 days']].map(([v, l]) => `<button data-v="${v}" class="${TF.range === v ? 'is-on' : ''}">${l}</button>`).join('')}</div>
       <select class="in" style="width:auto" id="fAcc"><option value="">All accounts</option>${optionList(S.account.map((a) => [a.id, a.name]), TF.account)}</select>
       <select class="in" style="width:auto" id="fOut">${optionList([['', 'All outcomes'], ['win', 'Winners'], ['loss', 'Losers'], ['broke', 'Rule breaks']], TF.outcome)}</select>
@@ -276,20 +276,20 @@ export function trades(el) {
   $('#fAcc', el).onchange = (e) => { TF.account = e.target.value; draw(); };
   $('#fOut', el).onchange = (e) => { TF.outcome = e.target.value; draw(); };
   $('#fQ', el).oninput = (e) => { TF.q = e.target.value; draw(); };
-  el.querySelector('[data-act="log"]').onclick = () => tradeModal();
-  el.querySelector('[data-act="csv"]').onclick = () => import('./views4.js?v=5c59a044').then((V4) => V4.importModal());
+  el.querySelector('[data-act="log"]').onclick = () => tradeModal(); { const b = el.querySelector('[data-act="shot"]'); if (b) b.onclick = () => tradeModal(null, {}, { shot: true }); }
+  el.querySelector('[data-act="csv"]').onclick = () => import('./views4.js?v=cfa49f3d').then((V4) => V4.importModal());
   draw(); after(el);
 }
 
 // ======================================================================= TRADE MODAL
-export function tradeModal(t0, preset = {}) {
+export function tradeModal(t0, preset = {}, opts = {}) {
   const isNew = !t0;
   const t = t0 ? JSON.parse(JSON.stringify(t0)) : { date: today(), time: new Date().toTimeString().slice(0, 5), side: 'Long', accountId: (S.account.find(isLive) || S.account[0] || {}).id, mistakes: [], followedPlan: true, rating: 0, ...preset };
   const setups = S.setup.map((s) => s.name);
   const instruments = P().instruments || [];
   const body = `
   <div class="tabs" id="tTabs"><button class="is-on" data-tab="a">Trade</button><button data-tab="b">Psychology</button><button data-tab="c">Notes &amp; chart</button><button data-tab="d">${icon('coach')} AI review</button><button data-tab="e">${icon('play')} Replay</button></div>
-  <div data-pane="a"><div class="form">
+  <div data-pane="a">${isNew ? `<div class="snap" id="snap"><span class="snap__ic">${icon('image')}</span><div class="snap__t"><b>Log it from a screenshot</b><span>Drop, paste (⌘V) or choose a screenshot of the trade: your platform's fills, positions or a chart with entry and exit. Claude fills the form in and you check it.</span></div><input type="file" accept="image/*" id="snapFile" hidden><button type="button" class="btn btn--sm" id="snapPick">${icon('upload')}Choose</button></div>` : ''}<div class="form">
     ${field('Date', inp('date', t.date, 'type="date"'))}${field('Entry time', inp('time', t.time, 'type="time"'))}${field('Exit time', inp('exitTime', t.exitTime, 'type="time"'), '', '<span id="durHint"></span>')}
     ${field('Account', `<select class="in" name="accountId">${optionList(S.account.map((a) => [a.id, a.name]), t.accountId)}<option value="">No account</option></select>`)}
     ${field('Symbol', inp('symbol', t.symbol, `list="symList" placeholder="${esc(instruments[0] || 'NQ')}" autocomplete="off"`))}
@@ -379,7 +379,7 @@ export function tradeModal(t0, preset = {}) {
   m.el.addEventListener('click', () => setTimeout(mScore));
   const durHint = () => { const f = formData(m.el); const d = durationMin({ date: f.date, time: f.time, exitTime: f.exitTime }); $('#durHint', m.el).textContent = d !== null ? `held ${d < 60 ? Math.round(d) + ' min' : (d / 60).toFixed(1) + ' h'}` : ''; };
   m.el.addEventListener('input', durHint); durHint(); setTimeout(mScore);
-  $$('#tTabs button', m.el).forEach((b) => b.onclick = () => { $$('#tTabs button', m.el).forEach((x) => x.classList.toggle('is-on', x === b)); $$('[data-pane]', m.el).forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab)); const pane = $(`[data-pane="${b.dataset.tab}"]`, m.el); if (b.dataset.tab === 'e') { read(); import('./views4.js?v=5c59a044').then((V4) => V4.replay($('#replayBox', m.el), { ...t }, { onExcursion: ({ mae, mfe }) => { $('[name="mae"]', m.el).value = mae; $('[name="mfe"]', m.el).value = mfe; } })); } if (window.gsap) window.gsap.fromTo(pane, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }); });
+  $$('#tTabs button', m.el).forEach((b) => b.onclick = () => { $$('#tTabs button', m.el).forEach((x) => x.classList.toggle('is-on', x === b)); $$('[data-pane]', m.el).forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab)); const pane = $(`[data-pane="${b.dataset.tab}"]`, m.el); if (b.dataset.tab === 'e') { read(); import('./views4.js?v=cfa49f3d').then((V4) => V4.replay($('#replayBox', m.el), { ...t }, { onExcursion: ({ mae, mfe }) => { $('[name="mae"]', m.el).value = mae; $('[name="mfe"]', m.el).value = mfe; } })); } if (window.gsap) window.gsap.fromTo(pane, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }); });
   const gHint = () => { const g = $('#gradeC .is-on', m.el)?.dataset.v; const bg = P().risk?.byGrade; $('#gradeHint', m.el).textContent = g && bg && num(bg[g]) ? `your ${g} risk: ${money(bg[g])}` : g ? '' : 'A+ high conviction · B normal · C low probability'; };
   $$('#gradeC .chip', m.el).forEach((c) => c.onclick = () => { const on = c.classList.contains('is-on'); $$('#gradeC .chip', m.el).forEach((x) => x.classList.remove('is-on')); if (!on) c.classList.add('is-on'); pop(c); gHint(); hint(); });
   gHint();
@@ -405,7 +405,55 @@ export function tradeModal(t0, preset = {}) {
   drop.ondragover = (e) => { e.preventDefault(); drop.style.borderColor = 'var(--accent)'; };
   drop.ondragleave = () => (drop.style.borderColor = '');
   drop.ondrop = (e) => { e.preventDefault(); drop.style.borderColor = ''; handleFile(e.dataTransfer.files[0]); };
-  m.el.addEventListener('paste', (e) => { const f = [...(e.clipboardData?.files || [])][0]; if (f) handleFile(f); });
+  m.el.addEventListener('paste', (e) => { const f = [...(e.clipboardData?.files || [])][0]; if (!f) return; if (isNew && $('#snap', m.el) && !$('[data-pane="c"]', m.el).offsetParent) readShot(f); else handleFile(f); });
+  // ---- log from a screenshot: Claude reads the fills, the form is filled in, the trader checks and saves
+  const SET = (name, v) => { const i = $(`[name="${name}"]`, m.el); if (!i || v === null || v === undefined || v === '') return false; i.value = v; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); refreshDate(i); i.classList.add('is-ai'); if (i.__dpBtn) { i.__dpBtn.classList.add('is-ai'); setTimeout(() => i.__dpBtn.classList.remove('is-ai'), 2600); } setTimeout(() => i.classList.remove('is-ai'), 2600); return true; };
+  const matchAccount = (name) => { if (!name) return null; const n = String(name).toLowerCase().replace(/[^a-z0-9]/g, ''); if (!n) return null; return S.account.find((a) => [a.brokerAccount, a.name].filter(Boolean).some((x) => { const y = String(x).toLowerCase().replace(/[^a-z0-9]/g, ''); return y && (y === n || y.includes(n) || n.includes(y)); })) || null; };
+  const fillFrom = (x) => {
+    if (x.side) { const b = $(`#sideSeg [data-v="${/short|sell/i.test(x.side) ? 'Short' : 'Long'}"]`, m.el); if (b && !b.classList.contains('is-on')) b.click(); }
+    const acc = matchAccount(x.account); if (acc) SET('accountId', acc.id);
+    ['date', 'time', 'exitTime', 'symbol', 'qty', 'entry', 'exit', 'stop', 'target', 'fees'].forEach((k) => SET(k, x[k]));
+    if (x.pnl !== null && x.pnl !== undefined && x.pnl !== '') SET('pnl', x.pnl); else { const i = $('[name="pnl"]', m.el); if (i) i.value = ''; }
+    hint();
+  };
+  const blank = (x) => ({ date: today(), time: '', side: 'Long', accountId: t.accountId, mistakes: [], followedPlan: true, rating: 0, ...Object.fromEntries(Object.entries(x).filter(([, v]) => v !== null && v !== undefined && v !== '')), side: /short|sell/i.test(x.side || '') ? 'Short' : 'Long', accountId: matchAccount(x.account)?.id || t.accountId, source: 'screenshot' });
+  const readShot = async (file) => {
+    const box = $('#snap', m.el); if (!box || !file || !file.type.startsWith('image/')) return;
+    if (S.local || !S.ai.configured) { toast(S.local ? 'Sign in to read trades from screenshots' : 'AI is not switched on yet', icon('info')); return; }
+    box.classList.add('is-busy'); $('.snap__t', box).innerHTML = '<b>Reading your screenshot…</b><span><span class="typing"><i></i><i></i><i></i></span></span>';
+    try {
+      const img = await compressImage(file, 1800, 0.82);
+      handleFile(file); // keep the screenshot on the trade as its chart
+      const ctx = `Today is ${today()}. The trader's instruments: ${(P().instruments || []).join(', ') || 'unknown'}. Their accounts: ${S.account.map((a) => a.name + (a.brokerAccount ? ' (' + a.brokerAccount + ')' : '')).join('; ') || 'none'}. Account currency: ${cur()}.`;
+      const r = await API.ai({ mode: 'readtrade', image: img, messages: [{ role: 'user', content: ctx + '\nRead the trade(s) in this screenshot.' }] });
+      const j = JSON.parse((r.text.match(/\{[\s\S]*\}/) || ['{}'])[0]);
+      const list = (j.trades || []).filter((x) => x && (x.symbol || x.entry || x.pnl !== undefined));
+      if (!list.length) throw new Error(j.notes || 'No trade found in that screenshot. Try one that shows the fills or the P&L.');
+      fillFrom(list[0]);
+      const note = [j.confidence && j.confidence !== 'high' ? `Confidence: ${esc(j.confidence)}.` : '', j.notes ? esc(j.notes) : ''].filter(Boolean).join(' ');
+      box.classList.remove('is-busy'); box.classList.add('is-done');
+      $('.snap__t', box).innerHTML = `<b>${list.length > 1 ? `Found ${list.length} trades. Showing the first; pick another or add them all.` : 'Filled in from your screenshot. Check the highlighted fields, then save.'}</b>${note ? `<span>${note}</span>` : ''}${list.length > 1 ? `<div class="snap__pick">${list.map((x, i) => `<button type="button" class="chip ${i ? '' : 'is-on'}" data-sn="${i}">${esc(x.symbol || 'Trade')} ${x.side ? esc(/short|sell/i.test(x.side) ? 'S' : 'L') : ''}${x.pnl !== null && x.pnl !== undefined ? ' · ' + money(+x.pnl, { sign: true }) : ''}</button>`).join('')}<button type="button" class="btn btn--sm btn--primary" data-snall>${icon('plus')}Add all ${list.length}</button></div>` : ''}`;
+      $$('[data-sn]', box).forEach((b) => (b.onclick = () => { $$('[data-sn]', box).forEach((x) => x.classList.toggle('is-on', x === b)); fillFrom(list[+b.dataset.sn]); }));
+      const all = $('[data-snall]', box);
+      if (all) all.onclick = () => {
+        const bad = list.filter((x) => !x.symbol || (x.pnl === null || x.pnl === undefined) && !(x.entry && x.exit && x.qty));
+        if (bad.length) { toast(`${bad.length} of them miss a symbol or P&L. Fill those one at a time.`, icon('info'), 4); return; }
+        list.forEach((x) => { const tr = blank(x); if (tr.pnl === undefined) { const pv = pointValue(tr.symbol); if (pv) tr.pnl = +(((tr.side === 'Short' ? -1 : 1) * (tr.exit - tr.entry)) * tr.qty * pv).toFixed(2); } save('trade', tr); });
+        m.close(); H.refresh(); toast(`${list.length} trades added from your screenshot. Open any of them to edit.`, icon('check'), 4);
+      };
+    } catch (e) {
+      box.classList.remove('is-busy'); $('.snap__t', box).innerHTML = `<b>Couldn't read that one</b><span class="bad">${esc(e.message)}</span>`;
+    }
+  };
+  if (isNew && $('#snap', m.el)) {
+    $('#snapPick', m.el).onclick = () => $('#snapFile', m.el).click();
+    $('#snapFile', m.el).onchange = (e) => readShot(e.target.files[0]);
+    const sn = $('#snap', m.el);
+    sn.ondragover = (e) => { e.preventDefault(); sn.classList.add('is-over'); };
+    sn.ondragleave = () => sn.classList.remove('is-over');
+    sn.ondrop = (e) => { e.preventDefault(); sn.classList.remove('is-over'); readShot(e.dataTransfer.files[0]); };
+    if (opts.shot) $('#snapFile', m.el).click();
+  }
   // AI
   const runAI = async (mode) => {
     if (!S.ai.configured) { toast('Add your Claude key to switch AI on', icon('info')); return; }

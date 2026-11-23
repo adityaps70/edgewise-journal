@@ -3,12 +3,12 @@ import {
   S, P, $, $$, esc, uid, num, sum, clamp, today, addDays, parseISO, weekStart, fmtDate, fmtDay, money, pct, tone, sym,
   net, stats, groupBy, inRange, rMultiple, accName, isLive, icon, API, aiContext, md, save, remove, saveProfile, setupsOf,
   F, setFilter, filterLabels, filterCount, FT, tagList, runAgents, autoTags, agentState, AGENT_METRICS, AGENT_OPS, pointValue, POINT_VALUE,
-} from './core.js?v=5c59a044';
-import { equityChart, hbars } from './charts.js?v=5c59a044';
-import { helpers, modal, confirmBox } from './views.js?v=5c59a044';
-import { segInit, toast, shake } from './motion.js?v=5c59a044';
-import { slider } from './ui.js?v=5c59a044';
-import * as V4m from './views4.js?v=5c59a044';
+} from './core.js?v=cfa49f3d';
+import { equityChart, hbars } from './charts.js?v=cfa49f3d';
+import { helpers, modal, confirmBox } from './views.js?v=cfa49f3d';
+import { segInit, toast, shake } from './motion.js?v=cfa49f3d';
+import { slider } from './ui.js?v=cfa49f3d';
+import * as V4m from './views4.js?v=cfa49f3d';
 
 // views.js imports this module too, so reach helpers lazily (they don't exist yet while modules load)
 const card = (...a) => helpers.card(...a); const phead = (...a) => helpers.phead(...a); const cnt = (...a) => helpers.cnt(...a);
@@ -321,7 +321,7 @@ export function tools(el) {
     $('#psOut', el).innerHTML = `<div class="grid g-3" style="gap:10px"><div class="kpi"><small>Contracts</small><b>${qty}</b><em>${money(perC)} risk each</em></div><div class="kpi"><small>Actual risk</small><b>${money(qty * perC)}</b><em>${qty ? pct(qty * perC / risk) + ' of plan' : 'stop too wide for this risk'}</em></div><div class="kpi"><small>Reward</small><b class="good">${money(qty * tgt * pv)}</b><em>${stop ? (tgt / stop).toFixed(2) : '—'} R</em></div></div>${micro !== null ? `<p class="muted" style="margin:10px 0 0;font-size:var(--fs-md)">Or ${micro} micro${micro === 1 ? '' : 's'} (M${esc(String(f.sym).toUpperCase())}) for finer sizing.</p>` : ''}`;
   };
   ps.addEventListener('input', calc);
-  $$('#psGrade .chip', el).forEach((c) => (c.onclick = () => { const s = $('[name=risk]', ps).closest('.sl'); import('./ui.js?v=5c59a044').then((u) => { u.setSlider(s, +c.dataset.v); calc(); }); $$('#psGrade .chip', el).forEach((x) => x.classList.toggle('is-on', x === c)); }));
+  $$('#psGrade .chip', el).forEach((c) => (c.onclick = () => { const s = $('[name=risk]', ps).closest('.sl'); import('./ui.js?v=cfa49f3d').then((u) => { u.setSlider(s, +c.dataset.v); calc(); }); $$('#psGrade .chip', el).forEach((x) => x.classList.toggle('is-on', x === c)); }));
   calc();
   // TradingView economic calendar widget
   const box = $('#econ', el);
@@ -358,7 +358,7 @@ async function loadShares(el) {
     nt.innerHTML = `<div class="chead"><div class="chead__text"><h3>Feedback</h3><p>Notes your mentors left</p></div></div>${notes.length ? `<div class="txlist">${notes.map((n) => { const t = S.trade.find((x) => x.id === n.trade_id); return `<div class="txrow" ${t ? `data-trade="${t.id}"` : 'style="cursor:default"'}><span class="av" style="width:36px;height:36px;font-size:13px">${esc((n.author || 'M').slice(0, 1).toUpperCase())}</span><span class="cell__text"><b style="white-space:normal">${esc(n.text)}</b><small>${esc(n.author || 'Mentor')} via ${esc(n.label || 'link')} · ${esc(fmtDate(new Date(n.created_at).toISOString().slice(0, 10)))}${t ? ` · on ${esc(t.symbol)} ${esc(fmtDate(t.date))}` : ''}</small></span></div>`; }).join('')}</div>` : `<div class="empty">${icon('users')}<b>No feedback yet</b>Notes appear here and on the trade itself.</div>`}`;
     $$('[data-copy]', sh).forEach((b) => (b.onclick = () => copyLink(b.dataset.copy)));
     $$('[data-off]', sh).forEach((b) => (b.onclick = () => confirmBox('Turn off this link?', 'Anyone with it loses access, and its notes are deleted.', async () => { await API.unshare(b.dataset.off); loadShares(el); }, 'Turn off')));
-    $$('[data-trade]', nt).forEach((r) => (r.onclick = () => import('./views.js?v=5c59a044').then((V) => V.tradeModal(S.trade.find((t) => t.id === r.dataset.trade)))));
+    $$('[data-trade]', nt).forEach((r) => (r.onclick = () => import('./views.js?v=cfa49f3d').then((V) => V.tradeModal(S.trade.find((t) => t.id === r.dataset.trade)))));
   } catch (e) { const sh = $('#shares', el); if (sh) sh.innerHTML = `<div class="empty"><b>Couldn't load</b>${esc(e.message)}</div>`; }
 }
 
