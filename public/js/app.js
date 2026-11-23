@@ -3,15 +3,15 @@ import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
   goalIdea,
-} from './core.js?v=b13e276e';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=b13e276e';
-import { slider, liveRate, fxAgo } from './ui.js?v=b13e276e';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=b13e276e';
+} from './core.js?v=7c85ad91';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=7c85ad91';
+import { slider, liveRate, fxAgo } from './ui.js?v=7c85ad91';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=7c85ad91';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=b13e276e';
-import * as V2 from './views2.js?v=b13e276e';
-import * as V3 from './views3.js?v=b13e276e';
-import * as V4 from './views4.js?v=b13e276e';
+import * as V from './views.js?v=7c85ad91';
+import * as V2 from './views2.js?v=7c85ad91';
+import * as V3 from './views3.js?v=7c85ad91';
+import * as V4 from './views4.js?v=7c85ad91';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -456,6 +456,7 @@ function navItems() { // every page this trader can open (the menu shows them gr
 }
 let current = null;
 function shell(first = false) {
+  import('./pet.js?v=7c85ad91').then((m) => m.mountPet()).catch(() => {});
   const p = P();
   app.innerHTML = `<div class="app"><div class="slab" id="slab">
     <aside class="side"><div class="side__top">${LOGO}<a class="side__name" href="index.html" aria-label="${APP.name} home">${WORDMARK}</a><button class="side__fold" id="fold" aria-label="Collapse sidebar">${icon('fold')}</button></div>
