@@ -933,3 +933,9 @@ body.mp { overflow: auto; background: var(--scene); background-color: var(--bg);
 .nb__ed textarea.nb__body { min-height: 52vh; height: auto; }
 .toast { width: max-content; }
 .econ { color-scheme: light; } /* transparent TradingView iframe needs a matching colour scheme, or browsers paint it white */
+
+/* ---------- Google sign-in ---------- */
+.gbox { display: grid; gap: 14px; margin-bottom: 16px; } .gbox[hidden] { display: none; }
+#gBtn { display: flex; justify-content: center; min-height: 44px; }
+.or { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: var(--fs-xs); font-weight: 600; }
+.or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line-2); }

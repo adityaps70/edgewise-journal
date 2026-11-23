@@ -55,6 +55,7 @@ function auth(mode = 'login') {
     ${LOGO}
     <h1>Your trading journal,<br>with a coach built in.</h1>
     <p>Track every trade, prop account and payout. Claude reads it all and tells you where the money leaks.</p>
+    <div id="gBox" class="gbox" hidden><div id="gBtn"></div><div class="or"><span>or with email</span></div></div>
     <div class="seg seg--accent" id="authSeg" style="margin-bottom:18px"><button data-v="login" class="${mode === 'login' ? 'is-on' : ''}">Sign in</button><button data-v="signup" class="${mode === 'signup' ? 'is-on' : ''}">Create account</button></div>
     <form class="stack" id="authForm">
       <label class="field" id="nameF" ${mode === 'login' ? 'hidden' : ''}><span>Name</span><input class="in" name="name" autocomplete="name"></label>
@@ -69,6 +70,7 @@ function auth(mode = 'login') {
     window.gsap.fromTo(card.children, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.06, ease: 'expo.out', delay: 0.1, clearProps: 'transform,opacity' });
   }
   segInit($('#authSeg'));
+  googleButton(card);
   $$('#authSeg button').forEach((b) => b.onclick = () => { segSelect($('#authSeg'), b); const s = b.dataset.v === 'signup'; mode = b.dataset.v; $('#nameF').hidden = !s; $('#authForm button').textContent = s ? 'Create my journal' : 'Sign in'; if (window.gsap) window.gsap.fromTo('#authForm', { opacity: 0.4, y: 6 }, { opacity: 1, y: 0, duration: 0.4 }); });
   $('#authForm').onsubmit = async (e) => {
     e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)); const btn = $('#authForm button'); btn.disabled = true;
@@ -79,6 +81,22 @@ function auth(mode = 'login') {
       boot();
     } catch (err) { $('#authErr').textContent = err.message; shake(card); btn.disabled = false; }
   };
+}
+
+async function googleButton(card) {
+  let cfg; try { cfg = await (await fetch(new URL('api/config', document.baseURI))).json(); } catch (e) { return; }
+  if (!cfg?.googleClientId) return;
+  await new Promise((res, rej) => { if (window.google?.accounts?.id) return res(); const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true; s.onload = res; s.onerror = rej; document.head.append(s); }).catch(() => null);
+  if (!window.google?.accounts?.id) return;
+  window.google.accounts.id.initialize({ client_id: cfg.googleClientId, ux_mode: 'popup', auto_select: false, callback: async ({ credential }) => {
+    try {
+      const r = await fetch(new URL('api/auth/google', document.baseURI), { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ credential }) });
+      const d = await r.json(); if (!r.ok) throw new Error(d.error || 'Google sign-in failed');
+      S.user = d.user; if (window.gsap && !reduced.matches) await window.gsap.to(card, { scale: 0.96, opacity: 0, duration: 0.3, ease: 'power2.in' }); boot();
+    } catch (err) { $('#authErr').textContent = err.message; shake(card); }
+  } });
+  const box = $('#gBox'); if (!box) return; box.hidden = false;
+  window.google.accounts.id.renderButton($('#gBtn'), { theme: document.documentElement.dataset.theme === 'dark' ? 'filled_black' : 'outline', size: 'large', shape: 'pill', text: 'continue_with', logo_alignment: 'center', width: Math.min(360, ($('#gBox').clientWidth || 340)) });
 }
 
 // ---------------------------------------------------------------- onboarding

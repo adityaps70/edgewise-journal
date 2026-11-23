@@ -12,6 +12,8 @@ database_id = "e4e2edf6-18fe-40f5-8c83-9a41c0c5215d"
 CLAUDE_MODEL = "claude-sonnet-5-5"
 # Max AI requests per user per day.
 AI_DAILY_LIMIT = "60"
+# Google sign-in (public OAuth client ID, not a secret).
+GOOGLE_CLIENT_ID = "480257317582-51bdjp8su1tve6ue69ukd83kbtm84k0f.apps.googleusercontent.com"
 # Set to "false" to close sign-ups.
 ALLOW_SIGNUP = "true"
 

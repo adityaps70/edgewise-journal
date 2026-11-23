@@ -133,6 +133,24 @@ async function bumpUsage(env, userId) {
 }
 
 
+
+// ---------------------------------------------------------------- Google sign-in (ID token, no client secret needed)
+const b64url = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+let GKEYS = null; let GKEYS_AT = 0;
+async function verifyGoogle(env, credential) {
+  if (!env.GOOGLE_CLIENT_ID) throw Object.assign(new Error('Google sign-in is not configured.'), { status: 503 });
+  const parts = String(credential || '').split('.'); if (parts.length !== 3) throw Object.assign(new Error('Bad Google token.'), { status: 400 });
+  const [h, p, sig] = parts; const dec = (x) => JSON.parse(new TextDecoder().decode(b64url(x)));
+  const header = dec(h); const payload = dec(p);
+  if (!GKEYS || Date.now() - GKEYS_AT > 3600_000) { GKEYS = (await (await fetch('https://www.googleapis.com/oauth2/v3/certs')).json()).keys; GKEYS_AT = Date.now(); }
+  const jwk = GKEYS.find((k) => k.kid === header.kid); if (!jwk) throw Object.assign(new Error('Unknown Google key. Try again.'), { status: 401 });
+  const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+  const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, b64url(sig), enc.encode(h + '.' + p));
+  if (!ok || payload.aud !== env.GOOGLE_CLIENT_ID || !['accounts.google.com', 'https://accounts.google.com'].includes(payload.iss) || payload.exp * 1000 < Date.now()) throw Object.assign(new Error('Google sign-in could not be verified.'), { status: 401 });
+  if (!payload.email || payload.email_verified === false) throw Object.assign(new Error('Your Google email is not verified.'), { status: 401 });
+  return payload;
+}
+
 // ---------------------------------------------------------------- mentor sharing
 // A share is a read-only link to your journal. Mentors can leave notes on it without an account.
 async function ensureShareTables(env) {
@@ -184,6 +202,23 @@ export async function onRequest(context) {
       const user = { id: randomId(12), email: e, name: String(name || '').slice(0, 80), plan: 'free' };
       await env.DB.prepare('INSERT INTO users (id, email, name, pass_hash, salt, plan, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
         .bind(user.id, user.email, user.name, hash, salt, user.plan, Date.now()).run();
+      return startSession(env, request, user);
+    }
+
+    if (path === '/config' && method === 'GET') {
+      return json({ googleClientId: env.GOOGLE_CLIENT_ID || null, signup: env.ALLOW_SIGNUP !== 'false' });
+    }
+
+    if (path === '/auth/google' && method === 'POST') {
+      const { credential } = await request.json();
+      const g = await verifyGoogle(env, credential);
+      const e = String(g.email).trim().toLowerCase();
+      const row = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(e).first();
+      if (row) return startSession(env, request, { id: row.id, email: row.email, name: row.name, plan: row.plan });
+      if (env.ALLOW_SIGNUP === 'false') return err('Sign-ups are closed.', 403);
+      const { hash, salt } = await hashPassword(randomId(24)); // Google accounts get an unguessable password; they sign in with Google
+      const user = { id: randomId(12), email: e, name: String(g.name || '').slice(0, 80), plan: 'free' };
+      await env.DB.prepare('INSERT INTO users (id, email, name, pass_hash, salt, plan, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(user.id, user.email, user.name, hash, salt, user.plan, Date.now()).run();
       return startSession(env, request, user);
     }
 
