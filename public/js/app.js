@@ -3,16 +3,16 @@ import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
   goalIdea,
-} from './core.js?v=0dba013b';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=0dba013b';
-import { slider, liveRate, fxAgo } from './ui.js?v=0dba013b';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=0dba013b';
+} from './core.js?v=f81d9df3';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=f81d9df3';
+import { slider, liveRate, fxAgo } from './ui.js?v=f81d9df3';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=f81d9df3';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=0dba013b';
-import * as V2 from './views2.js?v=0dba013b';
-import * as V3 from './views3.js?v=0dba013b';
-import * as PL from './plan.js?v=0dba013b';
-import * as V4 from './views4.js?v=0dba013b';
+import * as V from './views.js?v=f81d9df3';
+import * as V2 from './views2.js?v=f81d9df3';
+import * as V3 from './views3.js?v=f81d9df3';
+import * as PL from './plan.js?v=f81d9df3';
+import * as V4 from './views4.js?v=f81d9df3';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -459,7 +459,7 @@ function navItems() { // every page this trader can open (the menu shows them gr
 let current = null;
 function shell(first = false) {
   setTimeout(paintPlan, 0);
-  import('./pet.js?v=0dba013b').then((m) => m.mountPet()).catch(() => {});
+  import('./pet.js?v=f81d9df3').then((m) => m.mountPet()).catch(() => {});
   const p = P();
   app.innerHTML = `<div class="app"><div class="slab" id="slab">
     <aside class="side"><div class="side__top">${LOGO}<a class="side__name" href="index.html" aria-label="${APP.name} home">${WORDMARK}</a><button class="side__fold" id="fold" aria-label="Collapse sidebar">${icon('fold')}</button></div>
@@ -477,7 +477,6 @@ function shell(first = false) {
         <span class="head__sep"></span>
         <button class="rbtn rbtn--plain" id="hTheme" aria-label="Switch theme" title="Switch theme">${icon(root.dataset.theme === 'dark' ? 'sun' : 'moon')}</button>
         <button class="rbtn rbtn--plain" id="hBell" aria-label="Alerts">${icon('bell')}<i class="rbtn__badge" hidden></i></button>
-        <button class="rbtn head__me" id="hMe" aria-label="Settings"><span class="av" style="width:44px;height:44px">${esc(initials())}</span></button>
       </header>
       <div class="fbar" id="fbar" hidden></div>
       <main class="main" id="main"></main>
@@ -489,7 +488,6 @@ function shell(first = false) {
   $('.stage').addEventListener('click', (e) => { const s = $('#slab'); if (s.classList.contains('is-open') && !e.target.closest('#menu')) { e.preventDefault(); e.stopPropagation(); s.classList.remove('is-open'); } }, true);
   $('#hLog').onclick = (e) => { wobble(e.currentTarget.firstElementChild); V.tradeModal(); };
   $('#hAI').onclick = (e) => { wobble(e.currentTarget.firstElementChild); go('coach'); };
-  $('#hMe').onclick = () => go('settings');
   $('#hFilter').onclick = (e) => { wobble(e.currentTarget.firstElementChild); V3.filterModal(); };
   if (!S.local) API.mentorNotes().then((r) => { S.mentorNotes = r.notes; }).catch(() => {});
   $('#meMore').onclick = () => go('settings');
@@ -534,11 +532,14 @@ function buildNav() {
 function updateSide() {
   const r = safeToRisk(); const box = $('#safe'); if (!box) return;
   const m = missionMetrics();
+  const bar = (k) => `<div class="safe__bar ${k < 0.3 ? 'is-bad' : k < 0.6 ? 'is-warn' : ''}"><i style="width:${clamp(k, 0, 1) * 100}%"></i></div>`;
   if (r.amount !== null) {
-    box.innerHTML = `<small>Safe to risk today</small><b>${money(r.amount)}</b><p>${r.tradesLeft !== null ? `${r.tradesLeft} trade${r.tradesLeft === 1 ? '' : 's'} left · ` : ''}${r.todayNet ? `today ${money(r.todayNet, { sign: true })}` : 'no trades yet today'}${r.limitBy ? `<br>capped by ${esc(r.limitBy)}` : ''}</p>${r.rule ? `<div class="meter ${r.amount < r.rule * 0.3 ? 'meter--bad' : ''}"><i style="width:${clamp(r.amount / r.rule, 0, 1) * 100}%"></i></div>` : ''}`;
+    const chip = r.tradesLeft !== null ? `<span class="safe__chip">${r.tradesLeft} trade${r.tradesLeft === 1 ? '' : 's'} left</span>` : '';
+    box.innerHTML = `<div class="safe__h"><small>Safe to risk today</small>${chip}</div><b>${money(r.amount)}</b>${r.rule ? bar(r.amount / r.rule) : ''}<p><span>${r.todayNet ? `Today ${money(r.todayNet, { sign: true })}` : 'No trades yet today'}</span>${r.rule ? `<span>of ${money(r.rule)}</span>` : ''}</p>${r.limitBy ? `<p><span>Capped by ${esc(r.limitBy)}</span></p>` : ''}`;
   } else if (m) {
-    box.innerHTML = `<small>${esc(m.name)}</small><b>${money(m.actual)}</b><p>of ${money(m.target)} · ${m.tdLeft} trading days left</p><div class="meter"><i style="width:${m.progress * 100}%"></i></div>`;
-  } else box.innerHTML = `<small>Today</small><b>${money(r.todayNet, { sign: true })}</b><p>${r.tradesToday} trades · set limits in Playbook</p>`;
+    box.innerHTML = `<div class="safe__h"><small>${esc(m.name)}</small><span class="safe__chip">${m.tdLeft} days left</span></div><b>${money(m.actual)}</b>${bar(Math.max(m.progress, 0.6))}<p><span>${Math.round(m.progress * 100)}% done</span><span>of ${money(m.target)}</span></p>`;
+    $('.safe__bar', box).className = 'safe__bar is-goal'; $('.safe__bar i', box).style.width = clamp(m.progress, 0, 1) * 100 + '%';
+  } else box.innerHTML = `<div class="safe__h"><small>Today</small></div><b>${money(r.todayNet, { sign: true })}</b><p><span>${r.tradesToday} trades</span><span>set limits in Playbook</span></p>`;
   const alerts = getAlerts(); const badge = $('#hBell .rbtn__badge'); if (badge) badge.hidden = !alerts.length;
 }
 function getAlerts() {

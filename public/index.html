@@ -72,11 +72,11 @@
   <link rel="apple-touch-icon" href="brand/mark-180.png">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="preload" href="vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=0dba013b">
+  <link rel="stylesheet" href="styles.css?v=f81d9df3">
   <script src="vendor/gsap.min.js" defer></script>
   <script src="vendor/ScrollTrigger.min.js" defer></script>
-  <link rel="stylesheet" href="home.css?v=0dba013b">
-  <script type="module" src="js/home.js?v=0dba013b"></script>
+  <link rel="stylesheet" href="home.css?v=f81d9df3">
+  <script type="module" src="js/home.js?v=f81d9df3"></script>
 </head>
 <body class="home">
   <header class="hn" id="hn">
@@ -164,8 +164,8 @@
     <section class="sx">
       <div class="shead"><h2 class="h2">Make five prop accounts feel like one</h2><p class="lead">Every account, every rule and every payout in one journal that does the maths for you.</p></div>
       <div class="bento">
-        <article class="bc bc--core"><div class="bc__art"><div class="core"><span class="core__c c1"></span><span class="core__c c2"></span><span class="core__c c3"></span><span class="core__c c4"></span><svg class="core__ic" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M10 9h28a5 5 0 0 1 5 5v15a5 5 0 0 1-5 5H22l-8 7v-7h-4a5 5 0 0 1-5-5V14a5 5 0 0 1 5-5Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M13 27l6-6 5 4 9-9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M28 16h5v5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M40 3.5l1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1z" fill="currentColor"/></svg><small>AI COACH</small></div><span class="core__ln l1"></span><span class="core__ln l2"></span><span class="core__ln l3"></span></div><p><b>Ask anything about your trading.</b> Answers come from your own trades.</p></article>
-        <article class="bc bc--wide bc--replay"><div class="bc__art"><div class="rp2"><div class="rp2__bar"><span>NQ · 09:42 → 09:51</span><span class="rp2__ctl"><i data-ico="play"></i></span></div><div class="rp2__chart" id="rpChart"></div><div class="rp2__head" id="rpHead"></div></div></div><p><b>Replay any trade bar by bar,</b> with your entry and exit marked. Free.</p></article>
+        <article class="bc bc--core"><div class="bc__art"><div class="ask" id="ask"><div class="ask__a" id="askA"><span class="ask__dots"><i></i><i></i><i></i></span><b id="askAh">Yes, on Tuesdays.</b><span id="askAb">14 trades, 9 of them after 11:30 ET. Those lost $610.</span></div><div class="ask__in"><span class="ask__t" id="askT">Am I overtrading?</span><i class="ask__car"></i><span class="ask__go"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div></div></div><p><b>Ask anything about your trading.</b> Answers come from your own trades.</p></article>
+        <article class="bc bc--wide bc--replay"><div class="bc__art"><div class="rp2"><div class="rp2__bar"><span>NQ · 1 min · short 2</span><span class="rp2__pl" id="rpPl">$0</span></div><svg class="rp2__svg" id="rpChart" viewBox="0 0 440 170" aria-hidden="true"></svg></div></div><p><b>Replay any trade bar by bar,</b> with your entry and exit marked. Free.</p></article>
         <article class="bc bc--wide bc--pipe"><div class="bc__art"><div class="pipe"><div class="pipe__s is-done"><span class="pipe__i"><i data-ico="check"></i></span><div><b>Screenshot added</b><small>positions.png · 09:52</small></div></div><div class="pipe__s is-on"><span class="pipe__i"><i data-ico="coach"></i></span><div><b>Reading your screenshot</b><small>NQ short · 2 ct · +$400</small></div><span class="pipe__p"><i></i></span></div><div class="pipe__s"><span class="pipe__i"><i data-ico="journal"></i></span><div><b>Trade logged</b><small>check and save</small></div></div></div></div><p><b>Log a trade from a screenshot.</b> Check the fields, then save.</p></article>
         <article class="bc bc--flow"><div class="bc__art"><div class="plat"><div class="plat__l"><span class="pn">Tradovate</span><span class="pn">NinjaTrader</span><span class="pn">MetaTrader 5</span><span class="pn">ProjectX</span></div><svg class="plat__w" viewBox="0 0 120 200" preserveAspectRatio="none" aria-hidden="true"><path class="flow__w" d="M0,25 C60,25 60,100 120,100"/><path class="flow__w" d="M0,75 C60,75 60,100 120,100"/><path class="flow__w" d="M0,125 C60,125 60,100 120,100"/><path class="flow__w" d="M0,175 C60,175 60,100 120,100"/><path class="flow__a" d="M0,25 C60,25 60,100 120,100"/><path class="flow__a f2" d="M0,125 C60,125 60,100 120,100"/><path class="flow__a f3" d="M0,175 C60,175 60,100 120,100"/></svg><span class="nd nd--hub"><img src="brand/mark.svg?v=7" alt=""></span></div></div><p><b>Import or sync</b> from Tradovate, NinjaTrader, MetaTrader 5 and ProjectX.</p></article>
       </div>
@@ -176,15 +176,20 @@
       <div class="shead"><h2 class="h2">One journal to trade with confidence</h2><p class="lead">The three things that decide whether a funded account survives: drawdown, rules and discipline.</p></div>
       <div class="rows">
         <div class="row2">
-          <div class="vis vis--gauge"><span class="vis__n">/01</span><div class="gauge"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="84" class="gauge__bg"/><circle cx="100" cy="100" r="84" class="gauge__fg" id="gaugeFg"/><circle cx="100" cy="100" r="58" class="gauge__in"/></svg><span class="gauge__core"><i data-ico="shield"></i></span><span class="gauge__tag"><i></i>$3,840 buffer</span></div></div>
+          <div class="vis vis--dd"><span class="vis__n">/01</span>
+            <div class="dd">
+              <div class="dd__k"><div><small>Balance</small><b id="ddBal">$52,310</b></div><div><small>Breach line</small><b class="bad" id="ddBr">$50,000</b></div><div><small>Room left</small><b class="good" id="ddRoom">$2,310</b></div></div>
+              <svg class="dd__c" id="ddChart" viewBox="0 0 420 200" aria-hidden="true"></svg>
+              <div class="dd__leg"><span><i class="l-eq"></i>Balance</span><span><i class="l-br"></i>Breach line, trails your peak</span><span><i class="l-st"></i>Your daily stop</span></div>
+            </div>
+          </div>
           <div class="txt"><h3 class="h3">Know your breach line before you click</h3><p>Trailing, end-of-day or static drawdown, tracked per account. Your own daily stop sits on top, and the sidebar tells you how much you can still risk today.</p></div>
         </div>
         <div class="row2 row2--rev">
           <div class="vis vis--demo"><span class="vis__n">/02</span>
             <div class="demo2" id="demo">
-              <div class="demo__firms" id="dFirms"></div>
-              <div class="demo__row"><div class="seg" id="dProgs"></div></div>
-              <div class="demo__row"><div class="seg" id="dSizes"></div><div class="seg" id="dStage"><button data-v="challenge" class="is-on">Challenge</button><button data-v="funded">Funded</button></div></div>
+              <div class="fsel"><button type="button" class="fsel__nav" data-d="-1" aria-label="Previous firm"><svg viewBox="0 0 16 16" fill="none"><path d="M10 3 5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="fsel__track" id="dFirms"></div><button type="button" class="fsel__nav" data-d="1" aria-label="Next firm"><svg viewBox="0 0 16 16" fill="none"><path d="m6 3 5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+              <div class="demo__row"><div class="seg" id="dProgs"></div><div class="seg" id="dSizes"></div><div class="seg" id="dStage"><button data-v="challenge" class="is-on">Challenge</button><button data-v="funded">Funded</button></div></div>
               <div class="fp__rules" id="dRules"></div>
               <div id="dSlider"></div>
               <div class="demo__ladder"><div class="ladder"><div class="ladder__track"><i class="ladder__fill" id="dFill"></i><span class="ladder__zero" id="dZero"></span><span class="ladder__stop" id="dStop"></span><span class="ladder__dot" id="dDot"></span></div><div class="ladder__lab"><span class="bad" id="dLo"></span><span id="dHi"></span></div></div><p class="demo__cap" id="dCap"></p></div>
@@ -269,9 +274,6 @@
       </div>
     </section>
 
-    <!-- CTA -->
-    <section class="cta2"><div class="beam beam--cta" aria-hidden="true"><i></i></div><h2 class="h2">Ready to trade the plan?<br><span class="dim">Start today.</span></h2><p class="lead">Set up in two minutes. Start free.</p><a class="wbtn" href="app.html" data-cta>Open the journal</a></section>
-
     <!-- FAQ -->
     <section class="sx" id="faq">
       <div class="shead"><h2 class="h2">Good to know</h2></div>
@@ -283,6 +285,8 @@
         <details><summary><i data-ico="plus"></i>Is The Smart Trade affiliated with any prop firm?<em>/05</em></summary><p>No. The Smart Trade is an independent journal and doesn't sell or promote any firm's accounts.</p></details>
       </div>
     </section>
+    <!-- CTA -->
+    <section class="sx sx--cta"><div class="cta3"><div class="cta3__grid" aria-hidden="true"></div><div class="cta3__glow" aria-hidden="true"></div><h2 class="h2">Ready to trade the plan?<br><span class="dim">Start today.</span></h2><p class="lead">Set up in two minutes. Start free.</p><a class="wbtn" href="app.html" data-cta>Open the journal</a></div></section>
   </main>
 
   <footer class="hf">
