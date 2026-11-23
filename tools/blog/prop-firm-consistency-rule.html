@@ -1,0 +1,61 @@
+<!--meta
+{
+ "title": "Prop Firm Consistency Rule Explained (+ Free Calculator) · The Smart Trade",
+ "h1": "Prop firm consistency rule explained, with a free calculator",
+ "description": "What the consistency rule means, the formula firms use, which prop firms have one (Topstep, Tradeify, MFFU, Lucid, FTMO 1-Step) and how to work out your biggest allowed day.",
+ "date": "2026-11-23", "minutes": 7, "order": 2,
+ "keywords": ["prop firm consistency rule", "consistency rule explained", "consistency rule formula", "prop firm consistency rule calculator", "topstep consistency rule", "best day rule"],
+ "lede": "You hit the profit target and still didn't pass? A consistency rule is the usual reason. Here is how it works, the formula, and a calculator that tells you exactly how much more you need.",
+ "related": ["trailing-drawdown-explained", "how-to-pass-prop-firm-challenge", "prop-firm-rules-compared-50k"],
+ "faq": [
+  ["What is the consistency rule in a prop firm?", "A consistency rule limits how much of your total profit can come from a single trading day. With a 50% rule, your best day must be no more than half of your total profit, so one lucky day can't pass the evaluation on its own."],
+  ["How do you calculate the consistency rule?", "Divide your best day's profit by your total profit. If the result is above the firm's percentage, you need more total profit. The profit you need is your best day divided by the rule percentage: with a $1,800 best day and a 50% rule you need at least $3,600 total."],
+  ["Does breaking the consistency rule fail the account?", "Usually not. At most firms it doesn't breach the account; it just means you can't pass or request a payout until your total profit is large enough relative to your best day. Check your firm's wording, because a few treat it differently."],
+  ["Which prop firms have a consistency rule?", "In our November 2026 catalog: Topstep's Trading Combine (50%), Tradeify Select (40%), MyFundedFutures Rapid and Pro (50%), LucidFlex (50%), Take Profit Trader's Test (50%), TopOne Instant Sim Funded (20%) and FTMO 1-Step's Best Day Rule (50%). Several programs list none."]
+ ]
+}
+-->
+<h2>What the consistency rule means</h2>
+<p>A <strong>consistency rule</strong> caps how much of your total profit can come from your single best day. Firms use it to filter out traders who pass on one oversized, lucky session. FTMO calls its version the <strong>Best Day Rule</strong>; futures firms usually say "consistency" or "consistency target".</p>
+<p>The rule is almost always written as a percentage:</p>
+<p class="note"><strong>Best day profit ÷ total profit ≤ consistency %</strong></p>
+<p>Rearranged, that gives the number you actually care about:</p>
+<p class="note"><strong>Minimum total profit needed = best day ÷ consistency %</strong></p>
+
+<h2>Worked example</h2>
+<p>A 50K evaluation with a $3,000 target and a 50% consistency rule. Your days so far: +$400, +$1,800, −$300, +$600. Total profit is $2,500 and your best day is $1,800.</p>
+<ul>
+  <li>$1,800 ÷ $2,500 = 72%, which is above 50%, so you don't meet consistency yet.</li>
+  <li>Needed total = $1,800 ÷ 0.50 = <strong>$3,600</strong>.</li>
+  <li>So even though the target is $3,000, you need $1,100 more, and you must make it <em>without</em> a day bigger than $1,800, or the bar moves again.</li>
+</ul>
+
+<h2>Consistency calculator</h2>
+<div class="calc" id="cc">
+  <label>Best day profit ($)<input id="cc-best" type="number" value="1800" min="0"></label>
+  <label>Total profit so far ($)<input id="cc-total" type="number" value="2500"></label>
+  <label>Consistency rule (%)<input id="cc-pct" type="number" value="50" min="1" max="100"></label>
+  <label>Profit target ($)<input id="cc-target" type="number" value="3000" min="0"></label>
+  <output id="cc-out"></output>
+</div>
+<script>
+(function(){const $=id=>document.getElementById(id),f=n=>'$'+Math.round(n).toLocaleString('en-US');
+function run(){const b=+$('cc-best').value,t=+$('cc-total').value,p=+$('cc-pct').value/100,g=+$('cc-target').value;
+if(!p){$('cc-out').textContent='Enter a rule percentage.';return}
+const need=Math.max(b/p,g),more=Math.max(need-t,0),share=t>0?b/t*100:0,maxDay=Math.max(t*p,0);
+$('cc-out').textContent=(t>0?'Best day is '+share.toFixed(0)+'% of total. ':'')+(more>0?'You need '+f(need)+' total, so '+f(more)+' more.':'Consistency and target are both met.')+' Right now your biggest allowed day is '+f(maxDay)+'.';}
+['cc-best','cc-total','cc-pct','cc-target'].forEach(i=>$(i).addEventListener('input',run));run();})();
+</script>
+
+<h2>Which firms have a consistency rule</h2>
+<p>From our firm catalog, checked against each firm's published rules:</p>
+{{table:consistency}}
+<p>"None listed" means the program has no consistency rule in its <em>evaluation</em> in our catalog. Several firms add a separate consistency or payout rule once you're funded, and those change often, so read your firm's payout policy before your first withdrawal request.</p>
+
+<h2>How to pass without fighting the rule</h2>
+<ol>
+  <li><strong>Cap your daily profit, not just your loss.</strong> With a 50% rule and a $3,000 target, any day over $1,500 raises the bar. Many traders stop for the day at about 30–40% of the target.</li>
+  <li><strong>Check the ratio before you size up.</strong> If you already had a big day, the cheapest fix is several medium days, not another home run.</li>
+  <li><strong>Remember the rule usually applies to payouts too.</strong> On funded accounts a single huge day can delay a withdrawal the same way.</li>
+  <li><strong>Log every day's P&amp;L per account.</strong> The ratio is easy to work out on one account and easy to lose track of on four. Our journal loads each account's consistency rule from its firm and keeps daily P&amp;L per account on a calendar, so the check takes seconds.</li>
+</ol>

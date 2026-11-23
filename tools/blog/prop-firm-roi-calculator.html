@@ -1,0 +1,55 @@
+<!--meta
+{
+ "title": "Prop Firm ROI Calculator: Are Your Challenges Profitable? (USD & INR) · The Smart Trade",
+ "h1": "Prop firm ROI: are your challenges actually profitable?",
+ "description": "Work out your real prop firm ROI: evaluation fees, resets, activation and data fees against payouts, converted to rupees. Free calculator and tracking method.",
+ "date": "2026-11-23", "minutes": 6, "order": 4,
+ "keywords": ["prop firm roi calculator", "prop firm payout tracker", "is prop firm worth it", "prop firm fees vs payouts", "prop firm payout in india", "prop firm expense tracker"],
+ "lede": "Payout screenshots are everywhere. What nobody posts is the stack of failed evaluations, resets and activation fees behind them. Here is how to calculate whether prop trading is actually paying you.",
+ "related": ["prop-firm-rules-compared-50k", "how-to-pass-prop-firm-challenge", "best-trading-journal-for-prop-firms"],
+ "faq": [
+  ["How do you calculate prop firm ROI?", "Add up everything you paid the firm: evaluation fees, resets, monthly subscriptions, activation fees and data fees. Subtract that from the payouts you actually received. Divide the result by the total paid. If you paid $600 and received $900, your net is $300 and your ROI is 50%."],
+  ["Is prop firm trading worth it?", "It is worth it only if your total payouts exceed your total fees by enough to justify the time. Many traders lose money on fees without realising, because they track payouts but not resets and activation fees. Track both per firm for a few months before deciding."],
+  ["How do I track prop firm payouts in rupees?", "Record each payout in USD along with the rupee amount that actually reached your bank after conversion and transfer fees. The difference between the market rate and what you received is a real cost. Our journal converts payouts at the live rate and lets you record the actual amount received."]
+ ]
+}
+-->
+<h2>The formula</h2>
+<p class="note"><strong>Net = payouts received − (evaluation fees + resets + subscriptions + activation fees + data fees)</strong><br><strong>ROI = Net ÷ total paid</strong></p>
+<p>Two rules make this honest:</p>
+<ul>
+  <li><strong>Count payouts when they hit your bank</strong>, not when requested, and at the amount you actually received after transfer and conversion fees.</li>
+  <li><strong>Count every fee</strong>, including evaluations you failed. Breached accounts are the biggest hidden cost in prop trading.</li>
+</ul>
+
+<h2>Calculator</h2>
+<div class="calc" id="roi">
+  <label>Evaluation fees paid ($)<input id="r-eval" type="number" value="450" min="0"></label>
+  <label>Resets ($)<input id="r-reset" type="number" value="160" min="0"></label>
+  <label>Activation fees ($)<input id="r-act" type="number" value="149" min="0"></label>
+  <label>Data / platform fees ($)<input id="r-data" type="number" value="0" min="0"></label>
+  <label>Payouts received ($)<input id="r-pay" type="number" value="1200" min="0"></label>
+  <label>USD → INR rate<input id="r-fx" type="number" value="84" step="0.01" min="0"></label>
+  <label>Transfer/FX cost on payouts (%)<input id="r-fee" type="number" value="2" step="0.1" min="0"></label>
+  <output id="r-out"></output>
+</div>
+<script>
+(function(){const $=id=>document.getElementById(id),u=n=>(n<0?'−$':'$')+Math.abs(Math.round(n)).toLocaleString('en-US'),r=n=>(n<0?'−₹':'₹')+Math.abs(Math.round(n)).toLocaleString('en-IN');
+function run(){const paid=['r-eval','r-reset','r-act','r-data'].reduce((s,i)=>s+(+$(i).value||0),0),fx=+$('r-fx').value||0,cost=(+$('r-fee').value||0)/100,pay=(+$('r-pay').value||0)*(1-cost),net=pay-paid;
+$('r-out').textContent='Paid '+u(paid)+', received '+u(pay)+' after transfer costs. Net '+u(net)+' ('+r(net*fx)+'), ROI '+(paid?(net/paid*100).toFixed(0)+'%':'—')+'.';}
+document.querySelectorAll('#roi input').forEach(i=>i.addEventListener('input',run));run();})();
+</script>
+<p class="src">Replace the example numbers with your own. The rupee rate is a placeholder; use the rate you actually got.</p>
+
+<h2>Why most traders overestimate their prop firm returns</h2>
+<ol>
+  <li><strong>Failed evaluations fade from memory.</strong> A $49 evaluation feels free; twelve of them in a year are $588.</li>
+  <li><strong>Monthly billing keeps running.</strong> Subscription-style evaluations bill until you pass or cancel.</li>
+  <li><strong>Activation fees arrive at the happiest moment</strong>, right after you pass, so they rarely get counted.</li>
+  <li><strong>Conversion costs are invisible.</strong> For traders in India, the gap between the market rate and what reaches your bank account can be a few percent of every payout. Record the rupees received, not the dollar headline.</li>
+</ol>
+
+<h2>Track ROI per firm, not overall</h2>
+<p>One firm might be paying for all the others. Split your fees and payouts by firm and you'll often find one firm you pass easily and one you keep feeding. Moving your attempts to the firm whose rules fit your style is the cheapest edge in prop trading. For rule differences, see our <a href="/blog/prop-firm-rules-compared-50k">50K rules comparison</a>.</p>
+<p>Our journal's <strong>Prop firm ROI</strong> view does this automatically: every evaluation, activation, subscription and data fee per firm against the payouts that firm sent you, with breached accounts showing their true sunk cost, and payouts converted to your currency at the live rate.</p>
+<div class="note"><p>This article is about tracking, not tax. How prop firm payouts are taxed depends on your country and situation; in India, speak to a chartered accountant about how to report foreign payouts.</p></div>

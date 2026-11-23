@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trailing Drawdown Explained: EOD vs Intraday (With Examples) · The Smart Trade</title>
+  <meta name="description" content="What a trailing drawdown is, how end-of-day and intraday trailing differ, when the floor stops trailing, and how Topstep, Apex, Tradeify, Lucid and others set it.">
+  <link rel="canonical" href="https://thesmarttrade.in/blog/trailing-drawdown-explained">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="The Smart Trade">
+  <meta property="og:url" content="https://thesmarttrade.in/blog/trailing-drawdown-explained">
+  <meta property="og:title" content="Trailing Drawdown Explained: EOD vs Intraday (With Examples) · The Smart Trade">
+  <meta property="og:description" content="What a trailing drawdown is, how end-of-day and intraday trailing differ, when the floor stops trailing, and how Topstep, Apex, Tradeify, Lucid and others set it.">
+  <meta property="og:image" content="https://thesmarttrade.in/brand/og-1200x630.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#050608">
+  <link rel="icon" type="image/svg+xml" href="/brand/mark.svg">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/landing.css">
+  <link rel="stylesheet" href="/blog/blog.css">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BlogPosting", "headline": "Trailing drawdown explained: EOD vs intraday, with worked examples", "description": "What a trailing drawdown is, how end-of-day and intraday trailing differ, when the floor stops trailing, and how Topstep, Apex, Tradeify, Lucid and others set it.", "datePublished": "2026-11-23", "dateModified": "2026-11-23", "mainEntityOfPage": "https://thesmarttrade.in/blog/trailing-drawdown-explained", "image": "https://thesmarttrade.in/brand/og-1200x630.png", "author": {"@type": "Organization", "name": "The Smart Trade", "url": "https://thesmarttrade.in/"}, "publisher": {"@type": "Organization", "name": "The Smart Trade", "logo": {"@type": "ImageObject", "url": "https://thesmarttrade.in/brand/mark-512.png"}}, "keywords": "trailing drawdown, what is a trailing drawdown, eod drawdown meaning, eod vs intraday drawdown, prop firm trailing drawdown explained, trailing max drawdown"}</script>
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": "https://thesmarttrade.in/"}, {"@type": "ListItem", "position": 2, "name": "Blog", "item": "https://thesmarttrade.in/blog/"}, {"@type": "ListItem", "position": 3, "name": "Trailing drawdown explained: EOD vs intraday, with worked examples", "item": "https://thesmarttrade.in/blog/trailing-drawdown-explained"}]}</script>
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is a trailing drawdown in a prop firm?", "acceptedAnswer": {"@type": "Answer", "text": "A trailing drawdown is a maximum loss limit that moves up as your account makes new highs. If your 50K account has a $2,000 trailing drawdown and your balance peaks at $51,000, your breach level moves from $48,000 to $49,000. It never moves back down."}}, {"@type": "Question", "name": "What does EOD drawdown mean?", "acceptedAnswer": {"@type": "Answer", "text": "EOD (end-of-day) drawdown means the breach level is only recalculated from your balance at the close of each trading day. Profits you give back during the day do not raise the floor; only the closing balance counts."}}, {"@type": "Question", "name": "Is EOD or intraday trailing drawdown better?", "acceptedAnswer": {"@type": "Answer", "text": "For most day traders EOD trailing is easier to survive, because open-profit spikes during the day do not drag the floor up. Intraday trailing follows your highest equity, including unrealised profit, so a trade that goes +$800 and comes back to breakeven can cost you $800 of room."}}, {"@type": "Question", "name": "When does a trailing drawdown stop trailing?", "acceptedAnswer": {"@type": "Answer", "text": "Most futures firms stop trailing once the floor reaches your starting balance, sometimes plus a small buffer such as $100. After that the floor is fixed. Check your firm's rules, as the lock point differs by firm and account type."}}, {"@type": "Question", "name": "Which prop firms have no trailing drawdown?", "acceptedAnswer": {"@type": "Answer", "text": "Forex firms such as FTMO and FundingPips use a static maximum loss measured from the initial balance, so the floor does not move. Most futures prop firms use some form of trailing drawdown."}}]}</script>
+</head>
+<body class="blog">
+<header class="bnav">
+  <a class="lnav__brand" href="/"><span class="mark mark--img"><img src="/brand/mark.svg" alt=""></span><span class="wm"><small>THE</small><b>Smart<i>Trade</i></b></span></a>
+  <nav><a href="/blog/">Blog</a><a href="/#features">Features</a><a class="btn btn--primary" href="/app">Open journal</a></nav>
+</header>
+<main class="post">
+  <nav class="crumbs"><a href="/">Home</a> / <a href="/blog/">Blog</a></nav>
+  <article>
+    <h1>Trailing drawdown explained: EOD vs intraday, with worked examples</h1>
+    <p class="meta"><time datetime="2026-11-23">2026-11-23</time> · 8 min read</p>
+    <p class="lede">Most traders who fail a futures prop firm evaluation don't blow up on one bad trade. They get caught by a drawdown floor that moved up behind them without them noticing. This guide explains how that floor moves.</p>
+    <h2>What is a trailing drawdown?</h2>
+<p>A <strong>trailing drawdown</strong> (also called trailing max drawdown) is the maximum amount your account may fall from its <em>highest point</em> before it fails. Unlike a static loss limit, the breach level <strong>moves up when you make money and never moves down</strong>.</p>
+<p>Take a 50K evaluation with a $2,000 trailing drawdown:</p>
+<ul>
+  <li>You start at $50,000. The breach level is $48,000.</li>
+  <li>You make $1,200. Your new high is $51,200, so the breach level moves to $49,200.</li>
+  <li>You lose $700. Balance is $50,500, but the breach level stays at $49,200. You now have only $1,300 of room, not $2,000.</li>
+</ul>
+<p>That last line is the part that catches people. Your <strong>room</strong> is the gap between your current balance and the floor, and every new high shrinks the floor's distance from where you started.</p>
+
+<h2>EOD vs intraday trailing drawdown</h2>
+<p>The difference is <em>when</em> the firm checks for a new high.</p>
+<h3>End-of-day (EOD) trailing</h3>
+<p>The floor is recalculated once, from your <strong>closing balance</strong> at the end of the session. If a trade runs to +$900 during the day and you close the day at +$300, only the $300 counts toward moving the floor. You still breach if your balance touches the floor during the day; the floor itself just doesn't move intraday.</p>
+<h3>Intraday trailing</h3>
+<p>The floor follows your <strong>highest equity in real time</strong>, including unrealised profit on open trades. If a position is up $900 at its best and you exit at breakeven, the floor has already moved up $900. You gave back nothing in P&amp;L but lost $900 of room.</p>
+<div class="note"><p><strong>Rule of thumb:</strong> on intraday trailing, every dollar of open profit you give back is a dollar of drawdown room gone. Scale-outs and tighter trailing stops matter far more than on EOD accounts.</p></div>
+
+<h3>Worked example: the same day on both account types</h3>
+<p>50K account, $2,000 trailing drawdown, starting the day at $50,000 (floor $48,000). You take one trade that peaks at +$1,000 open profit and you close it at +$200.</p>
+<div class="tbl"><table><thead><tr><th></th><th>EOD trailing</th><th>Intraday trailing</th></tr></thead><tbody>
+<tr><td>Peak equity during the day</td><td>$51,000</td><td>$51,000</td></tr>
+<tr><td>Closing balance</td><td>$50,200</td><td>$50,200</td></tr>
+<tr><td>New floor</td><td>$48,200 (from close)</td><td>$49,000 (from peak)</td></tr>
+<tr><td>Room left tomorrow</td><td><strong>$2,000</strong></td><td><strong>$1,200</strong></td></tr>
+</tbody></table></div>
+<p>Same trade, same P&amp;L, but the intraday account has 40% less room the next morning.</p>
+
+<h2>When does the trailing drawdown stop?</h2>
+<p>On most futures prop accounts the floor stops trailing once it reaches your <strong>starting balance</strong>, sometimes plus a small buffer (for example, TopOne's Elite Access locks at break-even plus $100). From then on it's a fixed level. On a 50K account with $2,000 drawdown that happens once you've banked about $2,000 of profit (plus any buffer). That point is the most important milestone on a new funded account: before it, every win tightens the noose; after it, profits become real cushion.</p>
+
+<h2>How the major firms set drawdown</h2>
+<p>This table comes from the same firm catalog our journal uses to set up accounts:</p>
+<div class="tbl"><table><thead><tr><th>Firm · program</th><th>Drawdown type</th><th>Max loss</th></tr></thead><tbody><tr><td><a href="https://www.topstep.com" rel="nofollow noopener" target="_blank">Topstep</a> · Trading Combine</td><td>End-of-day trailing</td><td>$2,000 on 50K</td></tr><tr><td><a href="https://apextraderfunding.com" rel="nofollow noopener" target="_blank">Apex Trader Funding</a> · EOD Trail</td><td>End-of-day trailing</td><td>$2,000 on 50K</td></tr><tr><td><a href="https://apextraderfunding.com" rel="nofollow noopener" target="_blank">Apex Trader Funding</a> · Intraday Trail</td><td>Intraday trailing</td><td>$2,000 on 50K</td></tr><tr><td><a href="https://toponefutures.com" rel="nofollow noopener" target="_blank">TopOne Futures</a> · Elite Challenge</td><td>End-of-day trailing</td><td>$2,000 on 50K</td></tr><tr><td><a href="https://toponefutures.com" rel="nofollow noopener" target="_blank">TopOne Futures</a> · Elite Access</td><td>End-of-day trailing, locks at break-even + $100</td><td>$2,000 on 50K</td></tr><tr><td><a href="https://toponefutures.com" rel="nofollow noopener" target="_blank">TopOne Futures</a> · Ignite Instant Funding</td><td>Trailing with a fixed dollar buffer</td><td>$2,000 on 50K</td></tr><tr><td><a href="https://toponefutures.com" rel="nofollow noopener" target="_blank">TopOne Futures</a> · Instant Sim Funded</td><td>End-of-day trailing; daily drawdown 2.5% of end-of-day balance</td><td>$2,000 on 50K</td></tr><tr><td><a href="https://toponefutures.com" rel="nofollow noopener" target="_blank">TopOne Futures</a> · S2F Sim PRO</td><td>Intraday trailing</td><td>$1,625 on 50K</td></tr><tr><td><a href="https://tradeify.co" rel="nofollow noopener" target="_blank">Tradeify</a> · Select</td><td>End-of-day trailing</td><td>$2,000 on 50K</td></tr><tr><td><a href="https://tradeify.co" rel="nofollow noopener" target="_blank">Tradeify</a> · Growth</td><td>End-of-day trailing</td><td>$2,000 on 50K</td></tr><tr><td><a href="https://myfundedfutures.com" rel="nofollow noopener" target="_blank">MyFundedFutures</a> · Rapid</td><td>End-of-day trailing</td><td>$2,000 on 50K</td></tr><tr><td><a href="https://myfundedfutures.com" rel="nofollow noopener" target="_blank">MyFundedFutures</a> · Pro</td><td>End-of-day trailing</td><td>$2,000 on 50K</td></tr><tr><td><a href="https://lucidtrading.com" rel="nofollow noopener" target="_blank">Lucid Trading</a> · LucidFlex</td><td>End-of-day trailing</td><td>$2,000 on 50K</td></tr><tr><td><a href="https://lucidtrading.com" rel="nofollow noopener" target="_blank">Lucid Trading</a> · LucidPro</td><td>End-of-day trailing</td><td>$2,000 on 50K</td></tr><tr><td><a href="https://takeprofittrader.com" rel="nofollow noopener" target="_blank">Take Profit Trader</a> · Test</td><td>End-of-day trailing (intraday once PRO)</td><td>$2,000 on 50K</td></tr><tr><td><a href="https://ftmo.com" rel="nofollow noopener" target="_blank">FTMO</a> · 2-Step Challenge</td><td>Static (from initial balance)</td><td>$5,000 on 50K</td></tr><tr><td><a href="https://ftmo.com" rel="nofollow noopener" target="_blank">FTMO</a> · 1-Step Challenge</td><td>Static</td><td>$5,000 on 50K</td></tr><tr><td><a href="https://fundingpips.com" rel="nofollow noopener" target="_blank">FundingPips</a> · 2-Step Standard</td><td>Static</td><td>$5,000 on 50K</td></tr></tbody></table></div><p class="src">Source: The Smart Trade firm catalog, checked against each firm's public rules in 2026-11. Rules change often, so confirm on the firm's site before you buy.</p>
+<p>Notice the split: futures firms (Topstep, Apex, Tradeify, Lucid, MyFundedFutures, Take Profit Trader, TopOne) trail, mostly on an end-of-day basis, while the forex firms in our catalog (FTMO, FundingPips) use a <strong>static</strong> max loss measured from the initial balance. Apex offers both an EOD and an intraday version of its evaluation, so check which one you bought.</p>
+
+<h2>How to trade around a trailing drawdown</h2>
+<ol>
+  <li><strong>Know your real room every morning.</strong> Write down balance minus floor before the open. It's often much smaller than the headline "$2,000".</li>
+  <li><strong>Set a personal daily stop well inside it.</strong> Many traders use 25–35% of the remaining room, so one bad day can't end the account.</li>
+  <li><strong>Size down until the floor locks.</strong> Until the drawdown stops trailing, you're trading with borrowed room. Bigger size can come after.</li>
+  <li><strong>On intraday accounts, manage open profit.</strong> Take partials, or accept that a round-trip winner costs you room.</li>
+  <li><strong>Track it per account.</strong> With three or four evaluations running, guessing is how accounts get breached. Our journal's drawdown guard shows the distance to the floor and to the profit target on every account after each trade you log.</li>
+</ol>
+
+    <h2 id="faq">FAQ</h2><details><summary>What is a trailing drawdown in a prop firm?</summary><p>A trailing drawdown is a maximum loss limit that moves up as your account makes new highs. If your 50K account has a $2,000 trailing drawdown and your balance peaks at $51,000, your breach level moves from $48,000 to $49,000. It never moves back down.</p></details><details><summary>What does EOD drawdown mean?</summary><p>EOD (end-of-day) drawdown means the breach level is only recalculated from your balance at the close of each trading day. Profits you give back during the day do not raise the floor; only the closing balance counts.</p></details><details><summary>Is EOD or intraday trailing drawdown better?</summary><p>For most day traders EOD trailing is easier to survive, because open-profit spikes during the day do not drag the floor up. Intraday trailing follows your highest equity, including unrealised profit, so a trade that goes +$800 and comes back to breakeven can cost you $800 of room.</p></details><details><summary>When does a trailing drawdown stop trailing?</summary><p>Most futures firms stop trailing once the floor reaches your starting balance, sometimes plus a small buffer such as $100. After that the floor is fixed. Check your firm&#x27;s rules, as the lock point differs by firm and account type.</p></details><details><summary>Which prop firms have no trailing drawdown?</summary><p>Forex firms such as FTMO and FundingPips use a static maximum loss measured from the initial balance, so the floor does not move. Most futures prop firms use some form of trailing drawdown.</p></details>
+  </article>
+  <aside class="cta">
+    <b>Track every prop account in one place</b>
+    <p>The Smart Trade loads your firm's rules, shows how far each account is from breaching, and tracks fees against payouts in your own currency. Free while in beta.</p>
+    <a class="btn btn--primary" href="/app">Start journaling free</a>
+  </aside>
+  <section class="related"><h2>Keep reading</h2><div class="rgrid"><a class="rcard" href="/blog/prop-firm-consistency-rule"><b>Prop firm consistency rule explained, with a free calculator</b><span>What the consistency rule means, the formula firms use, which prop firms have one (Topstep, Tradeify, MFFU, Lucid, FTMO 1-Step) and how to work out your biggest allowed day.</span></a><a class="rcard" href="/blog/prop-firm-rules-compared-50k"><b>Topstep vs Apex vs Tradeify vs Lucid vs MFFU: 50K account rules compared</b><span>Side-by-side 50K evaluation rules for Topstep, Apex Trader Funding, Tradeify, Lucid, MyFundedFutures, Take Profit Trader, TopOne Futures and FTMO: price, target, drawdown, daily limit, consistency and split.</span></a><a class="rcard" href="/blog/how-to-pass-prop-firm-challenge"><b>How to pass a prop firm challenge: a risk plan built from the rules</b><span>A practical plan to pass a prop firm evaluation: size from your drawdown, set a daily stop, respect consistency, grade your setups and review every day. With 50K examples.</span></a></div></section>
+</main>
+<footer class="bfoot"><p>The Smart Trade is a journaling tool, not financial advice, and is not affiliated with any prop firm. Firm names belong to their owners. <a href="/">Home</a> · <a href="/blog/">Blog</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p></footer>
+</body>
+</html>
