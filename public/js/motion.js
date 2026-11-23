@@ -1,7 +1,7 @@
 // Motion system — GSAP recipes matching the Verdelo template:
 // expo.out entrances, split-character headings, sliding nav pill / segment thumb,
 // count-up figures, growing bars, cursor glint on glass, back.out pops, circular theme reveal.
-import { $, $$, clamp } from './core.js?v=e0e79e9b';
+import { $, $$, clamp } from './core.js?v=5c59a044';
 
 const G = () => window.gsap;
 export const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -201,8 +201,9 @@ export function cardStack(wrap, { onChange } = {}) {
   const cards = $$('.vcard', wrap);
   if (!cards.length) return { next() {}, prev() {}, flip() {} };
   let order = cards.slice(); let flipped = false; const g = G();
-  const layout = (animate = true) => {
+  const layout = (animate = true, skip = null) => {
     order.forEach((c, i) => {
+      if (c === skip) return;
       const props = { x: 0, y: -i * 16, scale: 1 - i * 0.05, rotation: 0, opacity: i > 3 ? 0 : 1 - i * 0.18, zIndex: 50 - i, filter: `brightness(${1 - i * 0.12})` };
       if (g && animate && !reduced.matches) g.to(c, { ...props, duration: 0.7, ease: 'expo.out', overwrite: 'auto' }); else if (g) g.set(c, props);
       c.style.pointerEvents = i === 0 ? 'auto' : 'none';
@@ -211,25 +212,42 @@ export function cardStack(wrap, { onChange } = {}) {
   };
   const setFlip = (v) => { flipped = v; const f = $('.vcard__flip', order[0]); if (g) g.to(f, { rotationY: v ? 180 : 0, duration: 0.9, ease: 'back.out(1.6)' }); };
   const unflip = () => { if (flipped) { const f = $('.vcard__flip', order[0]); flipped = false; if (g) g.set(f, { rotationY: 0 }); } };
-  const throwTop = (dir = 1) => {
+  let busy = false;
+  const throwTop = (dir = 1, vx = 0) => {
     const top = order[0]; unflip();
     if (!g || reduced.matches) { order.push(order.shift()); layout(false); return; }
-    g.to(top, { x: dir * 460, y: -40, rotation: dir * 18, opacity: 0, duration: 0.42, ease: 'power2.in', onComplete: () => { order.push(order.shift()); g.set(top, { x: 0, rotation: 0 }); layout(); } });
+    busy = true; g.killTweensOf(top);
+    g.to(top, { x: dir * (520 + Math.min(400, Math.abs(vx) * 200)), y: '-=30', rotation: dir * 22, rotationY: 0, scale: 0.96, opacity: 0, duration: 0.45, ease: 'power2.in', onComplete: () => { order.push(order.shift()); g.set(top, { x: 0, rotation: 0, scale: 1 }); top.classList.remove('is-held'); busy = false; layout(); } });
   };
-  const back = () => { unflip(); order.unshift(order.pop()); const c = order[0]; if (g && !reduced.matches) g.set(c, { x: -420, rotation: -14, opacity: 0 }); layout(); };
-  // pointer drag to throw, tap to flip
+  const back = () => { if (busy) return; unflip(); order.unshift(order.pop()); const c = order[0]; if (g && !reduced.matches) g.set(c, { x: -420, rotation: -14, opacity: 0 }); layout(); };
+  // hold and drag to throw (the card lifts and tilts, the next one rises behind it); tap to flip
   cards.forEach((c) => {
-    let sx = 0; let sy = 0; let dx = 0; let dragging = false; let t0 = 0;
-    c.addEventListener('pointerdown', (e) => { if (order[0] !== c) return; dragging = true; sx = e.clientX; sy = e.clientY; dx = 0; t0 = performance.now(); c.setPointerCapture(e.pointerId); });
-    c.addEventListener('pointermove', (e) => { if (!dragging) return; dx = e.clientX - sx; const dy = e.clientY - sy; if (g) g.set(c, { x: dx, y: dy * 0.3, rotation: dx / 18 }); });
+    let sx = 0; let sy = 0; let dx = 0; let dy = 0; let dragging = false; let t0 = 0; let lx = 0; let lt = 0; let vx = 0;
+    c.addEventListener('pointerdown', (e) => {
+      if (order[0] !== c || busy || e.button > 0) return;
+      dragging = true; sx = e.clientX; sy = e.clientY; dx = dy = vx = 0; t0 = lt = performance.now(); lx = e.clientX;
+      c.setPointerCapture(e.pointerId); c.classList.add('is-held');
+      if (g) { g.killTweensOf(c); g.to(c, { scale: 1.03, duration: 0.25, ease: 'power3.out' }); }
+    });
+    c.addEventListener('pointermove', (e) => {
+      if (!dragging) return; e.preventDefault();
+      dx = e.clientX - sx; dy = e.clientY - sy; const now = performance.now(); if (now - lt > 0) vx = vx * 0.6 + ((e.clientX - lx) / (now - lt)) * 0.4; lx = e.clientX; lt = now;
+      if (!g) return;
+      const ry = Math.max(-60, Math.min(60, dy)); // vertical travel is damped so the card stays near the stack
+      g.set(c, { x: dx, y: ry * 0.35, rotation: dx / 16, rotationY: Math.max(-12, Math.min(12, dx / 22)) });
+      const p = Math.min(1, Math.abs(dx) / 160); const nx = order[1];
+      if (nx) g.set(nx, { y: -16 + 16 * p, scale: 0.95 + 0.05 * p, opacity: 0.82 + 0.18 * p, filter: `brightness(${0.88 + 0.12 * p})` });
+    });
     const end = () => {
       if (!dragging) return; dragging = false;
-      const v = Math.abs(dx) / Math.max(1, performance.now() - t0);
-      if (Math.abs(dx) > 110 || (v > 0.6 && Math.abs(dx) > 30)) throwTop(Math.sign(dx) || 1);
-      else if (Math.abs(dx) < 6) { if (g) g.to(c, { x: 0, y: 0, rotation: 0, duration: 0.5, ease: 'back.out(2)' }); setFlip(!flipped); }
-      else layout();
+      const held = performance.now() - t0;
+      if (Math.abs(dx) > 120 || (Math.abs(vx) > 0.55 && Math.abs(dx) > 30)) { throwTop(Math.sign(dx) || Math.sign(vx) || 1, vx); return; }
+      c.classList.remove('is-held');
+      if (g) g.to(c, { x: 0, y: 0, rotation: 0, rotationY: 0, scale: 1, duration: 0.6, ease: 'elastic.out(1, 0.6)' });
+      layout(true, c);
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6 && held < 350) setFlip(!flipped);
     };
-    c.addEventListener('pointerup', end); c.addEventListener('pointercancel', end);
+    c.addEventListener('pointerup', end); c.addEventListener('pointercancel', end); c.addEventListener('lostpointercapture', end);
   });
   layout(false);
   if (g && !reduced.matches) g.fromTo(cards, { y: 60, opacity: 0, rotation: (i) => (i % 2 ? 2.5 : -2.5), scale: 0.95 }, { y: (i) => -order.indexOf(cards[i]) * 16, opacity: (i) => { const k = order.indexOf(cards[i]); return k > 3 ? 0 : 1 - k * 0.18; }, rotation: 0, scale: (i) => 1 - order.indexOf(cards[i]) * 0.05, duration: 0.85, ease: 'back.out(1.4)', stagger: 0.08, delay: 0.35 });

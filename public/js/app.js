@@ -2,15 +2,16 @@
 import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
-} from './core.js?v=e0e79e9b';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=e0e79e9b';
-import { slider, liveRate, fxAgo } from './ui.js?v=e0e79e9b';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=e0e79e9b';
+  goalIdea,
+} from './core.js?v=5c59a044';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=5c59a044';
+import { slider, liveRate, fxAgo } from './ui.js?v=5c59a044';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=5c59a044';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=e0e79e9b';
-import * as V2 from './views2.js?v=e0e79e9b';
-import * as V3 from './views3.js?v=e0e79e9b';
-import * as V4 from './views4.js?v=e0e79e9b';
+import * as V from './views.js?v=5c59a044';
+import * as V2 from './views2.js?v=5c59a044';
+import * as V3 from './views3.js?v=5c59a044';
+import * as V4 from './views4.js?v=5c59a044';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -158,8 +159,15 @@ function obRender(dir) {
   $$('.steps li').forEach((li, i) => { const fill = li.firstElementChild; const done = i <= s; if (window.gsap && !reduced.matches) window.gsap.to(fill, { scaleX: done ? 1 : 0, duration: 0.7, ease: 'expo.out' }); else fill.style.transform = `scaleX(${done ? 1 : 0})`; });
   $('#obBack').style.visibility = s ? 'visible' : 'hidden';
   $('#obNext').innerHTML = s === STEPS.length - 1 ? `${icon('bolt')}Open my journal` : `Continue${icon('right')}`;
-  const ex = (ob.markets.length ? ob.markets : ['futures']).flatMap((m) => MARKETS[m].examples);
-  const instAll = [...new Set([...ex, ...ob.instruments])];
+  // instruments: suggestions appear only for the markets picked; picks from markets you un-tick are dropped, your own additions stay
+  const allEx = new Set(Object.values(MARKETS).flatMap((m) => m.examples)); const picked = new Set(ob.markets.flatMap((m) => MARKETS[m].examples));
+  ob.instruments = ob.instruments.filter((v) => picked.has(v) || !allEx.has(v));
+  const own = ob.instruments.filter((v) => !allEx.has(v));
+  const instChips = (list) => list.map((v) => `<button type="button" class="chip ${ob.instruments.includes(v) ? 'is-on' : ''}" data-v="${esc(v)}">${esc(v)}</button>`).join('');
+  const instNew = !ob._instShown; ob._instShown = ob.markets.length > 0;
+  const instHTML = ob.markets.length ? `<div class="ob-inst ${instNew ? 'ob-inst--new' : ''}"><p class="ob-q ob-q--sm">Which instruments?</p><p class="ob-sub">Tap the ones you trade. They become quick picks when you log a trade.</p>
+      <div id="o_in" class="ob-groups">${ob.markets.map((m) => `<div class="ob-grp">${ob.markets.length > 1 ? `<span class="ob-grp__h">${esc(MARKETS[m].label)}</span>` : ''}<div class="chips">${instChips(MARKETS[m].examples)}</div></div>`).join('')}
+      <div class="ob-grp">${ob.markets.length > 1 || own.length ? `<span class="ob-grp__h">${own.length ? 'Your own' : 'Something else?'}</span>` : ''}<div class="chips">${instChips(own)}<button type="button" class="chip chip--add" data-add="o_in">${icon('plus')} Add</button></div></div></div></div>` : '';
   const screens = [
     () => `<p class="ob-q">First, who's trading?</p><p class="ob-sub">Sets your greeting, your account currency and how payouts convert to your bank currency.</p>
       <div class="form" style="grid-template-columns:1fr 1fr">
@@ -169,16 +177,16 @@ function obRender(dir) {
       <div class="full" id="o_fxbox">${rateLine()}</div></div>`,
     () => `<p class="ob-q">What do you trade?</p><p class="ob-sub">Pick all that apply. It sets units (contracts, lots, shares) and lets the journal calculate P&amp;L for you.</p>
       ${chipRow('o_mk', Object.keys(MARKETS), ob.markets, Object.fromEntries(Object.entries(MARKETS).map(([k, v]) => [k, v.label])), false)}
-      <p class="ob-q ob-q--sm">Your main instruments</p><p class="ob-sub">Quick picks when you log a trade.</p>${chipRow('o_in', instAll, ob.instruments)}`,
+      ${instHTML}`,
     () => `<p class="ob-q">Which accounts do you trade?</p><p class="ob-sub">Pick your prop firm, plan and size. The journal fills in the firm's rules: profit target, max loss and daily limit. Then set your own daily stop, which is usually tighter than the firm's.</p>
       <div class="explain">${icon('info')}<span>Prop firm path: you buy a <b>challenge</b>, pass it, and the firm gives you a <b>funded</b> account. Add each account at the stage it's in now; you can move it to funded later.</span></div>
       <div id="o_picker"></div>
       <details class="imp"><summary>${icon('sheet')}Already tracking in a spreadsheet? Import it</summary>
       <div class="drop" id="o_drop" style="margin-top:12px">${icon('sheet')}<div style="flex:1"><b>Import from Excel / Google Sheets export</b><span class="muted" style="font-size:var(--fs-sm)" id="o_dropInfo">${ob.imported ? esc(ob.imported) : 'Reads an accounts table with Firm, Cost and Quantity columns'}</span></div><input type="file" id="o_file" accept=".xlsx,.xls,.csv" hidden><button type="button" class="btn btn--sm" id="o_pick">Choose file</button></div></details>`,
-    () => `<p class="ob-q">Working toward a payout goal?</p><p class="ob-sub">Paying something off, or a monthly number. You'll get a progress card, a pace check and a forecast.</p>
+    () => `<p class="ob-q">Working toward a payout goal?</p><p class="ob-sub">Go full time, a first big payout, a house. Name it and you'll get a progress card, a pace check and a forecast.</p>
       <div class="seg seg--accent" id="o_goalSeg" style="margin-bottom:18px"><button data-v="yes" class="${ob.hasGoal !== false ? 'is-on' : ''}">Yes, I have a goal</button><button data-v="no" class="${ob.hasGoal === false ? 'is-on' : ''}">Not right now</button></div>
       <div class="form" style="grid-template-columns:1fr 1fr" id="o_goal" ${ob.hasGoal === false ? 'hidden' : ''}>
-        <label class="field full"><span>Name it</span><input class="in" id="o_gn" value="${esc(ob.mission.name)}" placeholder="e.g. Clear my credit card"></label>
+        <label class="field full"><span>Name it</span><input class="in" id="o_gn" value="${esc(ob.mission.name)}" placeholder="${goalIdea()}"></label>
         <div class="field">${slider({ name: 'o_gt', label: `Payout target`, value: ob.mission.target || 2000, min: 0, max: 50000, step: 100, prefix: sym2(ob.currency) })}</div>
         <div class="field">${slider({ name: 'o_me', label: 'Expected payout this month', value: ob.monthEst || 0, min: 0, max: 20000, step: 100, prefix: sym2(ob.currency), zero: 'Skip' })}</div>
         <label class="field"><span>Start</span><input class="in" id="o_gs" type="date" value="${esc(ob.mission.start)}"></label>

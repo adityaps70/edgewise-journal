@@ -385,7 +385,7 @@ select.in { appearance: none; background-image: url("data:image/svg+xml;utf8,<sv
 .chip { height: 34px; padding: 0 14px; border-radius: 99px; border: 0; background: var(--card-2); box-shadow: inset 0 0 0 1px var(--line-2); font-weight: 600; font-size: var(--fs-sm); color: var(--ink-2); transition: background .25s var(--ease), color .25s, box-shadow .25s; }
 .chip:hover { background: var(--card-3); }
 .chip.is-on { background: var(--accent-soft); color: var(--accent-text); box-shadow: inset 0 0 0 1.5px var(--accent); }
-.chip--add { border: 1px dashed var(--line-2); background: transparent; box-shadow: none; }
+.chip--add { display: inline-flex; align-items: center; gap: 6px; border: 1px dashed var(--line-2); background: transparent; box-shadow: none; }
 .stars { display: flex; gap: 4px; }
 .stars button { border: 0; background: none; padding: 2px; color: var(--line-2); }
 .stars button.is-on { color: #e3b34a; }
@@ -976,3 +976,51 @@ body.mp { overflow: auto; background: var(--scene); background-color: var(--bg);
 .aib__rules ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 3px; color: var(--ink-2); }
 .aib__list summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
 .aib__list .tablewrap { max-height: 360px; overflow: auto; }
+/* onboarding: instrument suggestions appear once a market is picked */
+.ob-inst--new { animation: obIn .45s cubic-bezier(.16,1,.3,1) both; }
+@keyframes obIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.ob-groups { display: grid; gap: 14px; }
+.ob-grp { display: grid; gap: 8px; }
+.ob-grp__h { font-size: var(--fs-xs, 12px); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .ob-inst--new { animation: none; } }
+.chip--add svg { width: 14px; height: 14px; flex: none; }
+/* firm picker: stacked labels, left-aligned, quieter */
+.fp__f { display: grid; gap: 8px; margin-bottom: 16px; min-width: 0; }
+.fp__lab { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.fp__plans { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start; }
+.fp__pair { display: flex; flex-wrap: wrap; gap: 8px 28px; }
+.fp__pair .fp__seg { width: max-content; max-width: 100%; }
+.fp__seg button { white-space: nowrap; }
+.fp__seg button:disabled { cursor: default; opacity: 1; }
+.fp__rules { padding-top: 14px; border-top: 1px solid var(--line); margin-top: 2px; }
+.fp__cfghead { margin-bottom: 18px; }
+/* chips are always centred, whatever element they are */
+.chip { display: inline-flex; align-items: center; justify-content: center; gap: 6px; line-height: 1; white-space: nowrap; }
+.chip svg { width: 14px; height: 14px; flex: none; }
+/* tall screens (onboarding with many accounts) scroll from the top instead of clipping it */
+.solo { align-items: flex-start; }
+.solo__card { margin: auto; }
+.fp__plans .chip em { margin-left: 0; }
+/* card stack: no text selection while dragging, lifted look when held */
+.vcard { user-select: none; -webkit-user-select: none; -webkit-user-drag: none; will-change: transform; }
+.vcard.is-held .vcard__face { box-shadow: inset 0 0 0 1px #ffffff30, inset 1px 1px 0 #ffffff3a, 0 40px 70px -26px #000000d0; }
+.vcard__back { gap: 12px; }
+.vcard__rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: auto; }
+.vcard__rules div { padding: 8px 10px; border-radius: 10px; background: #00000030; box-shadow: inset 0 0 0 1px #ffffff14; min-width: 0; }
+.vcard__rules small { display: block; font-size: 10.5px; opacity: .65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vcard__rules b { display: block; font-size: var(--fs-md); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vcard__hint { margin: 0; font-size: 10.5px; opacity: .45; text-align: center; }
+.vcard__pnl em b { font-size: inherit; letter-spacing: 0; line-height: inherit; font-weight: 700; }
+/* price actually paid */
+.fp__paid { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-top: 14px; }
+.fp__paid .fp__f { margin: 0; }
+.fp__paid em { font-style: normal; font-size: var(--fs-xs); color: var(--muted); }
+.fp__pay { display: inline-flex; align-items: center; gap: 6px; height: 40px; width: 200px; padding: 0 12px; border-radius: 12px; background: var(--card-2); box-shadow: inset 0 0 0 1px var(--line-2); }
+.fp__pay:focus-within { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.fp__pay i { font-style: normal; color: var(--muted); font-weight: 600; }
+.fp__pay input { flex: 1; min-width: 0; border: 0; background: none; color: var(--ink); font: inherit; font-weight: 700; font-size: var(--fs-lg); outline: none; }
+.fp__pay.is-bad { box-shadow: inset 0 0 0 1.5px var(--bad); animation: fpShake .35s; }
+@keyframes fpShake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+.fp__total { font-size: var(--fs-sm); color: var(--muted); padding-bottom: 22px; } .fp__total b { color: var(--ink); }
+.rp--list { opacity: .7; }
+.facc__paid { gap: 4px; } .facc__paid input { width: 70px; border: 0; background: none; color: var(--ink); font: inherit; font-weight: 700; outline: none; padding: 0; }

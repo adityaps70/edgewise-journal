@@ -1,5 +1,5 @@
 // Shared UI pieces: sliders, glass date picker, live exchange rates.
-import { $, $$, esc, iso, today, parseISO, clamp, num, icon } from './core.js?v=e0e79e9b';
+import { $, $$, esc, iso, today, parseISO, clamp, num, icon } from './core.js?v=5c59a044';
 
 const G = () => window.gsap;
 const RM = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -137,3 +137,26 @@ export async function liveRate(from = 'USD', to = 'INR', { force = false } = {})
   return null;
 }
 export const fxAgo = (at) => { const m = Math.round((Date.now() - at) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`; };
+
+// ---- slider sound: a soft detent click as the thumb moves, pitch rises with the value
+let AC = null; let lastTick = 0; const detent = new WeakMap();
+export const soundOn = () => { try { return localStorage.getItem('st_sound') !== 'off'; } catch (e) { return true; } };
+export const setSound = (on) => { try { localStorage.setItem('st_sound', on ? 'on' : 'off'); } catch (e) {} };
+function tick(p, edge) {
+  if (!soundOn()) return;
+  const now = performance.now(); if (now - lastTick < 26 && !edge) return; lastTick = now;
+  try {
+    AC ||= new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume();
+    const t = AC.currentTime; const o = AC.createOscillator(); const g = AC.createGain(); const f = AC.createBiquadFilter();
+    o.type = edge ? 'sine' : 'triangle'; o.frequency.setValueAtTime(edge ? 1400 : 520 + 900 * p, t); o.frequency.exponentialRampToValueAtTime((edge ? 1400 : 520 + 900 * p) * 0.6, t + 0.04);
+    f.type = 'highpass'; f.frequency.value = 300;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(edge ? 0.07 : 0.045, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + (edge ? 0.09 : 0.045));
+    o.connect(f).connect(g).connect(AC.destination); o.start(t); o.stop(t + 0.1);
+  } catch (e) { /* no audio available */ }
+}
+document.addEventListener('input', (e) => {
+  const r = e.target; if (!(r instanceof HTMLInputElement) || r.type !== 'range') return;
+  const min = +r.min || 0; const max = +r.max || 100; const p = max > min ? (r.value - min) / (max - min) : 0;
+  const d = Math.round(p * 40); if (detent.get(r) === d) return; detent.set(r, d);
+  tick(p, p <= 0 || p >= 1);
+}, true);

@@ -1,6 +1,6 @@
 // Prop firm catalog + picker. Rules live in data/firms.json so they can be updated without touching code.
-import { $, $$, esc, uid, num, today, money, short, icon, S, P } from './core.js?v=e0e79e9b';
-import { slider } from './ui.js?v=e0e79e9b';
+import { $, $$, esc, uid, num, today, money, short, icon, S, P } from './core.js?v=5c59a044';
+import { slider } from './ui.js?v=5c59a044';
 
 let CAT = null;
 export async function loadFirms() {
@@ -78,11 +78,12 @@ export function mountPicker(box, state) {
       const { firm, program, size, stage, qty } = sel; const r = planRules(firm, program, size, stage);
       return `<div class="fp__cfg">
         <div class="fp__cfghead"><span class="fmono">${esc(firm.mono || firm.name.slice(0, 2))}</span><div><b>${esc(firm.name)}</b><small>${program.custom ? 'Added by you' : `Rules as published · checked ${esc(catalog().verified)}`}${firm.url ? ` · <a href="${esc(firm.url)}" target="_blank" rel="noopener">confirm on site ↗</a>` : ''}</small></div><button type="button" class="ibtn" data-x aria-label="Close">${icon('close')}</button></div>
-        <div class="fp__row fp__row--plans"><span>Account type</span><div class="fp__plans">${firm.programs.map((p) => `<button type="button" data-plan="${p.id}" class="chip ${p.id === program.id ? 'is-on' : ''}">${esc(p.name)}${isInstant(p) ? '<em>instant</em>' : ''}${p.custom ? '<em>yours</em>' : ''}</button>`).join('')}<button type="button" class="chip chip--ghost" data-missing>${icon('plus')}Not listed?</button></div></div>
-        <div class="fp__row"><span>Size</span><div class="seg seg--accent fp__seg" data-k="size">${program.sizes.map((s) => `<button type="button" data-v="${s.size}" class="${s.size === size ? 'is-on' : ''}">${k(s.size)}</button>`).join('')}</div></div>
-        <div class="fp__row"><span>Stage</span>${isInstant(program) ? '<span class="rp">Instant funding · no challenge</span>' : `<div class="seg fp__seg" data-k="stage">${program.stages.map((s) => `<button type="button" data-v="${s}" class="${s === stage ? 'is-on' : ''}">${STAGE_LABEL[s]}</button>`).join('')}</div>`}</div>
-        <div class="fp__rules">${rulePills(r)}${r.cost ? `<span class="rp">${icon('payouts')}${r.priceCurrency === 'EUR' ? '€' : '$'}${r.cost}${program.billing === 'monthly' ? '/mo' : ''}</span>` : ''}</div>
+        <div class="fp__f"><span class="fp__lab">Account type</span><div class="fp__plans">${firm.programs.map((p) => `<button type="button" data-plan="${p.id}" class="chip ${p.id === program.id ? 'is-on' : ''}">${esc(p.name)}${isInstant(p) ? '<em>instant</em>' : ''}${p.custom ? '<em>yours</em>' : ''}</button>`).join('')}<button type="button" class="chip chip--add" data-missing>${icon('plus')}Not listed?</button></div></div>
+        <div class="fp__pair"><div class="fp__f"><span class="fp__lab">Size</span><div class="seg seg--accent fp__seg" data-k="size">${program.sizes.map((s) => `<button type="button" data-v="${s.size}" class="${s.size === size ? 'is-on' : ''}">${k(s.size)}</button>`).join('')}</div></div>
+        <div class="fp__f"><span class="fp__lab">Stage</span>${isInstant(program) ? '<div class="seg fp__seg"><button type="button" class="is-on" disabled>Funded from day one</button></div>' : `<div class="seg fp__seg" data-k="stage">${program.stages.map((s) => `<button type="button" data-v="${s}" class="${s === stage ? 'is-on' : ''}">${STAGE_LABEL[s]}</button>`).join('')}</div>`}</div></div>
+        <div class="fp__rules">${rulePills(r)}${r.cost ? `<span class="rp rp--list" title="The firm's list price. Your journal uses what you actually paid.">List ${r.priceCurrency === 'EUR' ? '€' : '$'}${r.cost}${program.billing === 'monthly' ? '/mo' : ''}</span>` : ''}</div>
         ${r.note ? `<p class="fp__note">${icon('info')}${esc(r.note)}</p>` : ''}
+        <div class="fp__paid"><label class="fp__f"><span class="fp__lab">What you paid, per account${program.billing === 'monthly' ? ' (this month)' : ''}</span><span class="fp__pay"><i>${r.priceCurrency === 'EUR' ? '€' : '$'}</i><input type="number" min="0" step="0.01" inputmode="decimal" data-paid value="${sel.paid ?? ''}" placeholder="${r.cost ? 'List ' + r.cost : 'e.g. 49'}"></span><em>After coupons and discounts. Enter 0 if it was free.</em></label><span class="fp__total" data-total></span></div>
         <div class="fp__row fp__row--end"><span>How many?</span><div class="stepper"><button type="button" data-q="-1">−</button><b>${qty}</b><button type="button" data-q="1">+</button></div><button type="button" class="btn btn--primary btn--sm" data-add>${icon('plus')}Add ${qty > 1 ? qty + ' accounts' : 'account'}</button></div>
       </div>`;
     })() : '';
@@ -96,7 +97,7 @@ export function mountPicker(box, state) {
   };
   const accRow = (a, i) => `<div class="facc" data-i="${i}">
     <div class="facc__top"><span class="fmono fmono--sm">${esc(mono(a))}</span><input class="facc__name" data-f="name" value="${esc(a.name)}" aria-label="Account name"><span class="pill ${a.stage === 'funded' || a.type === 'funded' ? 'pill--good' : a.type === 'personal' ? '' : 'pill--info'}">${a.type === 'personal' ? 'Own capital' : STAGE_LABEL[a.stage] || 'Challenge'}</span><button type="button" class="ibtn" data-rm="${i}" aria-label="Remove">${icon('trash')}</button></div>
-    ${a.type === 'personal' ? slider({ name: 'size', label: 'Account size', value: a.size || 10000, min: 1000, max: 250000, step: 1000, prefix: '$' }) : `<div class="fp__rules">${rulePills(a)}</div>`}
+    ${a.type === 'personal' ? slider({ name: 'size', label: 'Account size', value: a.size || 10000, min: 1000, max: 250000, step: 1000, prefix: '$' }) : `<div class="fp__rules">${rulePills(a)}<label class="rp facc__paid">Paid $<input type="number" min="0" step="0.01" inputmode="decimal" data-f="cost" value="${a.cost === '' || a.cost === undefined ? '' : num(a.cost)}" placeholder="0" aria-label="Price paid"></label></div>`}
     ${a.firmId === '_other' ? `<div class="grid g-3" style="gap:10px;margin-top:8px">${slider({ name: 'target', label: 'Profit target', value: a.target || 3000, min: 0, max: 20000, step: 250, prefix: '$', zero: 'None' })}${slider({ name: 'maxLoss', label: 'Max loss', value: a.maxLoss || 2000, min: 0, max: 15000, step: 250, prefix: '$' })}${slider({ name: 'dailyLimit', label: 'Firm daily limit', value: a.dailyLimit || 0, min: 0, max: 10000, step: 50, prefix: '$', zero: 'None' })}</div>` : ''}
     ${slider({ name: 'personalDaily', label: 'Your daily stop', value: a.personalDaily || defaultDaily(a), min: 50, max: dailyCap(a), step: 50, prefix: '$', hint: num(a.dailyLimit) ? `firm limit ${money(a.dailyLimit)}` : `max loss ${money(a.maxLoss || dailyCap(a))}` })}
   </div>`;
@@ -120,10 +121,14 @@ export function mountPicker(box, state) {
     const ms = $('[data-missing]', box); if (ms) ms.onclick = () => addMissing(sel.firm);
     const x = $('[data-x]', box); if (x) x.onclick = () => { sel = null; draw(); };
     $$('[data-q]', box).forEach((b) => (b.onclick = () => { sel.qty = Math.max(1, Math.min(20, sel.qty + +b.dataset.q)); draw(); }));
+    const paid = $('[data-paid]', box);
+    const total = () => { const t = $('[data-total]', box); if (!t || !sel) return; const v = sel.paid; t.innerHTML = v !== '' && v !== undefined && sel.qty > 1 ? `${sel.qty} × ${money(num(v))} = <b>${money(num(v) * sel.qty)}</b>` : ''; };
+    if (paid) { paid.oninput = () => { sel.paid = paid.value; total(); }; total(); }
     const add = $('[data-add]', box);
     if (add) add.onclick = () => {
+      if (sel.paid === undefined || sel.paid === '') { const pf = $('.fp__pay', box); pf?.classList.remove('is-bad'); void pf?.offsetWidth; pf?.classList.add('is-bad'); paid?.focus(); return; }
       const same = state.accounts.filter((a) => a.firmId === sel.firm.id && a.programId === sel.program.id && a.size === sel.size).length;
-      for (let i = 0; i < sel.qty; i++) state.accounts.push(accountFromPlan(sel.firm, sel.program, sel.size, sel.stage, sel.qty + same > 1 ? same + i + 1 : 1));
+      for (let i = 0; i < sel.qty; i++) state.accounts.push({ ...accountFromPlan(sel.firm, sel.program, sel.size, sel.stage, sel.qty + same > 1 ? same + i + 1 : 1), cost: num(sel.paid) });
       sel = null; done();
     };
     $$('.facc', box).forEach((row) => {
@@ -135,7 +140,7 @@ export function mountPicker(box, state) {
     $$('[data-rm]', box).forEach((b) => (b.onclick = () => { state.accounts.splice(+b.dataset.rm, 1); draw(); state.onChange?.(); }));
   };
   // user-added firm or plan: saved once, then it's in the list like any other
-  const addMissing = (firm) => import('./views.js?v=e0e79e9b').then((V) => V.planModal({ firm, size: sel?.size || 50000, onSave: ({ firmId, programId, size }) => {
+  const addMissing = (firm) => import('./views.js?v=5c59a044').then((V) => V.planModal({ firm, size: sel?.size || 50000, onSave: ({ firmId, programId, size }) => {
     shown = shownF(); const f = firmById(firmId); const p = f.programs.find((x) => x.id === programId);
     sel = { firm: f, program: p, size, stage: firstStage(p, 'challenge'), qty: 1 }; draw(); anim();
   } }));

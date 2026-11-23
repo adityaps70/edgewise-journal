@@ -185,6 +185,9 @@ export const local = (v) => {
 export const pct = (v, d = 0) => (Number.isFinite(v) ? (v * 100).toFixed(d) : '0') + '%';
 export const tone = (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : '');
 
+// big goals, shown as examples where a trader names theirs
+export const GOAL_IDEAS = ['Quit my 9-to-5 and trade full time', 'First $100K in payouts', 'Buy my parents a house', 'Six-figure trading year', 'Five funded accounts, all paying out', 'Trade from anywhere in the world'];
+export const goalIdea = () => 'e.g. ' + GOAL_IDEAS[Math.floor(Math.random() * GOAL_IDEAS.length)];
 // ------------------------------------------------------------------ markets
 export const MARKETS = {
   futures: { label: 'Futures', qty: 'Contracts', move: 'Points', examples: ['NQ', 'MNQ', 'ES', 'MES', 'YM', 'MYM', 'RTY', 'M2K', 'CL', 'MCL', 'GC', 'MGC'] },
