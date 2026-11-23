@@ -1,5 +1,5 @@
 // Glass logo and floating glass candlesticks in a studio lit from the top left.
-// Loaded on demand by home.js when the stage gets near the viewport. (scene v7)
+// Loaded on demand by home.js when the stage gets near the viewport. (scene v8)
 import * as THREE from '../vendor/three/three.module.min.js';
 import { SVGLoader } from '../vendor/three/SVGLoader.js';
 
@@ -130,7 +130,8 @@ export function mount(canvas, { reduced = false } = {}) {
     [1, 1.7, 0.4, 0.3, 1.4, 2.5, 0.95, 1.35], [0, 0.6, 0.3, 0.4, 0.9, 3.4, 1.9, 0.45],
   ];
   const R = 0.3, candles = [];
-  SPEC.forEach(([up, body, wu, wd, sz0, x, clear, z], i) => {
+  SPEC.forEach(([up, body, wu, wd, sz0, x0, clear, z], i) => {
+    const x = x0 * 0.6 - 0.1; // pulled in close to each other
     const sz = (0.55 + sz0 * 0.45) * 0.62; // overall candle scale
     const g = new THREE.Group(); const r = R * sz, bh = body * sz, top = bh / 2 + wu * sz, bot = bh / 2 + wd * sz;
     const bodyM = new THREE.Mesh(roundedCylinder(r, bh, Math.min(0.12, bh * 0.3)), up ? mBull : mBear);
