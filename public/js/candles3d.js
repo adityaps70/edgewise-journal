@@ -1,5 +1,5 @@
 // Glass logo and floating glass candlesticks in a studio lit from the top left.
-// Loaded on demand by home.js when the stage gets near the viewport. (scene v5)
+// Loaded on demand by home.js when the stage gets near the viewport. (scene v6)
 import * as THREE from '../vendor/three/three.module.min.js';
 import { SVGLoader } from '../vendor/three/SVGLoader.js';
 
