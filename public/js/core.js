@@ -61,6 +61,8 @@ export const API = {
   adminResetAi: (id) => api('/admin/users/' + id + '/reset-ai', { method: 'POST' }),
   adminSettings: () => api('/admin/settings'),
   adminSaveSettings: (b) => api('/admin/settings', { method: 'POST', body: b }),
+  payOrder: (months = 1) => api('/pay/order', { method: 'POST', body: { months } }),
+  payVerify: (b) => api('/pay/verify', { method: 'POST', body: b }),
   signup: (b) => api('/auth/signup', { method: 'POST', body: b }),
   login: (b) => api('/auth/login', { method: 'POST', body: b }),
   logout: () => api('/auth/logout', { method: 'POST' }),

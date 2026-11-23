@@ -1,29 +1,58 @@
 // Free vs Pro: the upgrade screen, the usage meter, and the admin panel.
-import { S, $, $$, esc, icon, API, isPro, tradesLeft, aiLeft } from './core.js?v=a8b6f7c0';
-import { modal, confirmBox, helpers } from './views.js?v=a8b6f7c0';
-import { toast } from './motion.js?v=a8b6f7c0';
+import { S, $, $$, esc, icon, API, isPro, tradesLeft, aiLeft } from './core.js?v=cc3f8c4f';
+import { modal, confirmBox, helpers } from './views.js?v=cc3f8c4f';
+import { toast } from './motion.js?v=cc3f8c4f';
 
 const SUPPORT = 'support@thesmarttrade.in';
 const price = () => S.sub?.price || '20';
+
+// ---------------------------------------------------------------- Razorpay Checkout
+let rzpLoad = null;
+const loadRzp = () => (rzpLoad ||= new Promise((ok, no) => { if (window.Razorpay) return ok(); const s = document.createElement('script'); s.src = 'https://checkout.razorpay.com/v1/checkout.js'; s.onload = ok; s.onerror = () => { rzpLoad = null; no(new Error("Couldn't load the payment window. Check your connection and try again.")); }; document.head.append(s); }));
+export async function checkout(btn, months = 1) {
+  const label = btn?.innerHTML; if (btn) { btn.disabled = true; btn.innerHTML = 'Opening checkout…'; }
+  const reset = () => { if (btn) { btn.disabled = false; btn.innerHTML = label; } };
+  try {
+    const [o] = await Promise.all([API.payOrder(months), loadRzp()]);
+    const rz = new window.Razorpay({
+      key: o.key, order_id: o.orderId, amount: o.amount, currency: o.currency,
+      name: 'The Smart Trade', description: months > 1 ? `Pro, ${months} months` : 'Pro, 1 month', image: location.origin + '/brand/mark-512.png',
+      prefill: { email: o.email, name: o.name }, notes: { months: String(months) }, theme: { color: '#ff3048' },
+      modal: { ondismiss: reset },
+      handler: async (r) => {
+        try {
+          const v = await API.payVerify({ orderId: r.razorpay_order_id, paymentId: r.razorpay_payment_id, signature: r.razorpay_signature });
+          if (v.plan) { S.sub = { ...S.sub, ...v.plan }; dispatchEvent(new CustomEvent('st:refresh')); dispatchEvent(new CustomEvent('st:usage')); }
+          document.querySelectorAll('.scrim').forEach((x) => x.querySelector('[data-act="x"]')?.click());
+          toast(v.ok ? 'You\'re on Pro. Thanks for supporting The Smart Trade.' : v.message || 'Payment received. Pro switches on in a few minutes.', 'good');
+        } catch (e) { toast(e.message, 'bad'); }
+        reset();
+      },
+    });
+    rz.on('payment.failed', (r) => { toast(r.error?.description || 'The payment didn\'t go through. No money was taken.', 'bad'); });
+    rz.open();
+  } catch (e) { toast(e.message, 'bad'); reset(); }
+}
 
 // ---------------------------------------------------------------- upgrade
 let open = false;
 export function upgradeModal(reason = '') {
   if (open || isPro()) return; open = true;
   const why = reason === 'trades' ? `You've logged your ${S.sub?.trades.limit || 10} free trades.` : reason === 'ai' ? `You've used your ${S.sub?.ai.limit || 10} free AI requests.` : 'Get everything, without limits.';
-  const pay = S.sub?.payLink;
+  const co = !!S.sub?.checkout; const pay = !co && S.sub?.payLink;
   const m = modal('Upgrade to Pro', `<div class="upg">
     <p class="upg__why">${esc(why)} Pro keeps your journal going with no caps on trades.</p>
     <div class="upg__plans">
       <div class="upg__p"><small>Free</small><b>$0</b><ul><li>${icon('check')}${S.sub?.trades.limit || 10} trade logs</li><li>${icon('check')}${S.sub?.ai.limit || 10} AI coach requests</li><li>${icon('check')}Every feature to try</li></ul></div>
       <div class="upg__p upg__p--pro"><small>Pro</small><b>$${esc(price())}<em>/month</em></b><ul><li>${icon('check')}Unlimited trade logs and imports</li><li>${icon('check')}AI coach, 60 requests a day</li><li>${icon('check')}Screenshot logging, replay, AI backtests</li><li>${icon('check')}Broker sync and mentor links</li></ul></div>
     </div>
-    <p class="upg__fine">${pay ? 'You pay on a secure checkout page. Your account switches to Pro as soon as the payment is confirmed.' : `Write to ${SUPPORT} and we'll switch your account to Pro.`}</p>
-  </div>`, `<button class="btn" data-act="x">Not now</button>${pay ? `<a class="btn btn--primary" href="${esc(pay)}" target="_blank" rel="noopener" data-act="pay">Upgrade for $${esc(price())}/month</a>` : `<a class="btn btn--primary" href="mailto:${SUPPORT}?subject=${encodeURIComponent('Upgrade to Pro')}&body=${encodeURIComponent('Please switch my account to Pro: ' + (S.user?.email || ''))}">Email to upgrade</a>`}`);
+    <p class="upg__fine">${co ? 'Secure payment by Razorpay: cards and international cards. Pro switches on right after payment. Cancel any time; see the <a href="/refund" target="_blank" rel="noopener">refund policy</a>.' : pay ? 'You pay on a secure checkout page. Your account switches to Pro as soon as the payment is confirmed.' : `Write to ${SUPPORT} and we'll switch your account to Pro.`}</p>
+  </div>`, `<button class="btn" data-act="x">Not now</button>${co ? `<button class="btn btn--primary" data-act="buy">Upgrade for $${esc(price())}/month</button>` : pay ? `<a class="btn btn--primary" href="${esc(pay)}" target="_blank" rel="noopener" data-act="pay">Upgrade for $${esc(price())}/month</a>` : `<a class="btn btn--primary" href="mailto:${SUPPORT}?subject=${encodeURIComponent('Upgrade to Pro')}&body=${encodeURIComponent('Please switch my account to Pro: ' + (S.user?.email || ''))}">Email to upgrade</a>`}`);
   m.el.parentElement.style.zIndex = '400'; // above any open form
   const done = () => (open = false);
   const obs = new MutationObserver(() => { if (!document.body.contains(m.el)) { done(); obs.disconnect(); } }); obs.observe(document.body, { childList: true });
   m.on('pay', () => {});
+  m.on('buy', (e) => checkout(e?.currentTarget || m.el.querySelector('[data-act="buy"]')));
 }
 
 // ---------------------------------------------------------------- usage meter (sidebar, settings)
@@ -59,7 +88,7 @@ export async function admin(el) {
       <div class="grid g-4 adkpis">
         <section class="card adk"><small>Users</small><b>${ov.users}</b><span>+${ov.new7} this week · +${ov.new30} in 30 days</span>${spark(ov.signups)}</section>
         <section class="card adk"><small>Active</small><b>${ov.active7}</b><span>${ov.active1} today · last 7 days</span></section>
-        <section class="card adk"><small>Pro</small><b>${ov.pro}</b><span>$${(ov.pro * +st.pro_price).toLocaleString()}/month at $${esc(st.pro_price)} · ${ov.atLimit} free users at the trade limit</span></section>
+        <section class="card adk"><small>Pro</small><b>${ov.pro}</b><span>${(ov.revenue30 || []).length ? (ov.revenue30.map((r) => `${r.currency === 'USD' ? '$' : r.currency === 'INR' ? '₹' : r.currency + ' '}${(r.amt / 100).toLocaleString()}`).join(' + ') + ' paid in 30 days') : ov.checkout ? 'No payments yet' : 'Razorpay not connected'} · ${ov.atLimit} free users at the trade limit</span></section>
         <section class="card adk"><small>AI requests</small><b>${ov.aiToday}</b><span>today · ${ov.ai30} in 30 days</span>${spark(ov.aiDaily, 'adspark--ai')}</section>
       </div>
       <section class="card" style="margin-top:var(--gap)"><div class="chead"><div class="chead__text"><h3>Users</h3><p>${list.length} of ${users.length} · ${ov.trades.toLocaleString()} trades and ${ov.accounts} accounts across everyone</p></div></div>

@@ -16,6 +16,8 @@ AI_DAILY_LIMIT = "60"
 GOOGLE_CLIENT_ID = "480257317582-51bdjp8su1tve6ue69ukd83kbtm84k0f.apps.googleusercontent.com"
 # Who can open the admin panel (comma separated).
 ADMIN_EMAILS = "adityaps700@gmail.com"
+RAZORPAY_KEY_ID = "rzp_live_Tym5GVPkVU2PfP"
+PAY_CURRENCY = "USD"
 # Set to "false" to close sign-ups.
 ALLOW_SIGNUP = "true"
 

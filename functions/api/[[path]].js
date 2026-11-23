@@ -72,6 +72,34 @@ async function planInfo(env, user) {
   return { pro, admin, proUntil: u.pro_until || null, trades: { used: Math.max(u.trades_logged || 0, tradeDocs || 0), limit: pro ? null : parseInt(st.free_trades, 10) }, ai: { used: aiTotal || 0, limit: pro ? null : parseInt(st.free_ai, 10) }, settings: st };
 }
 
+
+// ---------------------------------------------------------------- payments (Razorpay Checkout, one month of Pro per payment)
+const rzpOn = (env) => !!(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET);
+async function hmacHex(secret, msg) {
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return [...new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(msg)))].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+const safeEq = (a, b) => { a = String(a); b = String(b); if (a.length !== b.length) return false; let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i); return r === 0; };
+async function rzp(env, path, body) {
+  const r = await fetch('https://api.razorpay.com/v1' + path, { method: body ? 'POST' : 'GET', headers: { authorization: 'Basic ' + btoa(env.RAZORPAY_KEY_ID + ':' + env.RAZORPAY_KEY_SECRET), 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error?.description || 'Payment service error.');
+  return j;
+}
+async function ensurePayTable(env) { await env.DB.prepare('CREATE TABLE IF NOT EXISTS payments (id TEXT PRIMARY KEY, order_id TEXT, user_id TEXT, amount INTEGER, currency TEXT, months INTEGER, status TEXT, created_at INTEGER)').run(); }
+// records the payment once and extends Pro; safe to call from both the checkout callback and the webhook
+async function grantPro(env, { paymentId, orderId, userId, amount, currency, months }) {
+  await ensurePayTable(env); await ensurePlanTables(env);
+  const ins = await env.DB.prepare('INSERT OR IGNORE INTO payments (id, order_id, user_id, amount, currency, months, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').bind(paymentId, orderId || '', userId, amount || 0, currency || '', months || 1, 'captured', Date.now()).run();
+  if (!ins.meta?.changes) return false;
+  const u = await env.DB.prepare('SELECT plan, pro_until FROM users WHERE id = ?').bind(userId).first();
+  if (!u) return false;
+  if (u.plan === 'pro' && !u.pro_until) return true; // already Pro with no end date
+  const from = Math.max(Date.now(), u.pro_until || 0);
+  await env.DB.prepare("UPDATE users SET plan = 'pro', pro_until = ? WHERE id = ?").bind(from + (months || 1) * 30 * 86400000, userId).run();
+  return true;
+}
+
 async function startSession(env, request, user) {
   const token = randomId(32);
   await env.DB.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)')
@@ -365,6 +393,21 @@ export async function onRequest(context) {
       return err('Not found', 404);
     }
 
+    // Razorpay webhook: grants Pro even if the buyer closed the tab before the checkout callback ran
+    if (path === '/pay/webhook' && method === 'POST') {
+      if (!env.RAZORPAY_WEBHOOK_SECRET) return err('Webhook is not configured.', 503);
+      const raw = await request.text();
+      if (!safeEq(await hmacHex(env.RAZORPAY_WEBHOOK_SECRET, raw), request.headers.get('x-razorpay-signature') || '')) return err('Bad signature.', 400);
+      const ev = JSON.parse(raw);
+      if (ev.event === 'payment.captured' || ev.event === 'order.paid') {
+        const pay = ev.payload?.payment?.entity; const ord = ev.payload?.order?.entity; const orderId = pay?.order_id || ord?.id;
+        let notes = (ord && ord.notes && ord.notes.user_id) ? ord.notes : pay?.notes || {};
+        if (!notes.user_id && orderId && rzpOn(env)) notes = (await rzp(env, '/orders/' + orderId)).notes || {};
+        if (notes.user_id && pay?.id && pay.status === 'captured') await grantPro(env, { paymentId: pay.id, orderId, userId: notes.user_id, amount: pay.amount, currency: pay.currency, months: parseInt(notes.months || '1', 10) });
+      }
+      return json({ ok: true });
+    }
+
     // ---- everything below needs a session
     const user = await currentUser(env, request);
     if (!user) return err('Not signed in.', 401);
@@ -372,7 +415,28 @@ export async function onRequest(context) {
     if (path === '/me' && method === 'GET') {
       const plan = await planInfo(env, user);
       await env.DB.prepare('UPDATE users SET last_seen = ? WHERE id = ?').bind(Date.now(), user.id).run();
-      return json({ user: { ...user, admin: plan.admin }, plan: { pro: plan.pro, proUntil: plan.proUntil, trades: plan.trades, ai: plan.ai, price: plan.settings.pro_price, payLink: plan.settings.pay_link, banner: plan.settings.banner }, ai: { configured: !!env.ANTHROPIC_API_KEY } });
+      return json({ user: { ...user, admin: plan.admin }, plan: { pro: plan.pro, proUntil: plan.proUntil, trades: plan.trades, ai: plan.ai, price: plan.settings.pro_price, payLink: plan.settings.pay_link, banner: plan.settings.banner, checkout: rzpOn(env), currency: env.PAY_CURRENCY || 'USD' }, ai: { configured: !!env.ANTHROPIC_API_KEY } });
+    }
+
+    if (path === '/pay/order' && method === 'POST') {
+      if (!rzpOn(env)) return err('Payments are not set up yet. Email support@thesmarttrade.in to upgrade.', 503);
+      const st = await settings(env); const body = await request.json().catch(() => ({}));
+      const months = [1, 3, 12].includes(+body.months) ? +body.months : 1;
+      const currency = env.PAY_CURRENCY || 'USD'; const amount = Math.round((parseFloat(st.pro_price) || 20) * months * 100);
+      const order = await rzp(env, '/orders', { amount, currency, receipt: 'st_' + Date.now().toString(36) + '_' + user.id.slice(0, 8), notes: { user_id: user.id, email: user.email, months: String(months), product: 'The Smart Trade Pro' } });
+      return json({ key: env.RAZORPAY_KEY_ID, orderId: order.id, amount, currency, months, email: user.email, name: user.name || '' });
+    }
+    if (path === '/pay/verify' && method === 'POST') {
+      if (!rzpOn(env)) return err('Payments are not set up yet.', 503);
+      const { orderId, paymentId, signature } = await request.json();
+      if (!safeEq(await hmacHex(env.RAZORPAY_KEY_SECRET, orderId + '|' + paymentId), signature || '')) return err('This payment could not be verified. If money left your account, email support@thesmarttrade.in.', 400);
+      const order = await rzp(env, '/orders/' + orderId);
+      if (order.notes?.user_id !== user.id) return err('This payment belongs to another account.', 403);
+      const pay = await rzp(env, '/payments/' + paymentId);
+      if (pay.status !== 'captured') return json({ ok: false, pending: true, message: 'Payment received. Pro will switch on as soon as Razorpay confirms it, usually within a few minutes.' }, 202);
+      await grantPro(env, { paymentId, orderId, userId: user.id, amount: pay.amount, currency: pay.currency, months: parseInt(order.notes?.months || '1', 10) });
+      const plan = await planInfo(env, user);
+      return json({ ok: true, plan: { pro: plan.pro, proUntil: plan.proUntil, trades: plan.trades, ai: plan.ai } });
     }
 
     if (path === '/data' && method === 'GET') {
@@ -443,7 +507,10 @@ export async function onRequest(context) {
         const days = Array.from({ length: 30 }, (_, i) => new Date(now - (29 - i) * DAY).toISOString().slice(0, 10));
         const signups = days.map((d) => su.filter((r) => new Date(r.created_at).toISOString().slice(0, 10) === d).length);
         const aiDaily = days.map((d) => (au.find((r) => r.day === d) || {}).n || 0);
-        return json({ users: users.n, new7: new7.n, new30: new30.n, active1: active1.n, active7: active7.n, pro: pro.n, trades: trades.n, accounts: accounts.n, aiToday: aiToday.n, ai30: ai30.n, atLimit: atLimit.n, days, signups, aiDaily });
+        await ensurePayTable(env);
+        const { results: rev } = await env.DB.prepare('SELECT currency, COALESCE(SUM(amount), 0) AS amt, COUNT(*) AS n FROM payments WHERE created_at > ? GROUP BY currency').bind(now - 30 * DAY).all();
+        const paidAll = await one('SELECT COUNT(*) AS n, COUNT(DISTINCT user_id) AS u FROM payments');
+        return json({ users: users.n, new7: new7.n, new30: new30.n, active1: active1.n, active7: active7.n, pro: pro.n, trades: trades.n, accounts: accounts.n, aiToday: aiToday.n, ai30: ai30.n, atLimit: atLimit.n, days, signups, aiDaily, revenue30: rev, payments: paidAll.n || 0, payers: paidAll.u || 0, checkout: rzpOn(env) });
       }
       if (path === '/admin/users' && method === 'GET') {
         const { results } = await env.DB.prepare(`SELECT u.id, u.email, u.name, u.plan, u.pro_until, u.created_at, u.last_seen, COALESCE(u.trades_logged, 0) AS logged,
