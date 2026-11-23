@@ -3,15 +3,15 @@ import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
   goalIdea,
-} from './core.js?v=1a2e09d8';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=1a2e09d8';
-import { slider, liveRate, fxAgo } from './ui.js?v=1a2e09d8';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=1a2e09d8';
+} from './core.js?v=c8ab25c2';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=c8ab25c2';
+import { slider, liveRate, fxAgo } from './ui.js?v=c8ab25c2';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=c8ab25c2';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=1a2e09d8';
-import * as V2 from './views2.js?v=1a2e09d8';
-import * as V3 from './views3.js?v=1a2e09d8';
-import * as V4 from './views4.js?v=1a2e09d8';
+import * as V from './views.js?v=c8ab25c2';
+import * as V2 from './views2.js?v=c8ab25c2';
+import * as V3 from './views3.js?v=c8ab25c2';
+import * as V4 from './views4.js?v=c8ab25c2';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -510,6 +510,9 @@ function buildNav() {
   }).join('');
   $$('.nav__item', nav).forEach((a) => a.onclick = () => $('#slab').classList.remove('is-open'));
   requestAnimationFrame(() => movePill(nav, false));
+  // keep the red highlight on the current page if the menu's layout shifts later (fonts loading, badges, sidebar fold, window resize)
+  if (!nav.__ro && window.ResizeObserver) { nav.__ro = new ResizeObserver(() => movePill(nav, false)); nav.__ro.observe(nav); }
+  document.fonts?.ready.then(() => movePill(nav, false));
 }
 function updateSide() {
   const r = safeToRisk(); const box = $('#safe'); if (!box) return;

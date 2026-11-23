@@ -1039,3 +1039,9 @@ body.mp { overflow: auto; background: var(--scene); background-color: var(--bg);
 .hubtabs { margin: 0 0 var(--gap); }
 .hubtabs button { display: inline-flex; align-items: center; gap: 8px; padding: 12px 14px; font-size: var(--fs-md); }
 .hubtabs button svg { width: 16px; height: 16px; opacity: .8; }
+/* no browser focus ring on mouse clicks in the menu; a quiet one for keyboard users */
+.nav__item:focus:not(:focus-visible) { outline: none; }
+.nav__item:focus-visible { outline: 1.5px solid var(--line-2); outline-offset: -2px; }
+/* weekly plan: weekend note */
+.wkend { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: var(--gap); }
+.wkend__t { display: grid; gap: 4px; flex: 1; min-width: 240px; } .wkend__t b { font-size: var(--fs-md); } .wkend__t span { color: var(--muted); font-size: var(--fs-sm); } .wkend__t span b { font-size: inherit; }

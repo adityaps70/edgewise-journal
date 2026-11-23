@@ -368,12 +368,12 @@ export function missionMetrics() {
   return { ...m, start, end, actual, actualLocal, pending, costs, net: actual - costs, target: num(m.target), progress: num(m.target) ? clamp(actual / num(m.target), 0, 1) : 0, elapsed, daysLeft, tdTotal, tdLeft, tradePnl, payouts };
 }
 export function planMetrics(plan) {
-  const end = addDays(plan.start, (plan.days || 5) * 7 / 5 + 1);
+  const end = addDays(weekStart(plan.start), 6); // calendar week: Monday to Sunday (weekend trades, e.g. crypto, still count)
   const rows = (plan.rows || []).map((r) => {
     const trades = S.trade.filter((t) => t.accountId === r.accountId && t.date >= plan.start && t.date <= end);
     const actual = r.actual !== undefined && r.actual !== '' && r.actual !== null && !trades.length ? num(r.actual) : sum(trades, net);
     const goal = num(r.goal);
-    return { ...r, actual, perDay: goal / (plan.days || 5), endPlan: num(r.balanceStart) + goal - num(r.payout), endActual: num(r.balanceStart) + actual - num(r.payout), progress: goal ? clamp(actual / goal, 0, 1) : 0 };
+    return { ...r, actual, perDay: goal / 5, endPlan: num(r.balanceStart) + goal - num(r.payout), endActual: num(r.balanceStart) + actual - num(r.payout), progress: goal ? clamp(actual / goal, 0, 1) : 0 };
   });
   return { rows, end, goal: sum(rows, (r) => r.goal), actual: sum(rows, (r) => r.actual), payout: sum(rows, (r) => r.payout) };
 }

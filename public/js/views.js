@@ -6,13 +6,13 @@ import {
   safeToRisk, missionMetrics, planMetrics, aiContext, md, icon, API, flush, wipeAll, tradingDaysBetween,
   FT, exitStats, passForecast, autoTags, runAgents, tagList, accCost, COST_FIELDS, TIMEFRAMES, EXIT_BEHAVIOR, edgeScore, zoneOf, durationMin, durationBucket, setupsOf, severeCombo, lateLoss, mastery, HOT,
   goalIdea,
-} from './core.js?v=1a2e09d8';
-import { enterPage, animateData, segInit, segSelect, openModal, closeModal, toast, flash, pop, shake, wobble, cardStack, countUp } from './motion.js?v=1a2e09d8';
-import { equityChart, tubes, hbars, bindTips, drill as drillStore, radar, reg } from './charts.js?v=1a2e09d8';
+} from './core.js?v=c8ab25c2';
+import { enterPage, animateData, segInit, segSelect, openModal, closeModal, toast, flash, pop, shake, wobble, cardStack, countUp } from './motion.js?v=c8ab25c2';
+import { equityChart, tubes, hbars, bindTips, drill as drillStore, radar, reg } from './charts.js?v=c8ab25c2';
 const drillMap = () => drillStore;
-import { slider, setSlider, liveRate, fxAgo, soundOn, setSound, refreshDate } from './ui.js?v=1a2e09d8';
-import * as V3m from './views3.js?v=1a2e09d8';
-import { catalog, firmById, planRules, defaultDaily, dailyCap, STAGE_LABEL, mono, firstStage, isInstant } from './firms.js?v=1a2e09d8';
+import { slider, setSlider, liveRate, fxAgo, soundOn, setSound, refreshDate } from './ui.js?v=c8ab25c2';
+import * as V3m from './views3.js?v=c8ab25c2';
+import { catalog, firmById, planRules, defaultDaily, dailyCap, STAGE_LABEL, mono, firstStage, isInstant } from './firms.js?v=c8ab25c2';
 
 let H = { go: () => {}, refresh: () => {}, rerenderShell: () => {} };
 export const setHooks = (h) => (H = h);
@@ -158,7 +158,7 @@ export function overview(el) {
   el.querySelector('[data-act="log"]').onclick = () => tradeModal(); { const b = el.querySelector('[data-act="shot"]'); if (b) b.onclick = () => tradeModal(null, {}, { shot: true }); }
   el.querySelector('[data-act="review"]').onclick = () => H.go('coach', { run: 'week' });
   el.querySelector('[data-act="hide"]').onclick = (e) => { el.classList.toggle('is-masked'); wobble(e.currentTarget); };
-  import('./views3.js?v=1a2e09d8').then((V3) => V3.weeklyDigest($('#digest', el)));
+  import('./views3.js?v=c8ab25c2').then((V3) => V3.weeklyDigest($('#digest', el)));
   const ins = el.querySelector('[data-act="insight"]');
   if (ins) ins.onclick = async () => {
     const box = $('#insight', el); box.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>'; wobble(ins);
@@ -277,7 +277,7 @@ export function trades(el) {
   $('#fOut', el).onchange = (e) => { TF.outcome = e.target.value; draw(); };
   $('#fQ', el).oninput = (e) => { TF.q = e.target.value; draw(); };
   el.querySelector('[data-act="log"]').onclick = () => tradeModal(); { const b = el.querySelector('[data-act="shot"]'); if (b) b.onclick = () => tradeModal(null, {}, { shot: true }); }
-  el.querySelector('[data-act="csv"]').onclick = () => import('./views4.js?v=1a2e09d8').then((V4) => V4.importModal());
+  el.querySelector('[data-act="csv"]').onclick = () => import('./views4.js?v=c8ab25c2').then((V4) => V4.importModal());
   draw(); after(el);
 }
 
@@ -379,7 +379,7 @@ export function tradeModal(t0, preset = {}, opts = {}) {
   m.el.addEventListener('click', () => setTimeout(mScore));
   const durHint = () => { const f = formData(m.el); const d = durationMin({ date: f.date, time: f.time, exitTime: f.exitTime }); $('#durHint', m.el).textContent = d !== null ? `held ${d < 60 ? Math.round(d) + ' min' : (d / 60).toFixed(1) + ' h'}` : ''; };
   m.el.addEventListener('input', durHint); durHint(); setTimeout(mScore);
-  $$('#tTabs button', m.el).forEach((b) => b.onclick = () => { $$('#tTabs button', m.el).forEach((x) => x.classList.toggle('is-on', x === b)); $$('[data-pane]', m.el).forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab)); const pane = $(`[data-pane="${b.dataset.tab}"]`, m.el); if (b.dataset.tab === 'e') { read(); import('./views4.js?v=1a2e09d8').then((V4) => V4.replay($('#replayBox', m.el), { ...t }, { onExcursion: ({ mae, mfe }) => { $('[name="mae"]', m.el).value = mae; $('[name="mfe"]', m.el).value = mfe; } })); } if (window.gsap) window.gsap.fromTo(pane, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }); });
+  $$('#tTabs button', m.el).forEach((b) => b.onclick = () => { $$('#tTabs button', m.el).forEach((x) => x.classList.toggle('is-on', x === b)); $$('[data-pane]', m.el).forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab)); const pane = $(`[data-pane="${b.dataset.tab}"]`, m.el); if (b.dataset.tab === 'e') { read(); import('./views4.js?v=c8ab25c2').then((V4) => V4.replay($('#replayBox', m.el), { ...t }, { onExcursion: ({ mae, mfe }) => { $('[name="mae"]', m.el).value = mae; $('[name="mfe"]', m.el).value = mfe; } })); } if (window.gsap) window.gsap.fromTo(pane, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }); });
   const gHint = () => { const g = $('#gradeC .is-on', m.el)?.dataset.v; const bg = P().risk?.byGrade; $('#gradeHint', m.el).textContent = g && bg && num(bg[g]) ? `your ${g} risk: ${money(bg[g])}` : g ? '' : 'A+ high conviction · B normal · C low probability'; };
   $$('#gradeC .chip', m.el).forEach((c) => c.onclick = () => { const on = c.classList.contains('is-on'); $$('#gradeC .chip', m.el).forEach((x) => x.classList.remove('is-on')); if (!on) c.classList.add('is-on'); pop(c); gHint(); hint(); });
   gHint();
@@ -802,23 +802,34 @@ function targetsModal(focus) {
 // ======================================================================= WEEKLY PLAN
 export function plan(el) {
   const plans = S.plan.slice().sort((a, b) => b.start.localeCompare(a.start));
-  el.innerHTML = `<div class="page">${phead('Five trading days at a time', 'Weekly plan', 'Set a balance and goal per account for each 5-day block. Actuals fill in from your trades.', `<button class="btn btn--primary" data-act="add">${icon('plus')}Next 5 days</button>`)}
-  ${plans.length ? plans.map((p, i) => { const pm = planMetrics(p); const isNow = today() >= p.start && today() <= pm.end; return `<section class="card" style="margin-bottom:var(--gap)" data-plan="${p.id}"><div class="chead"><div class="chead__text"><h3>${esc(p.title || (i === plans.length - 1 ? 'First 5 trading days' : 'Next 5 trading days'))} ${isNow ? '<span class="pill pill--accent" style="margin-left:6px"><span class="live"></span>This week</span>' : ''}</h3><p>${fmtDate(p.start)} → ${fmtDate(pm.end)} · goal ${money(pm.goal)} · actual <b class="${tone(pm.actual)}">${money(pm.actual, { sign: true })}</b></p></div><button class="ibtn" data-act="del-plan" aria-label="Delete block">${icon('trash')}</button></div>
+  const wk = weekStart(today()); const dow = (parseISO(today()).getDay() + 6) % 7; const weekend = dow >= 5;
+  const hasWeek = (w) => S.plan.some((p) => weekStart(p.start) === w);
+  // on a weekend the next plan is for the coming Monday; on a weekday it's this week, then the week after the latest one
+  const nextWeek = weekend ? addDays(wk, 7) : wk;
+  const target = !hasWeek(nextWeek) ? nextWeek : addDays(weekStart(plans[0].start), 7);
+  const label = target === wk ? 'Plan this week' : target === addDays(wk, 7) ? 'Plan next week' : `Plan week of ${fmtDate(target)}`;
+  const wkName = (s0) => { const s = weekStart(s0); return s === wk ? 'This week' : s === addDays(wk, 7) ? 'Next week' : s === addDays(wk, -7) ? 'Last week' : `Week of ${fmtDate(s)}`; };
+  const thisPlan = plans.find((p) => weekStart(p.start) === wk);
+  const weekendCard = weekend ? (() => { const wt = S.trade.filter((t) => t.date >= wk && t.date <= addDays(wk, 6)); const n = sum(wt, net); const g = thisPlan ? planMetrics(thisPlan).goal : 0;
+    return `<section class="card wkend"><div class="wkend__t"><b>It's the weekend. Markets are closed.</b><span>${wt.length ? `This week: ${wt.length} trade${wt.length > 1 ? 's' : ''}, <b class="${tone(n)}">${money(n, { sign: true })}</b>${g ? ` against a ${money(g)} goal` : ''}. ` : 'No trades this week. '}Look back over the week, or take the time off. Plan Monday when you're ready.</span></div><div class="row"><button class="btn btn--sm" data-act="review">${icon('trades')}Review this week</button></div></section>`; })() : '';
+  el.innerHTML = `<div class="page">${phead('One trading week at a time', 'Weekly plan', 'Set a starting balance and a goal per account for each week, Monday to Friday. Actuals fill in from your trades. Weekends are for review or rest.', `<button class="btn btn--primary" data-act="add">${icon('plus')}${label}</button>`)}
+  ${weekendCard}
+  ${plans.length ? plans.map((p) => { const pm = planMetrics(p); const ws = weekStart(p.start); const isNow = ws === wk; return `<section class="card" style="margin-bottom:var(--gap)" data-plan="${p.id}"><div class="chead"><div class="chead__text"><h3>${esc(wkName(p.start))} ${isNow ? '<span class="pill pill--accent" style="margin-left:6px"><span class="live"></span>Now</span>' : ''}</h3><p>Mon ${fmtDate(ws)} → Fri ${fmtDate(addDays(ws, 4))} · goal ${money(pm.goal)} · actual <b class="${tone(pm.actual)}">${money(pm.actual, { sign: true })}</b></p></div><button class="ibtn" data-act="del-plan" aria-label="Delete week">${icon('trash')}</button></div>
     <div class="tablewrap"><table class="t plan-t"><thead><tr><th>Account</th><th class="r">Balance start</th><th class="r">Weekly goal</th><th class="r">Per day</th><th class="r">Payout</th><th class="r">Balance end (plan)</th><th class="r">Actual</th><th style="min-width:130px">Progress</th></tr></thead><tbody>
     ${pm.rows.map((r, k) => `<tr style="cursor:default"><td><b>${esc(r.label || accName(r.accountId))}</b></td><td class="r"><input class="in cell-in" data-k="${k}" data-f="balanceStart" value="${esc(r.balanceStart ?? '')}" type="number" step="any"></td><td class="r"><input class="in cell-in" data-k="${k}" data-f="goal" value="${esc(r.goal ?? '')}" type="number" step="any"></td><td class="r">${money(r.perDay)}</td><td class="r"><input class="in cell-in" data-k="${k}" data-f="payout" value="${esc(r.payout ?? '')}" type="number" step="any"></td><td class="r">${money(r.endPlan)}</td><td class="r amt ${tone(r.actual)}">${money(r.actual, { sign: true })}</td><td><div class="row" style="gap:8px"><div style="flex:1">${meter(r.progress)}</div><small>${pct(r.progress)}</small></div></td></tr>`).join('')}
-    </tbody><tfoot><tr><td>Total</td><td></td><td class="r">${money(pm.goal)}</td><td class="r">${money(pm.goal / (p.days || 5))}</td><td class="r">${money(pm.payout)}</td><td></td><td class="r ${tone(pm.actual)}">${money(pm.actual, { sign: true })}</td><td></td></tr></tfoot></table></div></section>`; }).join('')
-    : `<section class="card"><div class="empty">${icon('plan')}<b>No plan yet</b>Create your first 5-day block from your live accounts.</div></section>`}</div>`;
+    </tbody><tfoot><tr><td>Total</td><td></td><td class="r">${money(pm.goal)}</td><td class="r">${money(pm.goal / 5)}</td><td class="r">${money(pm.payout)}</td><td></td><td class="r ${tone(pm.actual)}">${money(pm.actual, { sign: true })}</td><td></td></tr></tfoot></table></div></section>`; }).join('')
+    : `<section class="card"><div class="empty">${icon('plan')}<b>No plan yet</b>Plan ${weekend ? 'next' : 'this'} week from your live accounts: a starting balance and a goal for each.</div></section>`}</div>`;
   el.querySelector('[data-act="add"]').onclick = () => {
     const last = plans[0]; const live = S.account.filter(isLive);
-    const start = last ? addDays(planMetrics(last).end, 1) : weekStart(today());
     const rows = last ? planMetrics(last).rows.map((r) => ({ accountId: r.accountId, label: r.label, balanceStart: Math.round(r.endActual), goal: r.goal, payout: 0 })) : live.map((a) => ({ accountId: a.id, balanceStart: Math.round(accountMetrics(a).pnl), goal: num(a.target) ? Math.round(num(a.target) / 2) : 1000, payout: 0 }));
-    save('plan', { start: weekStart(start) < start ? addDays(weekStart(start), 7) : start, days: 5, rows, title: last ? 'Next 5 trading days' : 'First 5 trading days' }); H.refresh();
+    save('plan', { start: target, days: 5, rows }); H.refresh();
   };
+  const rv = el.querySelector('[data-act="review"]'); if (rv) rv.onclick = () => { location.hash = '#trades'; };
   $$('.cell-in', el).forEach((input) => input.onchange = () => {
     const p = S.plan.find((x) => x.id === input.closest('[data-plan]').dataset.plan);
     p.rows[+input.dataset.k][input.dataset.f] = input.value === '' ? '' : num(input.value); save('plan', p); H.refresh();
   });
-  $$('[data-act="del-plan"]', el).forEach((b) => b.onclick = () => confirmBox('Delete this 5-day block?', '', () => { remove('plan', b.closest('[data-plan]').dataset.plan); H.refresh(); }));
+  $$('[data-act="del-plan"]', el).forEach((b) => b.onclick = () => confirmBox('Delete this week\'s plan?', '', () => { remove('plan', b.closest('[data-plan]').dataset.plan); H.refresh(); }));
   after(el);
 }
 
