@@ -3,15 +3,15 @@ import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
   goalIdea,
-} from './core.js?v=e2389fed';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=e2389fed';
-import { slider, liveRate, fxAgo } from './ui.js?v=e2389fed';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=e2389fed';
+} from './core.js?v=daca8531';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=daca8531';
+import { slider, liveRate, fxAgo } from './ui.js?v=daca8531';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=daca8531';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=e2389fed';
-import * as V2 from './views2.js?v=e2389fed';
-import * as V3 from './views3.js?v=e2389fed';
-import * as V4 from './views4.js?v=e2389fed';
+import * as V from './views.js?v=daca8531';
+import * as V2 from './views2.js?v=daca8531';
+import * as V3 from './views3.js?v=daca8531';
+import * as V4 from './views4.js?v=daca8531';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -421,7 +421,7 @@ const VIEWS = {
   mindset: ['Mindset', 'brain', V2.mindset], firms: ['Prop firms', 'shield', V2.firms], reports: ['Reports', 'sheet', V2.reports],
   coach: ['AI coach', 'coach', V.coach], settings: ['Settings', 'settings', V.settings],
   notebook: ['Notebook', 'note', V3.notebook], agents: ['Agents', 'agent', V3.agents], backtest: ['Backtesting', 'flask', V3.backtest],
-  tools: ['Tools', 'calc', V3.tools], mentor: ['Mentor mode', 'users', V3.mentor], connections: ['Connections', 'link', V4.connections],
+  tools: ['Tools', 'calc', V3.tools], mentor: ['Mentor mode', 'users', V3.mentor], connections: ['Connections', 'link', V4.connections], economic: ['Economic calendar', 'calendar', V3.economic],
 };
 // ---- menu sections: each groups related pages, shown as tabs at the top of the page
 const HUBS = [
@@ -431,7 +431,7 @@ const HUBS = [
   ['journal', 'Journal', 'journal', ['journal', 'notebook', 'plan']],
   ['playbook', 'Playbook', 'playbook', ['playbook', 'backtest']],
   ['accounts', 'Accounts', 'accounts', ['accounts', 'firms', 'payouts']],
-  ['tools', 'Tools', 'calc', ['agents', 'tools', 'connections', 'mentor']],
+  ['tools', 'Tools', 'calc', ['agents', 'tools', 'economic', 'connections', 'mentor']],
 ];
 const TAB_LABEL = { trades: 'Trade log', analytics: 'Stats', journal: 'Daily journal', accounts: 'Your accounts', firms: 'Firms & costs', tools: 'Calculators' };
 const hubOf = (id) => HUBS.find((h) => h[3].includes(id)) || null;
@@ -449,7 +449,7 @@ function navItems() { // every page this trader can open (the menu shows them gr
   if (prop) list.push('firms');
   if (prop || S.payout.length) list.push('payouts');
   if (prop || p.mission || S.plan.length) list.push('plan');
-  list.push('connections', 'agents', 'reports', 'mentor', 'tools', 'coach');
+  list.push('connections', 'agents', 'reports', 'mentor', 'tools', 'economic', 'coach');
   return list;
 }
 let current = null;

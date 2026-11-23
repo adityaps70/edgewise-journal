@@ -1050,3 +1050,6 @@ body.mp { overflow: auto; background: var(--scene); background-color: var(--bg);
 .hubtabs a:hover { color: var(--ink-2); }
 .hubtabs a.is-on { color: var(--ink); border-color: var(--accent); }
 .hubtabs a svg { width: 16px; height: 16px; opacity: .8; }
+.calcwrap { max-width: 720px; }
+.econ--full { min-height: 720px; }
+.chk__link { margin-left: auto; font-size: var(--fs-xs); font-weight: 600; color: var(--accent-text, var(--accent)); text-decoration: none; padding-left: 10px; }

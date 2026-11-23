@@ -3,12 +3,12 @@ import {
   S, P, $, $$, esc, uid, num, sum, clamp, today, addDays, parseISO, weekStart, fmtDate, fmtDay, money, pct, tone, sym,
   net, stats, groupBy, inRange, rMultiple, accName, isLive, icon, API, aiContext, md, save, remove, saveProfile, setupsOf,
   F, setFilter, filterLabels, filterCount, FT, tagList, runAgents, autoTags, agentState, AGENT_METRICS, AGENT_OPS, pointValue, POINT_VALUE,
-} from './core.js?v=e2389fed';
-import { equityChart, hbars } from './charts.js?v=e2389fed';
-import { helpers, modal, confirmBox } from './views.js?v=e2389fed';
-import { segInit, toast, shake } from './motion.js?v=e2389fed';
-import { slider } from './ui.js?v=e2389fed';
-import * as V4m from './views4.js?v=e2389fed';
+} from './core.js?v=daca8531';
+import { equityChart, hbars } from './charts.js?v=daca8531';
+import { helpers, modal, confirmBox } from './views.js?v=daca8531';
+import { segInit, toast, shake } from './motion.js?v=daca8531';
+import { slider } from './ui.js?v=daca8531';
+import * as V4m from './views4.js?v=daca8531';
 
 // views.js imports this module too, so reach helpers lazily (they don't exist yet while modules load)
 const card = (...a) => helpers.card(...a); const phead = (...a) => helpers.phead(...a); const cnt = (...a) => helpers.cnt(...a);
@@ -79,7 +79,7 @@ export function startDayHTML(j) {
   const items = checklistItems(); const done = j.checklist || [];
   const setups = S.setup.map((s) => s.name); const planned = j.plannedSetups || [];
   return `<section class="card sday"><div class="chead"><div class="chead__text"><h3>Start my day</h3><p>${done.length}/${items.length} checked${j.bias ? ' · bias ' + esc(j.bias) : ''}</p></div><button class="btn btn--sm btn--ghost" data-act="editcheck">${icon('edit')}Edit list</button></div>
-    <div class="checklist" id="chk">${items.map((x) => `<button type="button" class="chk ${done.includes(x) ? 'is-on' : ''}" data-v="${esc(x)}"><i>${icon('check')}</i><span>${esc(x)}</span></button>`).join('')}</div>
+    <div class="checklist" id="chk">${items.map((x) => `<button type="button" class="chk ${done.includes(x) ? 'is-on' : ''}" data-v="${esc(x)}"><i>${icon('check')}</i><span>${esc(x)}</span>${/economic calendar/i.test(x) ? `<a class="chk__link" href="#economic" onclick="event.stopPropagation()">Open ↗</a>` : ''}</button>`).join('')}</div>
     <div class="grid g-2" style="gap:12px;margin-top:12px">
       ${field('Bias', segRow('bias', [['Long', 'Long'], ['Short', 'Short'], ['Neutral', 'Neutral']], j.bias || ''))}
       ${field('Max trades today', inp('maxTradesPlan', j.maxTradesPlan || P().risk?.maxTrades || '', 'type="number" min="0" placeholder="e.g. 3"'))}
@@ -298,8 +298,8 @@ export function tools(el) {
   const r = P().risk || {}; const syms = Object.keys(POINT_VALUE).filter((k) => !/USD/.test(k)).concat(['EURUSD', 'GBPUSD', 'XAUUSD']);
   const def = (P().instruments || [])[0] || 'NQ';
   const theme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
-  el.innerHTML = `<div class="page">${phead('Quick maths before the trade', 'Tools', 'Position size, reward-to-risk and the economic calendar.', '')}
-  <div class="grid g-2">
+  el.innerHTML = `<div class="page">${phead('Quick maths before the trade', 'Calculators', 'How many contracts for the risk you planned, and what the trade pays if it works.', '')}
+  <div class="calcwrap">
     <section class="card"><div class="chead"><span class="prodico">${icon('calc')}</span><div class="chead__text"><h3>Position size</h3><p>How many contracts for the risk you planned</p></div></div>
       <div class="stack" id="ps">
         ${field('Instrument', `<input class="in" name="sym" list="psSym" value="${esc(def)}"><datalist id="psSym">${syms.map((s) => `<option value="${s}">`).join('')}</datalist>`, '', '<span id="psPv"></span>')}
@@ -308,9 +308,6 @@ export function tools(el) {
         <div class="grid g-2" style="gap:12px">${field('Stop distance (points)', inp('stop', 10, 'type="number" step="any" min="0"'))}${field('Target distance (points)', inp('target', 20, 'type="number" step="any" min="0"'))}</div>
         <div class="psout" id="psOut"></div>
       </div></section>
-    <section class="card"><div class="chead"><span class="prodico">${icon('calendar')}</span><div class="chead__text"><h3>Economic calendar</h3><p>High and medium impact events · times in your timezone</p></div></div>
-      <div id="econ" class="econ"><div class="empty">Loading calendar…</div></div>
-      <p class="muted" style="font-size:var(--fs-xs);margin:8px 0 0">Calendar by TradingView.</p></section>
   </div></div>`;
   const ps = $('#ps', el);
   const calc = () => {
@@ -321,14 +318,22 @@ export function tools(el) {
     $('#psOut', el).innerHTML = `<div class="grid g-3" style="gap:10px"><div class="kpi"><small>Contracts</small><b>${qty}</b><em>${money(perC)} risk each</em></div><div class="kpi"><small>Actual risk</small><b>${money(qty * perC)}</b><em>${qty ? pct(qty * perC / risk) + ' of plan' : 'stop too wide for this risk'}</em></div><div class="kpi"><small>Reward</small><b class="good">${money(qty * tgt * pv)}</b><em>${stop ? (tgt / stop).toFixed(2) : '—'} R</em></div></div>${micro !== null ? `<p class="muted" style="margin:10px 0 0;font-size:var(--fs-md)">Or ${micro} micro${micro === 1 ? '' : 's'} (M${esc(String(f.sym).toUpperCase())}) for finer sizing.</p>` : ''}`;
   };
   ps.addEventListener('input', calc);
-  $$('#psGrade .chip', el).forEach((c) => (c.onclick = () => { const s = $('[name=risk]', ps).closest('.sl'); import('./ui.js?v=e2389fed').then((u) => { u.setSlider(s, +c.dataset.v); calc(); }); $$('#psGrade .chip', el).forEach((x) => x.classList.toggle('is-on', x === c)); }));
+  $$('#psGrade .chip', el).forEach((c) => (c.onclick = () => { const s = $('[name=risk]', ps).closest('.sl'); import('./ui.js?v=daca8531').then((u) => { u.setSlider(s, +c.dataset.v); calc(); }); $$('#psGrade .chip', el).forEach((x) => x.classList.toggle('is-on', x === c)); }));
   calc();
-  // TradingView economic calendar widget
+  after(el);
+}
+
+// ======================================================================= ECONOMIC CALENDAR
+export function economic(el) {
+  const theme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  el.innerHTML = `<div class="page">${phead('Know what moves the market today', 'Economic calendar', 'High and medium impact news for the US, Europe, UK, Japan, China and India, in your timezone. Check it before the open: most prop firms restrict trading around big releases.', '')}
+  <section class="card"><div id="econ" class="econ econ--full"><div class="empty">Loading calendar…</div></div>
+    <p class="muted" style="font-size:var(--fs-xs);margin:8px 0 0">Calendar by TradingView.</p></section></div>`;
   const box = $('#econ', el);
   const w = document.createElement('div'); w.className = 'tradingview-widget-container';
   w.innerHTML = '<div class="tradingview-widget-container__widget"></div>';
   const s = document.createElement('script'); s.src = 'https://s3.tradingview.com/external-embedding/embed-widget-events.js'; s.async = true;
-  s.innerHTML = JSON.stringify({ colorTheme: theme, isTransparent: true, width: '100%', height: 560, locale: 'en', importanceFilter: '0,1', countryFilter: 'us,eu,gb,jp,cn,in' });
+  s.innerHTML = JSON.stringify({ colorTheme: theme, isTransparent: true, width: '100%', height: 720, locale: 'en', importanceFilter: '0,1', countryFilter: 'us,eu,gb,jp,cn,in' });
   s.onerror = () => { box.innerHTML = '<div class="empty">Couldn\'t load the calendar. Check your connection or an ad blocker.</div>'; };
   w.append(s); setTimeout(() => { box.innerHTML = ''; box.append(w); }, 50);
   after(el);
@@ -358,7 +363,7 @@ async function loadShares(el) {
     nt.innerHTML = `<div class="chead"><div class="chead__text"><h3>Feedback</h3><p>Notes your mentors left</p></div></div>${notes.length ? `<div class="txlist">${notes.map((n) => { const t = S.trade.find((x) => x.id === n.trade_id); return `<div class="txrow" ${t ? `data-trade="${t.id}"` : 'style="cursor:default"'}><span class="av" style="width:36px;height:36px;font-size:13px">${esc((n.author || 'M').slice(0, 1).toUpperCase())}</span><span class="cell__text"><b style="white-space:normal">${esc(n.text)}</b><small>${esc(n.author || 'Mentor')} via ${esc(n.label || 'link')} · ${esc(fmtDate(new Date(n.created_at).toISOString().slice(0, 10)))}${t ? ` · on ${esc(t.symbol)} ${esc(fmtDate(t.date))}` : ''}</small></span></div>`; }).join('')}</div>` : `<div class="empty">${icon('users')}<b>No feedback yet</b>Notes appear here and on the trade itself.</div>`}`;
     $$('[data-copy]', sh).forEach((b) => (b.onclick = () => copyLink(b.dataset.copy)));
     $$('[data-off]', sh).forEach((b) => (b.onclick = () => confirmBox('Turn off this link?', 'Anyone with it loses access, and its notes are deleted.', async () => { await API.unshare(b.dataset.off); loadShares(el); }, 'Turn off')));
-    $$('[data-trade]', nt).forEach((r) => (r.onclick = () => import('./views.js?v=e2389fed').then((V) => V.tradeModal(S.trade.find((t) => t.id === r.dataset.trade)))));
+    $$('[data-trade]', nt).forEach((r) => (r.onclick = () => import('./views.js?v=daca8531').then((V) => V.tradeModal(S.trade.find((t) => t.id === r.dataset.trade)))));
   } catch (e) { const sh = $('#shares', el); if (sh) sh.innerHTML = `<div class="empty"><b>Couldn't load</b>${esc(e.message)}</div>`; }
 }
 
