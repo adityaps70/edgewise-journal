@@ -4,15 +4,16 @@ import {
   money, short, local, pct, tone, cur, sym, save, remove, saveProfile, MARKETS, EMOTIONS, MISTAKES, SESSIONS, DEFAULT_SETUPS,
   net, stats, groupBy, inRange, rangeFor, rMultiple, calcPnl, pointValue, sessionFromTime, accName, accById, isLive, accountMetrics,
   safeToRisk, missionMetrics, planMetrics, aiContext, md, icon, API, flush, wipeAll, tradingDaysBetween,
+  copiersOf, copyRatio, copyLeader, ratioFor, saveWithCopies, copySiblings, syncCopies, copyOfTrade as copyOfTradeX,
   FT, exitStats, passForecast, autoTags, runAgents, tagList, accCost, COST_FIELDS, TIMEFRAMES, EXIT_BEHAVIOR, edgeScore, zoneOf, durationMin, durationBucket, setupsOf, severeCombo, lateLoss, mastery, HOT,
   goalIdea, tradesLeft,
-} from './core.js?v=6dca6492';
-import { enterPage, animateData, segInit, segSelect, openModal, closeModal, toast, flash, pop, shake, wobble, cardStack, countUp } from './motion.js?v=6dca6492';
-import { equityChart, tubes, hbars, bindTips, drill as drillStore, radar, reg } from './charts.js?v=6dca6492';
+} from './core.js?v=79ab0b80';
+import { enterPage, animateData, segInit, segSelect, openModal, closeModal, toast, flash, pop, shake, wobble, cardStack, countUp } from './motion.js?v=79ab0b80';
+import { equityChart, tubes, hbars, bindTips, drill as drillStore, radar, reg } from './charts.js?v=79ab0b80';
 const drillMap = () => drillStore;
-import { slider, setSlider, liveRate, fxAgo, soundOn, setSound, refreshDate } from './ui.js?v=6dca6492';
-import * as V3m from './views3.js?v=6dca6492';
-import { catalog, firmById, planRules, defaultDaily, dailyCap, STAGE_LABEL, mono, firstStage, isInstant } from './firms.js?v=6dca6492';
+import { slider, setSlider, liveRate, fxAgo, soundOn, setSound, refreshDate } from './ui.js?v=79ab0b80';
+import * as V3m from './views3.js?v=79ab0b80';
+import { catalog, firmById, planRules, defaultDaily, dailyCap, STAGE_LABEL, mono, firstStage, isInstant } from './firms.js?v=79ab0b80';
 
 let H = { go: () => {}, refresh: () => {}, rerenderShell: () => {} };
 export const setHooks = (h) => (H = h);
@@ -158,7 +159,7 @@ export function overview(el) {
   el.querySelector('[data-act="log"]').onclick = () => tradeModal(); { const b = el.querySelector('[data-act="shot"]'); if (b) b.onclick = () => tradeModal(null, {}, { shot: true }); }
   el.querySelector('[data-act="review"]').onclick = () => H.go('coach', { run: 'week' });
   el.querySelector('[data-act="hide"]').onclick = (e) => { el.classList.toggle('is-masked'); wobble(e.currentTarget); };
-  import('./views3.js?v=6dca6492').then((V3) => V3.weeklyDigest($('#digest', el)));
+  import('./views3.js?v=79ab0b80').then((V3) => V3.weeklyDigest($('#digest', el)));
   const ins = el.querySelector('[data-act="insight"]');
   if (ins) ins.onclick = async () => {
     const box = $('#insight', el); box.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>'; wobble(ins);
@@ -277,7 +278,7 @@ export function trades(el) {
   $('#fOut', el).onchange = (e) => { TF.outcome = e.target.value; draw(); };
   $('#fQ', el).oninput = (e) => { TF.q = e.target.value; draw(); };
   el.querySelector('[data-act="log"]').onclick = () => tradeModal(); { const b = el.querySelector('[data-act="shot"]'); if (b) b.onclick = () => tradeModal(null, {}, { shot: true }); }
-  el.querySelector('[data-act="csv"]').onclick = () => import('./views4.js?v=6dca6492').then((V4) => V4.importModal());
+  el.querySelector('[data-act="csv"]').onclick = () => import('./views4.js?v=79ab0b80').then((V4) => V4.importModal());
   draw(); after(el);
 }
 
@@ -292,6 +293,7 @@ export function tradeModal(t0, preset = {}, opts = {}) {
   <div data-pane="a">${isNew ? `<div class="snap" id="snap"><span class="snap__ic">${icon('image')}</span><div class="snap__t"><b>Log it from a screenshot</b><span>Drop, paste (⌘V) or choose a screenshot of the trade: your platform's fills, positions or a chart with entry and exit. The AI fills the form in and you check it.</span></div><input type="file" accept="image/*" id="snapFile" hidden><button type="button" class="btn btn--sm" id="snapPick">${icon('upload')}Choose</button></div>` : ''}<div class="form">
     ${field('Date', inp('date', t.date, 'type="date"'))}${field('Entry time', inp('time', t.time, 'type="time"'))}${field('Exit time', inp('exitTime', t.exitTime, 'type="time"'), '', '<span id="durHint"></span>')}
     ${field('Account', `<select class="in" name="accountId">${optionList(S.account.map((a) => [a.id, a.name]), t.accountId)}<option value="">No account</option></select>`)}
+    ${isNew ? `<div class="field full" id="tAlsoBox"><span>Also log on <em class="muted" style="font-style:normal;font-weight:500">copy trading</em></span><div class="chips" id="tAlso"></div></div>` : copySiblings(t).length ? `<label class="field full checkrow" id="tSyncBox"><input type="checkbox" id="tSync" checked> <span>Apply my changes to its ${copySiblings(t).length} ${copySiblings(t).length === 1 ? 'copy' : 'copies'} on ${esc(copySiblings(t).map((x) => accName(x.accountId)).join(', '))} <em class="muted" style="font-style:normal">(sizes keep their ratio)</em></span></label>` : ''}
     ${field('Symbol', inp('symbol', t.symbol, `list="symList" placeholder="${esc(instruments[0] || 'NQ')}" autocomplete="off"`))}
     ${field('Side', `<div class="seg seg--accent" id="sideSeg"><button type="button" data-v="Long" class="${t.side !== 'Short' ? 'is-on' : ''}">Long</button><button type="button" data-v="Short" class="${t.side === 'Short' ? 'is-on' : ''}">Short</button></div>`)}
     ${field(esc(qty()), inp('qty', t.qty, 'type="number" step="any" inputmode="decimal"'))}${field('Fees', inp('fees', t.fees, 'type="number" step="any" inputmode="decimal" placeholder="0"'))}
@@ -339,6 +341,17 @@ export function tradeModal(t0, preset = {}, opts = {}) {
   const foot = `${isNew ? '' : `<button class="btn btn--ghost btn--danger" data-act="del">${icon('trash')}Delete</button><span style="flex:1"></span><button class="btn" data-act="dup">Duplicate</button>`}<button class="btn" data-act="cancel">Cancel</button><button class="btn btn--primary" data-act="save">${icon('check')}${isNew ? 'Save trade' : 'Save changes'}</button>`;
   const m = modal(isNew ? 'Log a trade' : `${t.symbol || 'Trade'} · ${fmtDate(t.date)}`, body, foot, 'modal');
 
+  // copy trading: chips for the other live accounts; the chosen account's copiers start ticked
+  const alsoUI = () => {
+    const box = $('#tAlso', m.el); if (!box) return;
+    const acc = $('[name="accountId"]', m.el).value; const on = new Set(copiersOf(acc).map((a) => a.id));
+    const others = S.account.filter((a) => a.id !== acc && (isLive(a) || on.has(a.id)));
+    $('#tAlsoBox', m.el).style.display = others.length && acc ? '' : 'none';
+    box.innerHTML = others.map((a) => `<button type="button" class="chip ${on.has(a.id) ? 'is-on' : ''}" data-also="${a.id}">${esc(a.name)}${on.has(a.id) && copyRatio(a) !== 1 ? ` <em>×${copyRatio(a)}</em>` : ''}</button>`).join('');
+    $$('[data-also]', box).forEach((b) => (b.onclick = () => b.classList.toggle('is-on')));
+  };
+  const alsoTargets = () => { const acc = $('[name="accountId"]', m.el)?.value; return $$('#tAlso [data-also].is-on', m.el).map((b) => ({ id: b.dataset.also, k: ratioFor(acc, b.dataset.also) })); };
+  alsoUI(); $('[name="accountId"]', m.el)?.addEventListener('change', alsoUI);
   const read = () => {
     const f = formData(m.el);
     Object.assign(t, f);
@@ -379,7 +392,7 @@ export function tradeModal(t0, preset = {}, opts = {}) {
   m.el.addEventListener('click', () => setTimeout(mScore));
   const durHint = () => { const f = formData(m.el); const d = durationMin({ date: f.date, time: f.time, exitTime: f.exitTime }); $('#durHint', m.el).textContent = d !== null ? `held ${d < 60 ? Math.round(d) + ' min' : (d / 60).toFixed(1) + ' h'}` : ''; };
   m.el.addEventListener('input', durHint); durHint(); setTimeout(mScore);
-  $$('#tTabs button', m.el).forEach((b) => b.onclick = () => { $$('#tTabs button', m.el).forEach((x) => x.classList.toggle('is-on', x === b)); $$('[data-pane]', m.el).forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab)); const pane = $(`[data-pane="${b.dataset.tab}"]`, m.el); if (b.dataset.tab === 'e') { read(); import('./views4.js?v=6dca6492').then((V4) => V4.replay($('#replayBox', m.el), { ...t }, { onExcursion: ({ mae, mfe }) => { $('[name="mae"]', m.el).value = mae; $('[name="mfe"]', m.el).value = mfe; } })); } if (window.gsap) window.gsap.fromTo(pane, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }); });
+  $$('#tTabs button', m.el).forEach((b) => b.onclick = () => { $$('#tTabs button', m.el).forEach((x) => x.classList.toggle('is-on', x === b)); $$('[data-pane]', m.el).forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab)); const pane = $(`[data-pane="${b.dataset.tab}"]`, m.el); if (b.dataset.tab === 'e') { read(); import('./views4.js?v=79ab0b80').then((V4) => V4.replay($('#replayBox', m.el), { ...t }, { onExcursion: ({ mae, mfe }) => { $('[name="mae"]', m.el).value = mae; $('[name="mfe"]', m.el).value = mfe; } })); } if (window.gsap) window.gsap.fromTo(pane, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }); });
   const gHint = () => { const g = $('#gradeC .is-on', m.el)?.dataset.v; const bg = P().risk?.byGrade; $('#gradeHint', m.el).textContent = g && bg && num(bg[g]) ? `your ${g} risk: ${money(bg[g])}` : g ? '' : 'A+ high conviction · B normal · C low probability'; };
   $$('#gradeC .chip', m.el).forEach((c) => c.onclick = () => { const on = c.classList.contains('is-on'); $$('#gradeC .chip', m.el).forEach((x) => x.classList.remove('is-on')); if (!on) c.classList.add('is-on'); pop(c); gHint(); hint(); });
   gHint();
@@ -411,7 +424,7 @@ export function tradeModal(t0, preset = {}, opts = {}) {
   const matchAccount = (name) => { if (!name) return null; const n = String(name).toLowerCase().replace(/[^a-z0-9]/g, ''); if (!n) return null; return S.account.find((a) => [a.brokerAccount, a.name].filter(Boolean).some((x) => { const y = String(x).toLowerCase().replace(/[^a-z0-9]/g, ''); return y && (y === n || y.includes(n) || n.includes(y)); })) || null; };
   const fillFrom = (x) => {
     if (x.side) { const b = $(`#sideSeg [data-v="${/short|sell/i.test(x.side) ? 'Short' : 'Long'}"]`, m.el); if (b && !b.classList.contains('is-on')) b.click(); }
-    const acc = matchAccount(x.account); if (acc) SET('accountId', acc.id);
+    const acc = matchAccount(x.account); if (acc) { SET('accountId', acc.id); alsoUI(); }
     ['date', 'time', 'exitTime', 'symbol', 'qty', 'entry', 'exit', 'stop', 'target', 'fees'].forEach((k) => SET(k, x[k]));
     if (x.pnl !== null && x.pnl !== undefined && x.pnl !== '') SET('pnl', x.pnl); else { const i = $('[name="pnl"]', m.el); if (i) i.value = ''; }
     hint();
@@ -439,8 +452,8 @@ export function tradeModal(t0, preset = {}, opts = {}) {
         const bad = list.filter((x) => !x.symbol || (x.pnl === null || x.pnl === undefined) && !(x.entry && x.exit && x.qty));
         if (bad.length) { toast(`${bad.length} of them miss a symbol or P&L. Fill those one at a time.`, icon('info'), 4); return; }
         if (list.length > tradesLeft()) { dispatchEvent(new CustomEvent('st:upgrade', { detail: { reason: 'trades' } })); return; }
-        list.forEach((x) => { const tr = blank(x); if (tr.pnl === undefined) { const pv = pointValue(tr.symbol); if (pv) tr.pnl = +(((tr.side === 'Short' ? -1 : 1) * (tr.exit - tr.entry)) * tr.qty * pv).toFixed(2); } save('trade', tr); });
-        m.close(); H.refresh(); toast(`${list.length} trades added from your screenshot. Open any of them to edit.`, icon('check'), 4);
+        list.forEach((x) => { const tr = blank(x); if (tr.pnl === undefined) { const pv = pointValue(tr.symbol); if (pv) tr.pnl = +(((tr.side === 'Short' ? -1 : 1) * (tr.exit - tr.entry)) * tr.qty * pv).toFixed(2); } saveWithCopies(tr, alsoTargets()); });
+        m.close(); H.refresh(); toast(`${list.length} trades added from your screenshot${alsoTargets().length ? ` and copied to ${alsoTargets().length} more account${alsoTargets().length === 1 ? '' : 's'}` : ''}. Open any of them to edit.`, icon('check'), 4);
       };
     } catch (e) {
       box.classList.remove('is-busy'); $('.snap__t', box).innerHTML = `<b>Couldn't read that one</b><span class="bad">${esc(e.message)}</span>`;
@@ -476,13 +489,22 @@ export function tradeModal(t0, preset = {}, opts = {}) {
     const { _img, ...clean } = t;
     if (isNew && tradesLeft() <= 0) { dispatchEvent(new CustomEvent('st:upgrade', { detail: { reason: 'trades' } })); return; }
     const auto = autoTags(clean); if (auto.length) clean.tags = [...new Set([...tagList(clean), ...auto])].join(', ');
-    save('trade', clean); m.close(); H.refresh(); dispatchEvent(new CustomEvent('st:trade', { detail: clean }));
-    toast(`${clean.symbol} ${money(net(clean), { sign: true })} saved${auto.length ? ' · tagged ' + auto.map((x) => '#' + x).join(' ') : ''}`, icon('check'));
+    let copied = 0;
+    if (isNew) copied = saveWithCopies(clean, alsoTargets());
+    else { save('trade', clean); if ($('#tSync', m.el)?.checked) { syncCopies(clean); copied = copySiblings(clean).length; } }
+    m.close(); H.refresh(); dispatchEvent(new CustomEvent('st:trade', { detail: clean }));
+    toast(`${clean.symbol} ${money(net(clean), { sign: true })} saved${copied ? ` · ${isNew ? 'copied to' : 'updated on'} ${copied} more account${copied === 1 ? '' : 's'}` : ''}${auto.length ? ' · tagged ' + auto.map((x) => '#' + x).join(' ') : ''}`, icon('check'));
     const fired = runAgents(clean).filter(([lvl]) => lvl !== 'info');
     fired.slice(0, 2).forEach(([lvl, agent, title, body], i) => setTimeout(() => toast(`<b>${esc(agent)}:</b> ${esc(title)}. ${esc(body)}`, icon(lvl === 'bad' ? 'shield' : 'flag'), 4.5), 1400 + i * 5000));
   });
   m.on('dup', () => { read(); const { _img, id, aiReview, ...c } = t; m.close(); setTimeout(() => tradeModal(null, { ...c, time: new Date().toTimeString().slice(0, 5) }), 260); });
-  m.on('del', () => confirmBox('Delete this trade?', 'It will be removed from every stat.', () => { remove('trade', t.id); m.close(); H.refresh(); toast('Trade deleted', icon('trash')); }));
+  m.on('del', () => {
+    const sib = copySiblings(t);
+    if (!sib.length) return confirmBox('Delete this trade?', 'It will be removed from every stat.', () => { remove('trade', t.id); m.close(); H.refresh(); toast('Trade deleted', icon('trash')); });
+    const d = modal('Delete this trade?', `<p class="muted" style="margin:0">It was also logged on ${esc(sib.map((x) => accName(x.accountId)).join(', '))}.</p>`, `<button class="btn" data-act="cancel">Cancel</button><button class="btn" data-act="one">Only this account</button><button class="btn btn--primary" data-act="all" style="background:var(--bad);color:#fff">Delete all ${sib.length + 1}</button>`, 'modal modal--sm');
+    d.on('one', () => { remove('trade', t.id); d.close(); m.close(); H.refresh(); toast('Trade deleted', icon('trash')); });
+    d.on('all', () => { [t, ...sib].forEach((x) => remove('trade', x.id)); d.close(); m.close(); H.refresh(); toast(`${sib.length + 1} trades deleted`, icon('trash')); });
+  });
   hint();
   setTimeout(() => $('[name="symbol"]', m.el)?.focus(), 350);
 }
@@ -589,13 +611,13 @@ export function accounts(el) {
   const paid = sum(S.payout.filter((p) => p.status === 'credited'), (p) => p.amount);
   const live = S.account.filter(isLive);
   const groups = [['Live', accs.filter(isLive)], ['Passed / closed', accs.filter((a) => ['passed', 'closed'].includes(a.status))], ['Failed', accs.filter((a) => a.status === 'failed')]];
-  el.innerHTML = `<div class="page">${phead('Challenges, funded and personal', 'Accounts', 'Drawdown buffers, targets and costs for every account. Throw the top card to see the next.', `<button class="btn btn--primary" data-act="add">${icon('plus')}Add account</button>`)}
+  el.innerHTML = `<div class="page">${phead('Challenges, funded and personal', 'Accounts', 'Drawdown buffers, targets and costs for every account. Throw the top card to see the next.', `${S.account.length > 1 ? `<button class="btn" data-act="copy">${icon('copy')}Copy trading</button>` : ''}<button class="btn btn--primary" data-act="add">${icon('plus')}Add account</button>`)}
   <div class="grid g-4">${[['Live accounts', live.length, 'int', ''], ['Total bought', spent, 'money', ''], ['Payouts received', paid, 'money', 'good'], ['Return on fees', spent ? (paid - spent) / spent : 0, 'pct', tone(paid - spent)]].map(([l, v, f, c]) => `<div class="kpi"><small>${l}</small><b class="${c}">${cnt(v, f)}</b><em>${l === 'Live accounts' ? `${S.account.filter((a) => a.status === 'active').length} challenge · ${S.account.filter((a) => a.status === 'funded').length} funded` : l === 'Total bought' ? `${S.account.length} accounts incl. resets` : l === 'Payouts received' ? (local(paid) || 'credited') : 'payouts minus costs'}</em></div>`).join('')}</div>
   <div class="grid g-ov" style="margin-top:var(--gap)">
     ${card('Your stack', 'Drag the top card sideways, tap to see rules', `<div class="wallet"><div class="wallet__stack">${accs.map(accountCard).join('') || `<div class="empty">${icon('accounts')}<b>No accounts</b></div>`}</div></div>${accs.length ? `<div class="wallet__bar"><button class="ibtn" data-act="prev">${icon('left')}</button><div class="wallet__dots">${accs.map((_, i) => `<i class="${i ? '' : 'is-on'}"></i>`).join('')}</div><button class="ibtn" data-act="next">${icon('right')}</button><span class="wallet__spacer"></span><button class="btn btn--sm" data-act="edit-top">${icon('edit')}Edit</button></div>` : ''}`)}
     <section class="card"><div class="chead"><div class="chead__text"><h3>All accounts</h3><p>Click one to edit rules, status or cost</p></div></div>
     ${groups.filter(([, l]) => l.length).map(([g, list]) => `<div class="daygroup"><span>${g}</span><span>${list.length}</span></div><div class="txlist">${list.map((a) => { const x = accountMetrics(a); const danger = x.buffer !== null && x.maxLoss && x.buffer < x.maxLoss * 0.3; return `<div class="txrow txrow--acc" data-acc="${a.id}"><span class="prodico ${a.status === 'failed' ? 'is-loss' : a.type === 'funded' ? '' : 't4'}">${icon(a.type === 'funded' ? 'shield' : a.type === 'personal' ? 'payouts' : 'flag')}</span>
-      <span class="cell__text"><b>${esc(a.name)}</b><small>${esc(a.firm || 'Personal')} · ${a.size ? short(a.size) : ''} ${esc(a.type)} · bought ${esc(fmtDate(a.purchaseDate))} for ${money(num(a.cost))}</small>
+      <span class="cell__text"><b>${esc(a.name)}</b><small>${esc(a.firm || 'Personal')} · ${a.size ? short(a.size) : ''} ${esc(a.type)} · bought ${esc(fmtDate(a.purchaseDate))} for ${money(num(a.cost))}${copyLeader(a) ? ` · <span class="copytag">${icon('copy')}copies ${esc(copyLeader(a).name)}${copyRatio(a) !== 1 ? ' ×' + copyRatio(a) : ''}</span>` : copiersOf(a.id).length ? ` · <span class="copytag">${icon('copy')}copied to ${copiersOf(a.id).length}</span>` : ''}</small>
       ${x.target && isLive(a) ? `<div style="margin-top:6px;max-width:320px">${meter(x.progress)}</div>` : ''}</span>
       ${(() => { const f = a.status === 'active' && x.target ? passForecast(a, { runs: 800 }) : null; return f && !f.insufficient ? `<span class="pill ${f.pass >= 0.6 ? 'pill--good' : f.pass < 0.35 ? 'pill--bad' : ''}" title="${pct(f.fail)} breach, ${pct(f.open)} still open after 60 days${f.medianDays ? ', median ' + f.medianDays + ' trading days to pass' : ''}">Pass ${pct(f.pass)}</span>` : ''; })()}${x.buffer !== null && isLive(a) ? `<span class="pill ${danger ? 'pill--bad' : ''}">Buffer ${money(x.buffer)}</span>` : ''}${statusPill(a.status)}<span class="amt ${tone(x.pnl)}">${money(x.pnl, { sign: true })}</span></div>`; }).join('')}</div>`).join('') || `<div class="empty">${icon('accounts')}<b>Add your first account</b>Prop challenge, funded or your own capital.</div>`}</section>
   </div></div>`;
@@ -606,6 +628,7 @@ export function accounts(el) {
     el.querySelector('[data-act="edit-top"]').onclick = () => accountModal(accs[top]);
   }
   el.querySelector('[data-act="add"]').onclick = () => accountModal();
+  { const c = el.querySelector('[data-act="copy"]'); if (c) c.onclick = () => copyTradingModal(); }
   $$('[data-acc]', el).forEach((r) => r.onclick = () => accountModal(S.account.find((a) => a.id === r.dataset.acc)));
   after(el);
 }
@@ -693,6 +716,7 @@ export function accountModal(a0) {
     <div class="half">${slider({ name: 'minDays', label: 'Min trading days', value: num(a.minDays), min: 0, max: 30, step: 1, zero: 'None' })}</div>
     <div class="half">${slider({ name: 'consistency', label: 'Consistency rule', value: num(a.consistency), min: 0, max: 100, step: 5, suffix: '%', zero: 'None' })}</div>
     <div class="full costs"><span class="costs__t">${icon('payouts')}What this account cost you <em>(${esc(cur())})</em></span><div class="costs__grid">${COST_FIELDS.map(([k, l]) => field(l, inp(k, a[k], 'type="number" step="any" placeholder="0"'))).join('')}</div></div>
+    <div class="full costs"><span class="costs__t">${icon('copy')}Copy trading</span><div class="grid g-2" style="gap:12px">${field('Copies trades from', `<select class="in" name="copyOf"><option value="">Nothing, I trade it on its own</option>${optionList(S.account.filter((x) => x.id !== a.id && x.copyOf !== a.id).map((x) => [x.id, x.name]), a.copyOf || '')}</select>`, '', 'trades logged or imported there are added here too')}${field('Copy size', inp('copyRatio', a.copyRatio || 1, 'type="number" step="0.05" min="0.05" inputmode="decimal"'), '', '×1 same size, ×0.5 half, ×2 double')}</div></div>
     ${field('P&amp;L before journaling', inp('startPnl', a.startPnl, 'type="number" step="any" placeholder="0"'), '', 'e.g. −1000 if already down')}${field('Days already traded', inp('startDays', a.startDays, 'type="number" placeholder="0"'))}
     ${field('Notes', `<textarea class="in" name="notes" rows="2">${esc(a.notes || '')}</textarea>`, 'full')}
   </div>`,
@@ -745,9 +769,60 @@ export function accountModal(a0) {
     ['target', 'dailyLimit', 'minDays', 'consistency', 'maxLoss'].forEach((kk) => { if (f[kk] === 0) f[kk] = ''; });
     f.type = f.status === 'funded' ? 'funded' : !f.firm ? 'personal' : 'challenge';
     if (f.status === 'funded') a.stage = 'funded';
-    save('account', { ...a, ...f }); m.close(); H.refresh(); toast('Account saved', icon('check'));
+    f.copyRatio = num(f.copyRatio) > 0 ? num(f.copyRatio) : 1; if (!f.copyOf) { f.copyOf = ''; f.copyRatio = 1; }
+    const saved = save('account', { ...a, ...f }); m.close(); H.refresh(); toast('Account saved', icon('check'));
+    if (saved && f.copyOf && f.copyOf !== (a0?.copyOf || '')) offerBackfill(saved);
   });
   m.on('del', () => confirmBox(`Delete ${a.name}?`, 'Its trades stay in your log but lose the account link.', () => { remove('account', a.id); m.close(); H.refresh(); }));
+}
+
+// copy trading setup: one leader, any number of copiers, each with its own size
+export function copyTradingModal(leaderId) {
+  const accs = S.account.slice();
+  const lead0 = leaderId || (accs.find((a) => copiersOf(a.id).length) || accs.find(isLive) || accs[0]).id;
+  const m = modal('Copy trading', `<div class="stack">
+    <p class="muted" style="margin:0">Pick the account you trade on, then the accounts your copier mirrors it to. Trades you log or import on the leader are added to each copy, with quantity, P&amp;L and fees scaled to its size.</p>
+    ${field('Leader account', `<select class="in" id="ctLead">${optionList(accs.map((a) => [a.id, a.name]), lead0)}</select>`)}
+    <div class="field"><span>Copies to</span><div class="stack" id="ctList" style="gap:8px"></div></div></div>`,
+  '<button class="btn" data-act="cancel">Cancel</button><button class="btn btn--primary" data-act="save">Save copy group</button>', 'modal');
+  const draw = () => {
+    const lead = $('#ctLead', m.el).value;
+    $('#ctList', m.el).innerHTML = accs.filter((a) => a.id !== lead).map((a) => { const on = a.copyOf === lead; const busy = a.copyOf && a.copyOf !== lead ? copyLeader(a) : null; return `<label class="ctrow ${on ? 'is-on' : ''}"><input type="checkbox" data-ct="${a.id}" ${on ? 'checked' : ''}><span class="cell__text"><b>${esc(a.name)}</b><small>${esc(a.firm || 'Personal')}${a.size ? ' · ' + short(a.size) : ''}${busy ? ` · now copies ${esc(busy.name)}` : ''}${isLive(a) ? '' : ' · ' + esc(a.status)}</small></span><span class="ctrow__k">×<input class="in" type="number" step="0.05" min="0.05" inputmode="decimal" data-ck="${a.id}" value="${on ? copyRatio(a) : 1}"></span></label>`; }).join('') || '<div class="empty">Add another account first.</div>';
+    $$('[data-ct]', m.el).forEach((c) => (c.onchange = () => c.closest('.ctrow').classList.toggle('is-on', c.checked)));
+  };
+  $('#ctLead', m.el).onchange = draw; draw();
+  m.on('save', () => {
+    const lead = $('#ctLead', m.el).value; const fresh = [];
+    $$('[data-ct]', m.el).forEach((c) => {
+      const a = S.account.find((x) => x.id === c.dataset.ct); if (!a) return; const k = num($(`[data-ck="${a.id}"]`, m.el).value) > 0 ? num($(`[data-ck="${a.id}"]`, m.el).value) : 1;
+      if (c.checked) { if (a.copyOf !== lead) fresh.push(a.id); if (a.copyOf !== lead || copyRatio(a) !== k) save('account', { ...a, copyOf: lead, copyRatio: k }); }
+      else if (a.copyOf === lead) save('account', { ...a, copyOf: '', copyRatio: 1 });
+    });
+    // the leader itself can't copy one of its copiers
+    const L = S.account.find((x) => x.id === lead); if (L && fresh.includes(L.copyOf)) save('account', { ...L, copyOf: '', copyRatio: 1 });
+    m.close(); H.refresh(); toast('Copy group saved', icon('check'));
+    const next = () => { const id = fresh.shift(); if (!id) return; const a = S.account.find((x) => x.id === id); setTimeout(() => offerBackfill(a, next), 260); };
+    next();
+  });
+}
+
+// copy trading: after an account starts copying a leader, offer to copy the leader's existing trades too
+export function offerBackfill(acc, onDone) {
+  const lead = copyLeader(acc); if (!lead) return;
+  const from = acc.purchaseDate || '';
+  const have = new Set(S.trade.filter((x) => x.accountId === acc.id && x.copyGroup).map((x) => x.copyGroup));
+  const list = S.trade.filter((x) => x.accountId === lead.id && (!from || x.date >= from) && !(x.copyGroup && have.has(x.copyGroup)));
+  if (!list.length) return onDone && onDone(0);
+  const m = modal('Copy existing trades?', `<p class="muted" style="margin:0">${esc(lead.name)} has ${list.length} trade${list.length === 1 ? '' : 's'}${from ? ` since ${esc(fmtDate(from))}` : ''} that aren't on ${esc(acc.name)} yet. Add ${list.length === 1 ? 'it' : 'them'} here at ×${copyRatio(acc)} size?</p>`, `<button class="btn" data-act="cancel">Not now</button><button class="btn btn--primary" data-act="ok">Copy ${list.length} trade${list.length === 1 ? '' : 's'}</button>`, 'modal modal--sm');
+  m.on('ok', () => {
+    let n = 0;
+    for (const lt of list) {
+      if (tradesLeft() <= 0) { dispatchEvent(new CustomEvent('st:upgrade', { detail: { reason: 'trades' } })); break; }
+      if (!lt.copyGroup) { lt.copyGroup = uid(); lt.copyK = lt.copyK || 1; save('trade', lt); }
+      const c = copyOfTradeX(lt, acc.id, copyRatio(acc), lt.copyGroup); if (save('trade', c)) n++;
+    }
+    m.close(); H.refresh(); toast(`${n} trade${n === 1 ? '' : 's'} copied to ${acc.name}`, icon('check')); onDone && onDone(n);
+  });
 }
 
 // ======================================================================= PAYOUTS
@@ -1042,12 +1117,12 @@ export function settings(el) {
   $('#sMkSave', el).onclick = () => { const pv = {}; ($('[name=pv]', el).value || '').split(',').forEach((s) => { const [k, v] = s.split('='); if (k && v) pv[k.trim().toUpperCase()] = num(v); }); saveProfile({ ...P(), markets: $$('#sMk .is-on', el).map((c) => c.dataset.v), instruments: $('[name=inst]', el).value.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean), pointValues: pv }); toast('Saved', icon('check')); };
   segBind(el, '#sTheme', (v) => { const b = $('#sTheme .is-on', el).getBoundingClientRect(); window.__switchTheme(v, b.left + b.width / 2, b.top + b.height / 2); });
   $('#sFrost', el).oninput = (e) => { document.documentElement.style.setProperty('--frost', e.target.value); try { localStorage.setItem('ew_frost', e.target.value); } catch (er) {} };
-  { const up = $('#upgPreview', el); if (up) up.onclick = () => import('./plan.js?v=6dca6492').then((m) => m.upgradeModal()); }
-  { const pm = $('#proMore', el); if (pm) pm.onclick = () => import('./plan.js?v=6dca6492').then((m) => m.checkout(pm)); }
-  { const pu = $('#planUse', el); if (pu) import('./plan.js?v=6dca6492').then((m) => { pu.innerHTML = m.usageHTML(false) + `<p class="muted" style="margin:10px 0 0;font-size:var(--fs-sm)">Pro is ${m.priceTxt()}/month: unlimited trades and imports, AI coach 60 requests a day, screenshot logging, replay and AI backtests.</p>`; m.bindUsage(pu); }); }
-  { const pv = $('#petPv', el); if (pv) import('./pet.js?v=6dca6492').then((m) => (pv.innerHTML = m.petPreview('pip'))); }
-  $('#sPet', el).onclick = (e) => { const on = e.currentTarget.classList.toggle('is-on'); $('#petMoveRow', el).style.display = on ? '' : 'none'; import('./pet.js?v=6dca6492').then((m) => m.setPet(on)); };
-  segBind(el, '#sPetMove', (v) => import('./pet.js?v=6dca6492').then((m) => m.setFollow(v === 'follow')));
+  { const up = $('#upgPreview', el); if (up) up.onclick = () => import('./plan.js?v=79ab0b80').then((m) => m.upgradeModal()); }
+  { const pm = $('#proMore', el); if (pm) pm.onclick = () => import('./plan.js?v=79ab0b80').then((m) => m.checkout(pm)); }
+  { const pu = $('#planUse', el); if (pu) import('./plan.js?v=79ab0b80').then((m) => { pu.innerHTML = m.usageHTML(false) + `<p class="muted" style="margin:10px 0 0;font-size:var(--fs-sm)">Pro is ${m.priceTxt()}/month: unlimited trades and imports, AI coach 60 requests a day, screenshot logging, replay and AI backtests.</p>`; m.bindUsage(pu); }); }
+  { const pv = $('#petPv', el); if (pv) import('./pet.js?v=79ab0b80').then((m) => (pv.innerHTML = m.petPreview('pip'))); }
+  $('#sPet', el).onclick = (e) => { const on = e.currentTarget.classList.toggle('is-on'); $('#petMoveRow', el).style.display = on ? '' : 'none'; import('./pet.js?v=79ab0b80').then((m) => m.setPet(on)); };
+  segBind(el, '#sPetMove', (v) => import('./pet.js?v=79ab0b80').then((m) => m.setFollow(v === 'follow')));
   $('#sSnd', el).onclick = (e) => { const on = e.currentTarget.classList.toggle('is-on'); setSound(on); };
   $('#sRM', el).onclick = (e) => { e.currentTarget.classList.toggle('is-on'); try { localStorage.setItem('ew_rm', e.currentTarget.classList.contains('is-on') ? '1' : '0'); } catch (er) {} toast('Reload to apply', icon('info')); };
   $('#sExp', el).onclick = () => { const o = { exportedAt: new Date().toISOString(), profile: S.profile }; ['account', 'trade', 'payout', 'plan', 'journal', 'setup', 'rule'].forEach((k) => (o[k] = S[k])); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(o, null, 2)], { type: 'application/json' })); a.download = `smarttrade-${today()}.json`; a.click(); };

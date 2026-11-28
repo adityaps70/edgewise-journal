@@ -1,11 +1,12 @@
 // Connections (broker sync), file import, trade replay, AI backtesting.
 import {
   S, P, $, $$, esc, uid, num, sum, clamp, today, addDays, fmtDate, fmtDay, money, pct, tone, net, icon, API, save, saveProfile, pointValue, setupsOf, tradesLeft,
-} from './core.js?v=6dca6492';
-import { equityChart } from './charts.js?v=6dca6492';
-import { helpers, modal, confirmBox, tradeList } from './views.js?v=6dca6492';
-import { toast, shake } from './motion.js?v=6dca6492';
-import * as IM from './importers.js?v=6dca6492';
+  copiersOf, copyRatio, ratioFor, copyOfTrade, isLive,
+} from './core.js?v=79ab0b80';
+import { equityChart } from './charts.js?v=79ab0b80';
+import { helpers, modal, confirmBox, tradeList } from './views.js?v=79ab0b80';
+import { toast, shake } from './motion.js?v=79ab0b80';
+import * as IM from './importers.js?v=79ab0b80';
 
 const card = (...a) => helpers.card(...a); const phead = (...a) => helpers.phead(...a); const after = (...a) => helpers.after(...a);
 const field = (...a) => helpers.field(...a); const inp = (...a) => helpers.inp(...a); const optionList = (...a) => helpers.optionList(...a); const formData = (...a) => helpers.formData(...a);
@@ -16,13 +17,26 @@ const TZS = [['local', 'My computer\'s time'], ['UTC', 'UTC'], ['America/New_Yor
 const tzVal = (v) => (/^-?\d+$/.test(String(v)) ? +v : v);
 
 // ======================================================================= SAVE IMPORTED TRADES
-function commit(trades, { defaultAccount = '' } = {}) {
-  const { fresh, dup } = IM.dedupe(trades);
+function commit(trades, { defaultAccount = '', also = [] } = {}) {
+  const withAcc = trades.map((t) => ({ ...t, accountId: t.accountId || IM.guessAccount(t.brokerAccount) || defaultAccount }));
+  // accounts that get their own trades from this file don't also get copies of someone else's
+  const direct = new Set(withAcc.map((t) => t.accountId).filter(Boolean));
+  const all = [];
+  withAcc.forEach((t) => {
+    const targets = copiersOf(t.accountId).filter((a) => !direct.has(a.id)).map((a) => ({ id: a.id, k: copyRatio(a) }));
+    also.filter((id) => id && id !== t.accountId && !direct.has(id) && !targets.some((x) => x.id === id)).forEach((id) => targets.push({ id, k: ratioFor(t.accountId, id) }));
+    const group = targets.length ? uid() : undefined;
+    const lead = group ? { ...t, copyGroup: group, copyK: 1 } : t;
+    all.push(lead); targets.forEach((x) => all.push({ ...copyOfTrade(lead, x.id, x.k, group), _copy: true }));
+  });
+  const { fresh, dup } = IM.dedupe(all);
   const room = tradesLeft(); const take = fresh.slice(0, room === Infinity ? fresh.length : room);
-  take.forEach((t) => save('trade', { ...t, id: uid(), accountId: t.accountId || IM.guessAccount(t.brokerAccount) || defaultAccount }));
+  let copies = 0;
+  take.forEach(({ _copy, ...t }) => { if (_copy) copies++; save('trade', { ...t, id: uid() }); });
   if (take.length < fresh.length) setTimeout(() => dispatchEvent(new CustomEvent('st:upgrade', { detail: { reason: 'trades' } })), 600);
-  return { added: take.length, dup, over: fresh.length - take.length };
+  return { added: take.length - copies, copies, dup, over: fresh.length - take.length };
 }
+const copyNote = (r) => (r.copies ? `, ${r.copies} copied to other accounts` : '');
 
 // ======================================================================= FILE IMPORT
 export function importModal() {
@@ -30,7 +44,7 @@ export function importModal() {
     <p class="muted" style="margin:0;font-size:var(--fs-md)">Drop the export from your platform. Tradovate, TopstepX/ProjectX, NinjaTrader, MetaTrader 4/5, Rithmic R|Trader and most other CSV, Excel or HTML trade files are recognised automatically. Trades you already have are skipped.</p>
     <div class="drop" id="imDrop">${icon('upload')}<div style="flex:1"><b>Choose or drop a file</b><span class="muted" id="imInfo" style="font-size:var(--fs-sm)">.csv, .xlsx, .xls or .html</span></div><input type="file" accept=".csv,.txt,.xlsx,.xls,.htm,.html" id="imFile" hidden><button class="btn btn--sm" id="imPick">Choose</button></div>
     <div class="grid g-2" style="gap:12px">${field('Times in the file are in', `<select class="in" id="imTz">${optionList(TZS, 'local')}</select>`, '', 'Most platforms export your computer\'s time; MetaTrader uses its server time')}${field('Default account', `<select class="in" id="imAcc">${optionList(S.account.map((a) => [a.id, a.name]))}<option value="">No account</option></select>`, '', 'for trades whose account isn\'t recognised')}</div>
-    <div id="imMap"></div><div id="imPrev"></div></div>`,
+    <div id="imAlso"></div><div id="imMap"></div><div id="imPrev"></div></div>`,
   '<button class="btn" data-act="cancel">Cancel</button><button class="btn btn--primary" data-act="go" disabled>Import</button>', 'modal');
   let file = null; let result = null;
   const run = async () => {
@@ -40,7 +54,8 @@ export function importModal() {
       if (!fmt) { $('#imInfo', m.el).innerHTML = `<span class="bad">Couldn't recognise this file.</span> It needs a header row with symbol, prices or P&amp;L.`; $('[data-act="go"]', m.el).disabled = true; return; }
       const tz = tzVal($('#imTz', m.el).value);
       const p = IM.parse(rows, fmt, { tz }); const trades = p.trades.concat(IM.pairFills(p.fills, {}).trades);
-      const { fresh, dup } = IM.dedupe(trades); result = fresh;
+      result = trades; const est = () => IM.dedupe(trades.map((t) => ({ ...t, accountId: IM.guessAccount(t.brokerAccount) || $('#imAcc', m.el).value })));
+      const { fresh, dup } = est();
       $('#imInfo', m.el).innerHTML = `<span style="color:var(--text);font-weight:600">${esc(fmt.label)}</span> · ${trades.length} trades found${dup ? `, ${dup} already in your journal` : ''}`;
       const brokers = [...new Set(fresh.map((t) => t.brokerAccount).filter(Boolean))];
       $('#imMap', m.el).innerHTML = brokers.length ? `<div class="field"><span>Match platform accounts to your journal</span><div class="stack" style="gap:6px">${brokers.map((b) => `<div class="maprow"><code>${esc(b)}</code><span>${icon('left')}</span><select class="in" data-broker="${esc(b)}">${optionList(S.account.map((a) => [a.id, a.name]), IM.guessAccount(b))}<option value="" ${IM.guessAccount(b) ? '' : 'selected'}>Use default account</option></select></div>`).join('')}</div></div>` : '';
@@ -53,12 +68,22 @@ export function importModal() {
   $('#imFile', m.el).onchange = (e) => e.target.files[0] && pick(e.target.files[0]);
   const drop = $('#imDrop', m.el); drop.ondragover = (e) => { e.preventDefault(); drop.classList.add('is-over'); }; drop.ondragleave = () => drop.classList.remove('is-over'); drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove('is-over'); if (e.dataTransfer.files[0]) pick(e.dataTransfer.files[0]); };
   $('#imTz', m.el).onchange = run;
+  // also add the same trades to other accounts (copy trading); the default account's copiers start ticked
+  const alsoUI = () => {
+    const def = $('#imAcc', m.el).value; const others = S.account.filter((a) => a.id !== def && (isLive(a) || a.copyOf === def));
+    const on = new Set(copiersOf(def).map((a) => a.id));
+    $('#imAlso', m.el).innerHTML = others.length ? `<div class="field"><span>Also add these trades to</span><div class="chips">${others.map((a) => `<button type="button" class="chip ${on.has(a.id) ? 'is-on' : ''}" data-also="${a.id}">${esc(a.name)}${a.copyOf === def && copyRatio(a) !== 1 ? ` <em>×${copyRatio(a)}</em>` : ''}</button>`).join('')}</div><small class="muted">For accounts you copy trades to. Quantity and P&amp;L follow each account's copy size; accounts with their own rows in this file are left alone.</small></div>` : '';
+    $$('[data-also]', m.el).forEach((b) => (b.onclick = () => b.classList.toggle('is-on')));
+  };
+  $('#imAcc', m.el).onchange = () => { alsoUI(); if (file) run(); };
+  alsoUI();
   m.on('go', () => {
     const map = Object.fromEntries($$('[data-broker]', m.el).map((s) => [s.dataset.broker, s.value]));
     Object.entries(map).forEach(([b, id]) => { const a = S.account.find((x) => x.id === id); if (a && a.brokerAccount !== b) save('account', { ...a, brokerAccount: b }); });
     const def = $('#imAcc', m.el).value;
-    const r = commit(result.map((t) => ({ ...t, accountId: map[t.brokerAccount] || '' })), { defaultAccount: def });
-    m.close(); H().refresh(); toast(`${r.added} trades imported${r.dup ? `, ${r.dup} duplicates skipped` : ''}${r.over ? `, ${r.over} over the free limit` : ''}`, icon('check'));
+    const also = $$('#imAlso [data-also].is-on', m.el).map((b) => b.dataset.also);
+    const r = commit(result.map((t) => ({ ...t, accountId: map[t.brokerAccount] || '' })), { defaultAccount: def, also });
+    m.close(); H().refresh(); toast(`${r.added} trades imported${copyNote(r)}${r.dup ? `, ${r.dup} duplicates skipped` : ''}${r.over ? `, ${r.over} over the free limit` : ''}`, icon('check'));
   });
 }
 

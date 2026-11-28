@@ -1,6 +1,6 @@
 // Trade importers: platform exports (CSV / XLSX / HTML), fill pairing (FIFO), and conversion of synced data.
 // Every importer returns either round-trip trades or fills; fills are paired into trades here.
-import { S, P, iso, num, calcPnl, pointValue, sessionFromTime, net } from './core.js?v=6dca6492';
+import { S, P, iso, num, calcPnl, pointValue, sessionFromTime, net } from './core.js?v=79ab0b80';
 
 // ------------------------------------------------------------------ reading files
 export function parseDelimited(text) {
@@ -170,11 +170,13 @@ export function pairFills(fills, lots = {}) {
 }
 
 // ------------------------------------------------------------------ dedupe + account mapping
-const fingerprint = (t) => `${t.date}|${t.time}|${cleanSymbol(t.symbol)}|${t.side}|${num(t.qty)}|${Math.round(num(t.pnl) * 100)}`;
+// duplicates are judged per account: the same fill on two accounts (copy trading) is two real trades
+const fingerprint = (t) => `${t.accountId || ''}|${t.date}|${t.time}|${cleanSymbol(t.symbol)}|${t.side}|${num(t.qty)}|${Math.round(num(t.pnl) * 100)}`;
+const extKey = (t) => (t.ext ? `${String(t.ext).split('@')[0]}|${t.accountId || ''}` : '');
 export function dedupe(trades) {
-  const ext = new Set(S.trade.map((t) => t.ext).filter(Boolean)); const fp = new Set(S.trade.map(fingerprint));
+  const ext = new Set(S.trade.map(extKey).filter(Boolean)); const fp = new Set(S.trade.map(fingerprint));
   const seen = new Set(); const fresh = []; let dup = 0;
-  trades.forEach((t) => { const f = fingerprint(t); if ((t.ext && ext.has(t.ext)) || fp.has(f) || seen.has(f)) { dup++; return; } seen.add(f); fresh.push(t); });
+  trades.forEach((t) => { const f = fingerprint(t); const e = extKey(t); if ((e && ext.has(e)) || fp.has(f) || seen.has(f)) { dup++; return; } seen.add(f); if (e) ext.add(e); fresh.push(t); });
   return { fresh, dup };
 }
 export function guessAccount(brokerAccount) {

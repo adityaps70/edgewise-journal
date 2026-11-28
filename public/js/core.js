@@ -179,6 +179,41 @@ export function remove(kind, id) {
   schedule();
 }
 export function saveMany(kind, objs) { objs.forEach((o) => save(kind, o)); }
+
+// ---------------------------------------------------------------- copy trading
+// An account can copy another (its leader) at a size ratio, like a trade copier does. A trade logged or
+// imported on the leader is also written to each copier, with quantity, P&L and fees scaled. Copies share
+// copyGroup, and copyK is each one's size relative to the trade it came from, so edits and deletes can follow.
+const COPY_DEAD = ['failed', 'closed'];
+const r2 = (x) => Math.round(x * 100) / 100;
+export const copyRatio = (a) => (num(a?.copyRatio) > 0 ? num(a.copyRatio) : 1);
+export const copiersOf = (accId) => (accId ? S.account.filter((a) => a.copyOf === accId && a.id !== accId && !COPY_DEAD.includes(a.status)) : []);
+export const copyLeader = (a) => (a?.copyOf ? S.account.find((x) => x.id === a.copyOf) : null);
+// the ratio to use when copying from account `from` onto account `to`
+export const ratioFor = (from, toId) => { const to = S.account.find((a) => a.id === toId); return to && to.copyOf === from ? copyRatio(to) : 1; };
+const scaleQty = (q, k) => (q === '' || q === null || q === undefined ? q : r2(num(q) * k));
+export function copyOfTrade(t, accId, k, group) {
+  const { id, aiReview, brokerAccount, ...rest } = t;
+  return { ...rest, accountId: accId, copyGroup: group, copyK: r2((num(t.copyK) || 1) * k), qty: scaleQty(t.qty, k), pnl: r2(num(t.pnl) * k), fees: t.fees === '' || t.fees === undefined ? t.fees : r2(num(t.fees) * k), ext: t.ext ? `${String(t.ext).split('@')[0]}@${accId}` : undefined };
+}
+// save trade t, plus a copy on each account in `targets` ([{ id, k }]). Returns how many copies were written.
+export function saveWithCopies(t, targets = []) {
+  const extra = targets.filter((x) => x.id && x.id !== t.accountId);
+  if (extra.length) { t.copyGroup ||= uid(); t.copyK ||= 1; }
+  if (!save('trade', t)) return 0;
+  let n = 0;
+  for (const x of extra) { if (tradesLeft() <= 0) { dispatchEvent(new CustomEvent('st:upgrade', { detail: { reason: 'trades' } })); break; } if (save('trade', copyOfTrade(t, x.id, x.k, t.copyGroup))) n++; }
+  return n;
+}
+// one entry per real decision: copies of the same trade on copier accounts count once (trade counts, streaks, the coach)
+export const decisions = (list) => { const seen = new Set(); return list.filter((t) => { if (!t.copyGroup) return true; if (seen.has(t.copyGroup)) return false; seen.add(t.copyGroup); return true; }); };
+export const copySiblings = (t) => (t?.copyGroup ? S.trade.filter((x) => x.copyGroup === t.copyGroup && x.id !== t.id) : []);
+// after editing a copied trade, carry the change to its copies (sizes keep their ratios)
+const OWN = ['id', 'accountId', 'ext', 'brokerAccount', 'copyK', 'copyGroup', 'qty', 'pnl', 'fees', 'updatedAt', 'aiReview'];
+export function syncCopies(t) {
+  const k0 = num(t.copyK) || 1; const shared = Object.fromEntries(Object.entries(t).filter(([key]) => !OWN.includes(key)));
+  copySiblings(t).forEach((s) => { const k = (num(s.copyK) || 1) / k0; save('trade', { ...s, ...shared, qty: scaleQty(t.qty, k), pnl: r2(num(t.pnl) * k), fees: t.fees === '' || t.fees === undefined ? t.fees : r2(num(t.fees) * k) }); });
+}
 export async function wipeAll() {
   if (!S.local) await API.reset();
   S.profile = null; KINDS.forEach((k) => (S[k] = []));
@@ -372,7 +407,7 @@ export function safeToRisk() {
   live.forEach((a) => { const m = accountMetrics(a); if (m.dailyLeft !== null) candidates.push([m.dailyLeft, `${a.name || 'account'} daily stop`]); if (m.buffer !== null) candidates.push([m.buffer, `${a.name || 'account'} drawdown buffer`]); });
   const lowest = candidates.reduce((x, y) => (!x || y[0] < x[0] ? y : x), null);
   const maxTrades = num(P().risk?.maxTrades);
-  const tradesToday = S.trade.filter((t) => t.date === today()).length;
+  const tradesToday = decisions(S.trade.filter((t) => t.date === today())).length;
   return { amount: lowest ? Math.max(0, lowest[0]) : null, limitBy: lowest && rule && lowest[1] !== 'your max loss per day' ? lowest[1] : '', rule, todayNet, tradesLeft: maxTrades ? Math.max(0, maxTrades - tradesToday) : null, tradesToday, maxTrades };
 }
 export function missionMetrics() {
@@ -407,12 +442,13 @@ export function planMetrics(plan) {
 // ------------------------------------------------------------------ context for Claude
 export function aiContext({ trades, focus } = {}) {
   const p = P();
-  const all = S.trade;
+  const all = decisions(S.trade); const copies = S.trade.length - all.length;
   const st = stats(all);
   const last30 = stats(inRange(all, ...rangeFor('30d')));
   const lines = [];
   lines.push(`Trader: ${p.name || 'Trader'} | markets: ${(p.markets || []).join(', ')} | instruments: ${(p.instruments || []).join(', ')} | style: ${p.style || '-'} | display currency: ${cur()} | today: ${today()}`);
   if (p.risk) lines.push(`Personal risk rules: max daily loss ${p.risk.maxDailyLoss || '-'}, max trades/day ${p.risk.maxTrades || 'no limit'}, sizing: ${p.risk.mode === 'grade' && p.risk.byGrade ? 'by setup grade (' + Object.entries(p.risk.byGrade).map(([k, v]) => k + ' ' + v).join(', ') + ')' : p.risk.mode === 'fixed' ? 'fixed ' + p.risk.perTrade + ' per trade' : 'decided per trade'}`);
+  if (copies) lines.push(`Copy trading: ${copies} trades are copies of the same decisions on copier accounts. Trade counts, win rates and P&L below count each decision once, on the account it was logged on.`);
   if (S.rule.length) lines.push('Rules: ' + S.rule.map((r) => r.text).join(' | '));
   if (S.setup.length) lines.push('Playbook setups: ' + S.setup.map((s) => `${s.name}${s.criteria ? ' (' + s.criteria + ')' : ''}`).join(' | '));
   const m = missionMetrics();
@@ -648,13 +684,14 @@ export const AGENT_METRICS = [
 export const AGENT_OPS = [['>=', 'is at least'], ['<=', 'is at most'], ['>', 'is above'], ['<', 'is below']];
 function metricNow(key, t) {
   const day = (t?.date) || today(); const list = S.trade.filter((x) => x.date === day).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-  if (key === 'tradesToday') return list.length;
+  const uniq = decisions(list);
+  if (key === 'tradesToday') return uniq.length;
   if (key === 'dayPnl') return sum(list, net);
   if (key === 'weekPnl') return sum(inRange(S.trade, weekStart(day), day), net);
   if (key === 'tradeLoss') return t ? Math.max(0, -net(t)) : 0;
   if (key === 'qty') return t ? num(t.qty) : 0;
   if (key === 'entryHour') return t?.time ? +t.time.slice(0, 2) : -1;
-  if (key === 'lossesInRow') { let n = 0; for (let i = list.length - 1; i >= 0; i--) { if (net(list[i]) < 0) n++; else break; } return n; }
+  if (key === 'lossesInRow') { let n = 0; for (let i = uniq.length - 1; i >= 0; i--) { if (net(uniq[i]) < 0) n++; else break; } return n; }
   if (key === 'minutesSinceLoss') { const prev = list.filter((x) => x !== t && net(x) < 0 && (!t || (x.time || '') <= (t.time || ''))).pop(); if (!prev || !t?.time || !prev.time) return 9999; const mm = (s) => +s.slice(0, 2) * 60 + +s.slice(3, 5); return mm(t.time) - mm(prev.exitTime || prev.time); }
   return 0;
 }
@@ -685,7 +722,7 @@ export function runAgents(t = null) {
 export function autoTags(t) {
   if (!agentState().autotag) return [];
   const tags = [];
-  const others = S.trade.filter((x) => x.date === t.date && x.id !== t.id && (x.time || '') < (t.time || '')).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  const others = decisions(S.trade.filter((x) => x.date === t.date && x.id !== t.id && !(t.copyGroup && x.copyGroup === t.copyGroup) && (x.time || '') < (t.time || '')).sort((a, b) => (a.time || '').localeCompare(b.time || '')));
   let lossRow = 0; for (let i = others.length - 1; i >= 0; i--) { if (net(others[i]) < 0) lossRow++; else break; }
   if (lossRow >= 2) tags.push('after-2-losses');
   const lastLoss = others.filter((x) => net(x) < 0).pop();
