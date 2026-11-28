@@ -7,10 +7,6 @@ binding = "DB"
 database_name = "smarttrade-db"
 database_id = "e4e2edf6-18fe-40f5-8c83-9a41c0c5215d"
 
-# Cloudflare Email Service: sends the sign-up and sign-in codes from no-reply@thesmarttrade.in
-[[send_email]]
-name = "SEND_EMAIL"
-
 [vars]
 # Model used for every AI feature. Change any time without redeploying code.
 CLAUDE_MODEL = "claude-sonnet-5-5"
@@ -24,6 +20,9 @@ RAZORPAY_KEY_ID = "rzp_live_Tym5GVPkVU2PfP"
 INTL_PAYMENTS = "off"
 # Set to "false" to close sign-ups.
 ALLOW_SIGNUP = "true"
+# Cloudflare Email Service (REST API) sends the sign-up codes. The token is a SECRET set in the dashboard: CF_EMAIL_TOKEN
+CF_ACCOUNT_ID = "d824dbe6debaca3eee60830bfc5901ea"
+MAIL_FROM = "no-reply@thesmarttrade.in"
 
 # The Claude key is a SECRET, never put it here:
 #   npx wrangler pages secret put ANTHROPIC_API_KEY
