@@ -3,17 +3,18 @@ import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
   goalIdea, passStatus, payoutStatus,
-} from './core.js?v=13aa090b';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=13aa090b';
-import { slider, liveRate, fxAgo } from './ui.js?v=13aa090b';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=13aa090b';
+} from './core.js?v=7966b2a2';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=7966b2a2';
+import { slider, liveRate, fxAgo } from './ui.js?v=7966b2a2';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=7966b2a2';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=13aa090b';
-import * as V2 from './views2.js?v=13aa090b';
-import * as V3 from './views3.js?v=13aa090b';
-import * as PL from './plan.js?v=13aa090b';
-import * as V4 from './views4.js?v=13aa090b';
-import * as MS from './milestones.js?v=13aa090b';
+import * as V from './views.js?v=7966b2a2';
+import * as V2 from './views2.js?v=7966b2a2';
+import * as V3 from './views3.js?v=7966b2a2';
+import * as PL from './plan.js?v=7966b2a2';
+import * as V4 from './views4.js?v=7966b2a2';
+import * as IM from './importers.js?v=7966b2a2';
+import * as MS from './milestones.js?v=7966b2a2';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -172,7 +173,11 @@ async function onboarding() {
   $('#obNext').onclick = () => obGo(1);
   obRender(0);
 }
-const chipRow = (id, all, on, labels = {}, add = true) => `<div class="chips" id="${id}">${all.map((v) => `<button type="button" class="chip ${on.includes(v) ? 'is-on' : ''}" data-v="${esc(v)}">${esc(labels[v] || v)}</button>`).join('')}${add ? `<button type="button" class="chip chip--add" data-add="${id}">${icon('plus')} Add</button>` : ''}</div>`;
+// chips you can add to, rename and remove (setups, rules, own instruments) carry small edit and remove buttons
+const EDITABLE = new Set(['o_su', 'o_ru']);
+const chipRow = (id, all, on, labels = {}, add = true) => `<div class="chips" id="${id}">${all.map((v) => EDITABLE.has(id)
+  ? `<span role="button" tabindex="0" class="chip chip--ed ${on.includes(v) ? 'is-on' : ''}" data-v="${esc(v)}"><span>${esc(labels[v] || v)}</span><button type="button" class="chip__b" data-edit="${id}" aria-label="Rename ${esc(v)}" title="Rename">${icon('edit')}</button><button type="button" class="chip__b" data-del="${id}" aria-label="Remove ${esc(v)}" title="Remove">${icon('close')}</button></span>`
+  : `<button type="button" class="chip ${on.includes(v) ? 'is-on' : ''}" data-v="${esc(v)}">${esc(labels[v] || v)}</button>`).join('')}${add ? `<button type="button" class="chip chip--add" data-add="${id}">${icon('plus')} Add</button>` : ''}</div>`;
 const dailyBase = () => { const d = ob.accounts.map((a) => num(a.personalDaily)).filter(Boolean); return d.length ? Math.min(...d) : 500; };
 function gradeDefaults(base) { return { 'A+': round25(base * 0.5), B: round25(base * 0.3), C: round25(base * 0.15) }; }
 const sym2 = (c) => ({ USD: '$', EUR: '€', GBP: '£', INR: '₹', AUD: 'A$', CAD: 'C$', AED: 'AED ', SGD: 'S$' }[c] ?? c + ' ');
@@ -199,7 +204,7 @@ function obRender(dir) {
   $('#obCount').innerHTML = `<b>${STEPS[s]}</b> · ${s + 1} of ${STEPS.length}`;
   $$('.steps li').forEach((li, i) => { const fill = li.firstElementChild; const done = i <= s; if (window.gsap && !reduced.matches) window.gsap.to(fill, { scaleX: done ? 1 : 0, duration: 0.7, ease: 'expo.out' }); else fill.style.transform = `scaleX(${done ? 1 : 0})`; });
   $('#obBack').style.visibility = s ? 'visible' : 'hidden';
-  $('#obNext').innerHTML = s === STEPS.length - 1 ? `${icon('bolt')}Open my journal` : `Continue${icon('right')}`;
+  $('#obNext').innerHTML = s === STEPS.length - 1 ? `${icon('bolt')}Open my journal` : `Continue${icon('right')}`; $('#obNext').classList.remove('btn--skip');
   // instruments: suggestions appear only for the markets picked; picks from markets you un-tick are dropped, your own additions stay
   const allEx = new Set(Object.values(MARKETS).flatMap((m) => m.examples)); const picked = new Set(ob.markets.flatMap((m) => MARKETS[m].examples));
   ob.instruments = ob.instruments.filter((v) => picked.has(v) || !allEx.has(v));
@@ -222,8 +227,10 @@ function obRender(dir) {
     () => `<p class="ob-q">Which accounts do you trade?</p><p class="ob-sub">Pick your prop firm, plan and size. The journal fills in the firm's rules: profit target, max loss and daily limit. Then set your own daily stop, which is usually tighter than the firm's.</p>
       <div class="explain">${icon('info')}<span>Prop firm path: you buy a <b>challenge</b>, pass it, and the firm gives you a <b>funded</b> account. Add each account at the stage it's in now; you can move it to funded later.</span></div>
       <div id="o_picker"></div>
-      <details class="imp"><summary>${icon('sheet')}Already tracking in a spreadsheet? Import it</summary>
-      <div class="drop" id="o_drop" style="margin-top:12px">${icon('sheet')}<div style="flex:1"><b>Import from Excel / Google Sheets export</b><span class="muted" style="font-size:var(--fs-sm)" id="o_dropInfo">${ob.imported ? esc(ob.imported) : 'Reads an accounts table with Firm, Cost and Quantity columns'}</span></div><input type="file" id="o_file" accept=".xlsx,.xls,.csv" hidden><button type="button" class="btn btn--sm" id="o_pick">Choose file</button></div></details>`,
+      <div id="o_copy"></div>
+      <details class="imp" ${ob.pending || ob.imported ? 'open' : ''}><summary>${icon('sheet')}Have past trades or a tracking sheet? Import it</summary>
+      <div class="drop" id="o_drop" style="margin-top:12px">${icon('sheet')}<div style="flex:1"><b>Trade history or accounts sheet</b><span class="muted" style="font-size:var(--fs-sm)" id="o_dropInfo">${ob.imported ? esc(ob.imported) : 'A trade export from your platform (CSV, Excel or HTML), or a sheet with Firm, Cost and Quantity columns'}</span></div><input type="file" id="o_file" accept=".csv,.txt,.xlsx,.xls,.htm,.html" hidden><button type="button" class="btn btn--sm" id="o_pick">Choose file</button></div>
+      <div id="o_trades"></div></details>`,
     () => `<p class="ob-q">Working toward a payout goal?</p><p class="ob-sub">Go full time, a first big payout, a house. Name it and you'll get a progress card, a pace check and a forecast.</p>
       <div class="seg seg--accent" id="o_goalSeg" style="margin-bottom:18px"><button data-v="yes" class="${ob.hasGoal !== false ? 'is-on' : ''}">Yes, I have a goal</button><button data-v="no" class="${ob.hasGoal === false ? 'is-on' : ''}">Not right now</button></div>
       <div class="form" style="grid-template-columns:1fr 1fr" id="o_goal" ${ob.hasGoal === false ? 'hidden' : ''}>
@@ -256,18 +263,40 @@ function obRender(dir) {
   $$('.seg', body).forEach(segInit);
   const toggle = (id, single = false) => $$(`#${id} .chip:not(.chip--add)`, body).forEach((c) => c.onclick = () => { if (single) $$(`#${id} .chip`, body).forEach((x) => x !== c && x.classList.remove('is-on')); c.classList.toggle('is-on'); pop(c); if (id === 'o_mk') { obCollect(); obRender(0); } });
   ['o_mk', 'o_in', 'o_ss', 'o_su', 'o_ru'].forEach((id) => toggle(id)); toggle('o_st', true);
+  // add, rename and remove chips: type, then press Enter or tap Add; the box stays open for the next one
+  const LIST = { o_in: ['instruments', 'instruments'], o_su: ['allSetups', 'setups'], o_ru: ['allRules', 'rules'] };
+  const chipInput = (anchor, id, { value = '', onDone }) => {
+    const box = document.createElement('span'); box.className = 'chipin';
+    box.innerHTML = `<input class="in" value="${esc(value)}" placeholder="${id === 'o_su' ? 'e.g. Opening drive' : id === 'o_ru' ? 'e.g. No trades after 11am' : 'e.g. MCL'}" maxlength="60"><button type="button" class="btn btn--sm btn--primary">${value ? 'Save' : 'Add'}</button><button type="button" class="ibtn ibtn--sm" aria-label="Cancel">${icon('close')}</button>`;
+    anchor.replaceWith(box); const input = $('input', box); input.focus(); input.select();
+    const ok = () => { const v = id === 'o_in' ? input.value.trim().toUpperCase() : input.value.trim(); if (!v) { shake(input); return; } onDone(v); };
+    $('.btn', box).onclick = ok; $('.ibtn', box).onclick = () => obRender(0);
+    input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); ok(); } if (e.key === 'Escape') obRender(0); };
+  };
+  const reopenAdd = (id) => { const b = $(`[data-add="${id}"]`); if (b) b.click(); };
   $$('[data-add]', body).forEach((b) => b.onclick = () => {
-    const id = b.dataset.add; const input = document.createElement('input'); input.className = 'in'; input.style.cssText = 'width:200px;height:36px;border-radius:99px';
-    input.placeholder = 'Type and press Enter'; b.replaceWith(input); input.focus();
-    input.onkeydown = (e) => { if (e.key === 'Enter' && input.value.trim()) { e.preventDefault(); const v = id === 'o_in' ? input.value.trim().toUpperCase() : input.value.trim(); obCollect(); ({ o_in: () => ob.instruments.push(v), o_su: () => { ob.allSetups.push(v); ob.setups.push(v); }, o_ru: () => { ob.allRules.push(v); ob.rules.push(v); } })[id]?.(); obRender(0); } if (e.key === 'Escape') obRender(0); };
+    const id = b.dataset.add;
+    chipInput(b, id, { onDone: (v) => { obCollect(); const [allK, onK] = LIST[id]; if (!ob[allK].includes(v)) ob[allK].push(v); if (!ob[onK].includes(v)) ob[onK].push(v); obRender(0); reopenAdd(id); } });
   });
+  $$('[data-edit]', body).forEach((b) => b.onclick = (e) => {
+    e.stopPropagation(); const id = b.dataset.edit; const chip = b.closest('.chip'); const old = chip.dataset.v; const wasOn = chip.classList.contains('is-on');
+    chipInput(chip, id, { value: old, onDone: (v) => { obCollect(); const [allK, onK] = LIST[id]; const sw = (arr) => [...new Set(arr.map((x) => (x === old ? v : x)))]; ob[allK] = sw(ob[allK]); ob[onK] = sw(ob[onK]).filter((x) => x !== v); if (wasOn) ob[onK].push(v); obRender(0); } });
+  });
+  $$('[data-del]', body).forEach((b) => b.onclick = (e) => {
+    e.stopPropagation(); const id = b.dataset.del; const old = b.closest('.chip').dataset.v; obCollect(); const [allK, onK] = LIST[id];
+    ob[allK] = ob[allK].filter((x) => x !== old); ob[onK] = ob[onK].filter((x) => x !== old); obRender(0);
+  });
+  $$('.chip--ed', body).forEach((c) => (c.onkeydown = (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === c) { e.preventDefault(); c.click(); } }));
   if (s === 0) {
     bindRate(); obFetchRate();
     const recur = () => { obCollect(); ob.rateMeta = null; $('#o_fxbox').innerHTML = rateLine(); bindRate(); obFetchRate(); };
     $('#o_cur').onchange = recur; $('#o_loc').onchange = recur;
   }
   if (s === 2) obAccounts();
-  if (s === 3) $$('#o_goalSeg button', body).forEach((b) => b.onclick = () => { segSelect($('#o_goalSeg'), b); ob.hasGoal = b.dataset.v === 'yes'; const g = $('#o_goal'); g.hidden = !ob.hasGoal; if (ob.hasGoal && window.gsap) window.gsap.fromTo(g.children, { opacity: 0, y: 10 }, { opacity: 1, y: 0, stagger: 0.04, duration: 0.45, ease: 'power3.out' }); });
+  if (s === 3) {
+    $$('#o_goalSeg button', body).forEach((b) => b.onclick = () => { segSelect($('#o_goalSeg'), b); ob.hasGoal = b.dataset.v === 'yes'; const g = $('#o_goal'); g.hidden = !ob.hasGoal; if (ob.hasGoal && window.gsap) window.gsap.fromTo(g.children, { opacity: 0, y: 10 }, { opacity: 1, y: 0, stagger: 0.04, duration: 0.45, ease: 'power3.out' }); goalBtn(); });
+    $('#o_gn').addEventListener('input', goalBtn); goalBtn();
+  }
   if (s === 4) $$('#o_tz button', body).forEach((b) => b.onclick = () => { segSelect($('#o_tz'), b); ob.sessionTz = b.dataset.v; });
   if (s === 5) {
     $$('#o_rm button', body).forEach((b) => b.onclick = () => {
@@ -277,6 +306,12 @@ function obRender(dir) {
     });
   }
   if (s === 6) animateSummary(body);
+}
+// the goal step's button says Skip until a goal is named, then Continue
+function goalBtn() {
+  const named = ob.hasGoal !== false && ($('#o_gn')?.value || '').trim();
+  $('#obNext').innerHTML = named ? `Continue${icon('right')}` : `Skip${icon('right')}`;
+  $('#obNext').classList.toggle('btn--skip', !named);
 }
 function riskBox(g, base, c) {
   if (ob.riskMode === 'none') return `<p class="muted" style="margin:12px 0 0;font-size:var(--fs-md)">No preset sizes. Log the risk on each trade and the journal works out your R multiples.</p>`;
@@ -309,19 +344,60 @@ function animateSummary(body) {
   g.fromTo($$('.gbars i', body), { scaleX: 0 }, { scaleX: 1, duration: 1, stagger: 0.08, delay: 0.5, ease: 'expo.out', transformOrigin: 'left' });
   const h = $('.bt--hero h2', body); if (h) revealHeading(h, 0.15);
 }
+// copy trading: one lead account, the rest copy it (sizes can differ: set them later in Copy trading)
+function obExtras() {
+  ob.accounts.forEach((a) => (a.id ||= uid()));
+  const box = $('#o_copy'); if (box) {
+    if (ob.accounts.length < 2) box.innerHTML = '';
+    else {
+      const lead = ob.accounts.find((a) => a.id === ob.copyLead) || null; const on = ob.copyOn === true;
+      box.innerHTML = `<div class="obcopy"><div class="row row--between" style="gap:10px;flex-wrap:wrap"><span class="obcopy__q">${icon('copy')}<span><b>Do you copy trades across these accounts?</b><small>Log or import once on the lead account; the copies fill in by themselves.</small></span></span>
+        <div class="seg seg--accent" id="o_cpSeg"><button data-v="no" class="${on ? '' : 'is-on'}">No</button><button data-v="yes" class="${on ? 'is-on' : ''}">Yes</button></div></div>
+        ${on ? `<div class="obcopy__b"><label class="field"><span>Lead account (the one you trade)</span><select class="in" id="o_cpLead">${ob.accounts.map((a) => `<option value="${a.id}" ${lead?.id === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
+          <div class="field"><span>Accounts that copy it</span><div class="chips" id="o_cpTo">${ob.accounts.filter((a) => a.id !== (lead?.id || ob.accounts[0].id)).map((a) => `<button type="button" class="chip ${(ob.copyTo || null) === null || ob.copyTo.includes(a.id) ? 'is-on' : ''}" data-v="${a.id}">${esc(a.name)}</button>`).join('')}</div><em>Different sizes? Set each account's copy size later under Accounts → Copy trading.</em></div></div>` : ''}</div>`;
+      $$('.seg', box).forEach(segInit);
+      $$('#o_cpSeg button', box).forEach((b) => (b.onclick = () => { ob.copyOn = b.dataset.v === 'yes'; if (ob.copyOn && !ob.copyLead) ob.copyLead = ob.accounts[0].id; obExtras(); }));
+      const ls = $('#o_cpLead', box); if (ls) ls.onchange = () => { ob.copyLead = ls.value; ob.copyTo = null; obExtras(); };
+      $$('#o_cpTo .chip', box).forEach((c) => (c.onclick = () => { c.classList.toggle('is-on'); pop(c); ob.copyTo = $$('#o_cpTo .chip.is-on', box).map((x) => x.dataset.v); }));
+    }
+  }
+  // trades read from an uploaded history file, added when setup finishes
+  const tb = $('#o_trades'); if (tb) {
+    const pd = ob.pending;
+    tb.innerHTML = pd ? `<div class="obtrades">${icon('check')}<span><b>${pd.trades.length} trades ready to import</b><small>${esc(pd.file)} · ${esc(fmtDate(pd.from))} to ${esc(fmtDate(pd.to))} · added when you finish</small></span>
+      <label class="field"><span>Add them to</span><select class="in" id="o_tAcc">${ob.accounts.map((a) => `<option value="${a.id}" ${pd.accountId === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('') || '<option value="">Add an account above first</option>'}</select></label><button type="button" class="linkbtn" id="o_tDrop">Remove</button></div>` : '';
+    const sel = $('#o_tAcc', tb); if (sel) { pd.accountId = sel.value; sel.onchange = () => (pd.accountId = sel.value); }
+    const rm = $('#o_tDrop', tb); if (rm) rm.onclick = () => { ob.pending = null; ob.imported = null; $('#o_dropInfo').textContent = 'A trade export from your platform (CSV, Excel or HTML), or a sheet with Firm, Cost and Quantity columns'; obExtras(); };
+  }
+}
+async function readTradeFile(file) {
+  const rows = await IM.readRows(file); const fmt = IM.detect(rows); if (!fmt) return null;
+  const p = IM.parse(rows, fmt, { tz: 'local' }); const trades = p.trades.concat(IM.pairFills(p.fills, {}).trades);
+  if (!trades.length) return null;
+  const dates = trades.map((t) => t.date).sort();
+  return { trades, fmt: fmt.label, from: dates[0], to: dates[dates.length - 1] };
+}
 function obAccounts() {
-  mountPicker($('#o_picker'), Object.assign(ob._pk ||= {}, { accounts: ob.accounts, markets: ob.markets, allowOwn: true, onChange: () => {} }));
+  mountPicker($('#o_picker'), Object.assign(ob._pk ||= {}, { accounts: ob.accounts, markets: ob.markets, allowOwn: true, onChange: () => obExtras() }));
+  obExtras();
   $('#o_pick').onclick = () => $('#o_file').click();
   const handle = async (file) => {
     if (!file) return;
     $('#o_dropInfo').textContent = 'Reading…';
+    // a trade history from a platform first, then an accounts sheet
+    let tr = null; try { tr = await readTradeFile(file); } catch (e) { tr = null; }
+    if (tr) {
+      ob.pending = { ...tr, file: file.name, accountId: ob.pending?.accountId || ob.accounts[0]?.id || '' };
+      ob.imported = `${file.name}: ${tr.fmt}, ${tr.trades.length} trades`;
+      $('#o_dropInfo').textContent = ob.imported; obExtras(); toast(`${tr.trades.length} trades found`, icon('check')); return;
+    }
     try {
       const res = await importWorkbook(file);
       res.patch.accounts.forEach((a) => { a.personalDaily ||= defaultDaily(a) || 500; });
       Object.assign(ob, res.patch);
       ob.imported = `${file.name}: ${res.summary}`;
       obRender(0); $('details.imp')?.setAttribute('open', ''); toast('Sheet imported', icon('check'));
-    } catch (e) { $('#o_dropInfo').textContent = e.message; shake($('#o_drop')); }
+    } catch (e) { $('#o_dropInfo').textContent = 'No trades or accounts found in this file. For trades, use the export from your trading platform; for accounts, a sheet with Firm, Cost and Quantity columns.'; shake($('#o_drop')); }
   };
   $('#o_file').onchange = (e) => handle(e.target.files[0]);
   const drop = $('#o_drop');
@@ -336,7 +412,7 @@ function obCollect() {
   switch (ob.step) {
     case 0: ob.name = v('o_name') ?? ob.name; ob.currency = v('o_cur') || ob.currency; ob.localCode = v('o_loc') ?? ob.localCode; if (!ob.rateAuto && $('#o_rate')) ob.rate = v('o_rate'); break;
     case 1: ob.markets = on('o_mk'); ob.instruments = on('o_in'); break;
-    case 3: if (ob.hasGoal === null) ob.hasGoal = true; ob.mission = { ...ob.mission, name: v('o_gn') ?? ob.mission.name, target: sv('o_gt') ?? ob.mission.target, start: v('o_gs') || ob.mission.start, end: v('o_ge') || ob.mission.end }; ob.monthEst = sv('o_me') ?? ob.monthEst; break;
+    case 3: if (ob.hasGoal === null) ob.hasGoal = true; if (!(v('o_gn') ?? ob.mission.name).trim()) ob.hasGoal = false; ob.mission = { ...ob.mission, name: v('o_gn') ?? ob.mission.name, target: sv('o_gt') ?? ob.mission.target, start: v('o_gs') || ob.mission.start, end: v('o_ge') || ob.mission.end }; ob.monthEst = sv('o_me') ?? ob.monthEst; break;
     case 4: ob.style = on('o_st')[0] || ''; ob.sessions = on('o_ss'); ob.setups = on('o_su'); break;
     case 5:
       ob.maxDailyLoss = sv('o_md') ?? ob.maxDailyLoss; ob.maxTrades = sv('o_mt') ?? ob.maxTrades; ob.rules = on('o_ru');
@@ -373,11 +449,19 @@ async function obFinish() {
   saveProfile(prof);
   const keep = new Set(ob.accounts.map((a) => a.id));
   S.account.filter((a) => !keep.has(a.id)).forEach((a) => remove('account', a.id));
-  ob.accounts.forEach((a) => save('account', { ddType: 'trailing', ...a, id: a.id || uid() }));
+  ob.accounts.forEach((a) => (a.id ||= uid()));
+  if (ob.copyOn && ob.accounts.length > 1) {
+    const lead = ob.copyLead || ob.accounts[0].id; const to = ob.copyTo || ob.accounts.filter((a) => a.id !== lead).map((a) => a.id);
+    ob.accounts.forEach((a) => { if (a.id !== lead && to.includes(a.id)) { a.copyOf = lead; a.copyRatio = a.copyRatio || 1; } else if (a.copyOf === lead && !to.includes(a.id)) { a.copyOf = ''; } });
+  }
+  ob.accounts.forEach((a) => save('account', { ddType: 'trailing', ...a }));
   const existing = new Set(S.setup.map((s) => s.name)); ob.setups.filter((n) => !existing.has(n)).forEach((name) => save('setup', { name }));
   const er = new Set(S.rule.map((r) => r.text)); ob.rules.filter((t) => !er.has(t)).forEach((text) => save('rule', { text }));
   if (ob.plan && !S.plan.length) save('plan', ob.plan);
+  let imp = null;
+  if (ob.pending?.trades?.length) { try { imp = V4.commit(ob.pending.trades, { defaultAccount: ob.pending.accountId || ob.accounts[0]?.id || '' }); } catch (e) { imp = null; } }
   await flush();
+  if (imp) setTimeout(() => toast(`${imp.added} trades imported${imp.copies ? `, ${imp.copies} copied to your other accounts` : ''}${imp.dup ? `, ${imp.dup} already here` : ''}`, icon('check'), 4), 900);
   if (window.gsap && !reduced.matches) await window.gsap.to('#ob', { scale: 0.96, opacity: 0, y: -10, duration: 0.4, ease: 'power2.in' });
   location.hash = '#overview'; shell(true);
 }
@@ -503,7 +587,7 @@ function navItems() { // every page this trader can open (the menu shows them gr
 let current = null;
 function shell(first = false) {
   setTimeout(paintPlan, 0);
-  import('./pet.js?v=13aa090b').then((m) => m.mountPet()).catch(() => {});
+  import('./pet.js?v=7966b2a2').then((m) => m.mountPet()).catch(() => {});
   const p = P();
   app.innerHTML = `<div class="app"><div class="slab" id="slab">
     <aside class="side"><div class="side__top">${LOGO}<a class="side__name" href="index.html" aria-label="${APP.name} home">${WORDMARK}</a><button class="side__fold" id="fold" aria-label="Collapse sidebar">${icon('fold')}</button></div>

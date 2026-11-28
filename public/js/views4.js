@@ -2,11 +2,11 @@
 import {
   S, P, $, $$, esc, uid, num, sum, clamp, today, addDays, fmtDate, fmtDay, money, pct, tone, net, icon, API, save, saveProfile, pointValue, setupsOf, tradesLeft,
   copiersOf, copyRatio, ratioFor, copyOfTrade, isLive,
-} from './core.js?v=13aa090b';
-import { equityChart } from './charts.js?v=13aa090b';
-import { helpers, modal, confirmBox, tradeList } from './views.js?v=13aa090b';
-import { toast, shake } from './motion.js?v=13aa090b';
-import * as IM from './importers.js?v=13aa090b';
+} from './core.js?v=7966b2a2';
+import { equityChart } from './charts.js?v=7966b2a2';
+import { helpers, modal, confirmBox, tradeList } from './views.js?v=7966b2a2';
+import { toast, shake } from './motion.js?v=7966b2a2';
+import * as IM from './importers.js?v=7966b2a2';
 
 const card = (...a) => helpers.card(...a); const phead = (...a) => helpers.phead(...a); const after = (...a) => helpers.after(...a);
 const field = (...a) => helpers.field(...a); const inp = (...a) => helpers.inp(...a); const optionList = (...a) => helpers.optionList(...a); const formData = (...a) => helpers.formData(...a);
@@ -17,7 +17,7 @@ const TZS = [['local', 'My computer\'s time'], ['UTC', 'UTC'], ['America/New_Yor
 const tzVal = (v) => (/^-?\d+$/.test(String(v)) ? +v : v);
 
 // ======================================================================= SAVE IMPORTED TRADES
-function commit(trades, { defaultAccount = '', also = [] } = {}) {
+export function commit(trades, { defaultAccount = '', also = [] } = {}) {
   const withAcc = trades.map((t) => ({ ...t, accountId: t.accountId || IM.guessAccount(t.brokerAccount) || defaultAccount }));
   // accounts that get their own trades from this file don't also get copies of someone else's
   const direct = new Set(withAcc.map((t) => t.accountId).filter(Boolean));

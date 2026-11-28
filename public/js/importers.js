@@ -1,6 +1,6 @@
 // Trade importers: platform exports (CSV / XLSX / HTML), fill pairing (FIFO), and conversion of synced data.
 // Every importer returns either round-trip trades or fills; fills are paired into trades here.
-import { S, P, iso, num, calcPnl, pointValue, sessionFromTime, net } from './core.js?v=13aa090b';
+import { S, P, iso, num, calcPnl, pointValue, sessionFromTime, net } from './core.js?v=7966b2a2';
 
 // ------------------------------------------------------------------ reading files
 export function parseDelimited(text) {
@@ -43,7 +43,7 @@ export function cleanSymbol(raw) {
   return s;
 }
 // Parse a timestamp string to a JS Date. Strings without an offset are read as the browser's local time.
-export function parseWhen(raw, { tz: tz0 = 'local' } = {}) {
+export function parseWhen(raw, { tz: tz0 = 'local', dayFirst } = {}) {
   let tz = tz0;
   let s = String(raw || '').trim(); if (!s) return null;
   if (/^\d{10}(\.\d+)?$/.test(s)) return new Date(+s * 1000);
@@ -51,9 +51,11 @@ export function parseWhen(raw, { tz: tz0 = 'local' } = {}) {
   if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(s) && /\d{4}-\d{2}-\d{2}T/.test(s)) return new Date(s);
   s = s.replace(/^(\d{4})\.(\d{2})\.(\d{2})/, '$1-$2-$3'); // MT5
   const offM = s.match(/\s?([+-])(\d{2}):?(\d{2})$/); if (offM && !/^\d{4}-\d{2}-\d{2}$/.test(s)) { s = s.slice(0, offM.index).trim(); tz = (offM[1] === '-' ? -1 : 1) * (+offM[2] * 60 + +offM[3]); }
-  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})[ T,]*(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?\s*(AM|PM)?/i) || s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  // 11/25/2026, 25-11-2026, 25.11.2026 (with or without a time): slashes default to month first (US), dashes and dots to day first,
+  // unless a part over 12 settles it or the file as a whole told us (dayFirst)
+  let m = s.match(/^(\d{1,2})([\/.-])(\d{1,2})\2(\d{2,4})(?:[ T,]+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?\s*(AM|PM)?)?\s*$/i);
   let y; let mo; let d; let hh = 0; let mm = 0; let ss = 0;
-  if (m) { mo = +m[1]; d = +m[2]; y = +m[3]; if (y < 100) y += 2000; if (mo > 12) [mo, d] = [d, mo]; hh = +(m[4] || 0); mm = +(m[5] || 0); ss = +(m[6] || 0); const ap = (m[7] || '').toUpperCase(); if (ap === 'PM' && hh < 12) hh += 12; if (ap === 'AM' && hh === 12) hh = 0; }
+  if (m) { const a = +m[1]; const b = +m[3]; const df = a > 12 ? true : b > 12 ? false : dayFirst !== undefined ? dayFirst : m[2] !== '/'; d = df ? a : b; mo = df ? b : a; y = +m[4]; if (y < 100) y += 2000; m = [m[0], , , , m[5], m[6], m[7], m[8]]; hh = +(m[4] || 0); mm = +(m[5] || 0); ss = +(m[6] || 0); const ap = (m[7] || '').toUpperCase(); if (ap === 'PM' && hh < 12) hh += 12; if (ap === 'AM' && hh === 12) hh = 0; }
   else if ((m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/))) { y = +m[1]; mo = +m[2]; d = +m[3]; hh = +(m[4] || 0); mm = +(m[5] || 0); ss = +(m[6] || 0); }
   else if ((m = s.match(/^(\d{4})(\d{2})(\d{2})\s+(\d{2})(\d{2})(\d{2})?$/))) { y = +m[1]; mo = +m[2]; d = +m[3]; hh = +m[4]; mm = +m[5]; ss = +(m[6] || 0); }
   else { const dt = new Date(s); return isNaN(dt) ? null : dt; }
@@ -109,34 +111,39 @@ function tradeFrom({ when, exitWhen, symbol, side, qty, entry, exit, pnl, fees, 
 export function parse(rows, fmt, opts = {}) {
   const hd = H(rows[fmt.headerIndex]); const body = rowsAfter(rows, fmt.headerIndex, (r) => r.length < 3 || (fmt.id.startsWith('mt') && /^(orders|deals|working orders|summary|open positions)$/i.test(r[0])));
   const g = (r, i) => (i >= 0 ? r[i] ?? '' : '');
-  const tz = opts.tz || 'local';
+  const tz0 = opts.tz || 'local';
   const trades = []; const fills = [];
+  // decide once per file whether numeric dates are day-first: any first part over 12 means yes, any second part over 12 means no
+  const dateCols = hd.map((h, k) => (/date|time|opened|closed|timestamp/.test(h) ? k : -1)).filter((k) => k >= 0);
+  let dayFirst; for (const r of body) { for (const k of dateCols) { const mm2 = String(r[k] || '').trim().match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-]\d{2,4}/); if (!mm2) continue; if (+mm2[1] > 12) dayFirst = true; else if (+mm2[2] > 12) dayFirst = false; } if (dayFirst !== undefined) break; }
+  const tz = tz0; const PW = (v, o) => parseWhen(v, { dayFirst, ...o });
   if (fmt.id === 'tradovate-perf') {
     const i = { sym: col(hd, 'symbol'), qty: col(hd, 'qty'), bp: col(hd, 'buyprice'), sp: col(hd, 'sellprice'), pnl: col(hd, 'pnl'), bt: col(hd, 'boughttimestamp'), st: col(hd, 'soldtimestamp'), bid: col(hd, 'buyfillid'), sid: col(hd, 'sellfillid') };
-    body.forEach((r) => { const b = parseWhen(g(r, i.bt), { tz }); const s = parseWhen(g(r, i.st), { tz }); if (!b || !s) return; const long = b <= s; trades.push(tradeFrom({ when: long ? b : s, exitWhen: long ? s : b, symbol: g(r, i.sym), side: long ? 'Long' : 'Short', qty: g(r, i.qty), entry: long ? g(r, i.bp) : g(r, i.sp), exit: long ? g(r, i.sp) : g(r, i.bp), pnl: money(g(r, i.pnl)), src: 'tradovate', ext: `tv-${g(r, i.bid)}-${g(r, i.sid)}` })); });
+    body.forEach((r) => { const b = PW(g(r, i.bt), { tz }); const s = PW(g(r, i.st), { tz }); if (!b || !s) return; const long = b <= s; trades.push(tradeFrom({ when: long ? b : s, exitWhen: long ? s : b, symbol: g(r, i.sym), side: long ? 'Long' : 'Short', qty: g(r, i.qty), entry: long ? g(r, i.bp) : g(r, i.sp), exit: long ? g(r, i.sp) : g(r, i.bp), pnl: money(g(r, i.pnl)), src: 'tradovate', ext: `tv-${g(r, i.bid)}-${g(r, i.sid)}` })); });
   } else if (fmt.id === 'topstepx') {
     const i = { id: col(hd, 'id'), sym: col(hd, 'contractname', 'symbol'), en: col(hd, 'enteredat'), ex: col(hd, 'exitedat'), ep: col(hd, 'entryprice'), xp: col(hd, 'exitprice'), fees: col(hd, 'fees'), comm: col(hd, 'commissions'), pnl: col(hd, 'pnl', 'p&l'), size: col(hd, 'size', 'qty'), type: col(hd, 'type', 'side') };
-    body.forEach((r) => { const w = parseWhen(g(r, i.en), { tz }); trades.push(tradeFrom({ when: w, exitWhen: parseWhen(g(r, i.ex), { tz }), symbol: g(r, i.sym), side: /short|sell/i.test(g(r, i.type)) ? 'Short' : 'Long', qty: g(r, i.size), entry: g(r, i.ep), exit: g(r, i.xp), pnl: money(g(r, i.pnl)), fees: (num(money(g(r, i.fees))) || 0) + Math.abs(num(money(g(r, i.comm))) || 0), src: 'topstepx', ext: g(r, i.id) ? `px-${g(r, i.id)}` : '' })); });
+    body.forEach((r) => { const w = PW(g(r, i.en), { tz }); trades.push(tradeFrom({ when: w, exitWhen: PW(g(r, i.ex), { tz }), symbol: g(r, i.sym), side: /short|sell/i.test(g(r, i.type)) ? 'Short' : 'Long', qty: g(r, i.size), entry: g(r, i.ep), exit: g(r, i.xp), pnl: money(g(r, i.pnl)), fees: (num(money(g(r, i.fees))) || 0) + Math.abs(num(money(g(r, i.comm))) || 0), src: 'topstepx', ext: g(r, i.id) ? `px-${g(r, i.id)}` : '' })); });
   } else if (fmt.id === 'nt-trades') {
     const i = { n: col(hd, 'trade number', 'trade #'), sym: col(hd, 'instrument'), acc: col(hd, 'account'), pos: col(hd, 'market pos.'), qty: col(hd, 'qty', 'quantity'), ep: col(hd, 'entry price'), xp: col(hd, 'exit price'), et: col(hd, 'entry time'), xt: col(hd, 'exit time'), pnl: col(hd, 'profit'), comm: col(hd, 'commission'), mae: col(hd, 'mae'), mfe: col(hd, 'mfe') };
-    body.forEach((r) => { const w = parseWhen(g(r, i.et), { tz }); const acc = g(r, i.acc); trades.push(tradeFrom({ when: w, exitWhen: parseWhen(g(r, i.xt), { tz }), symbol: g(r, i.sym), side: /short/i.test(g(r, i.pos)) ? 'Short' : 'Long', qty: g(r, i.qty), entry: g(r, i.ep), exit: g(r, i.xp), pnl: money(g(r, i.pnl)), fees: money(g(r, i.comm)), account: acc, src: 'ninjatrader', ext: `nt-${acc}-${g(r, i.sym)}-${g(r, i.et)}-${g(r, i.n)}`, mae: money(g(r, i.mae)), mfe: money(g(r, i.mfe)) })); });
+    body.forEach((r) => { const w = PW(g(r, i.et), { tz }); const acc = g(r, i.acc); trades.push(tradeFrom({ when: w, exitWhen: PW(g(r, i.xt), { tz }), symbol: g(r, i.sym), side: /short/i.test(g(r, i.pos)) ? 'Short' : 'Long', qty: g(r, i.qty), entry: g(r, i.ep), exit: g(r, i.xp), pnl: money(g(r, i.pnl)), fees: money(g(r, i.comm)), account: acc, src: 'ninjatrader', ext: `nt-${acc}-${g(r, i.sym)}-${g(r, i.et)}-${g(r, i.n)}`, mae: money(g(r, i.mae)), mfe: money(g(r, i.mfe)) })); });
   } else if (fmt.id === 'mt5-positions') {
     const ti = hd.reduce((a, h, k) => (h === 'time' ? a.concat(k) : a), []); const pi = hd.reduce((a, h, k) => (h === 'price' ? a.concat(k) : a), []);
     const i = { pos: col(hd, 'position'), sym: col(hd, 'symbol'), type: col(hd, 'type'), vol: col(hd, 'volume'), comm: col(hd, 'commission'), swap: col(hd, 'swap'), pnl: col(hd, 'profit') };
-    body.forEach((r) => { const type = g(r, i.type).toLowerCase(); if (!/^(buy|sell)$/.test(type)) return; const p = money(g(r, i.pnl)); trades.push(tradeFrom({ when: parseWhen(g(r, ti[0]), { tz: opts.tz || 'local' }), exitWhen: parseWhen(g(r, ti[1]), { tz: opts.tz || 'local' }), symbol: g(r, i.sym), side: type === 'sell' ? 'Short' : 'Long', qty: g(r, i.vol), entry: g(r, pi[0]), exit: g(r, pi[1]), pnl: (num(p) || 0) + (num(money(g(r, i.swap))) || 0), fees: money(g(r, i.comm)), src: 'mt5', ext: `mt5-${g(r, i.pos)}` })); });
+    body.forEach((r) => { const type = g(r, i.type).toLowerCase(); if (!/^(buy|sell)$/.test(type)) return; const p = money(g(r, i.pnl)); trades.push(tradeFrom({ when: PW(g(r, ti[0]), { tz: opts.tz || 'local' }), exitWhen: PW(g(r, ti[1]), { tz: opts.tz || 'local' }), symbol: g(r, i.sym), side: type === 'sell' ? 'Short' : 'Long', qty: g(r, i.vol), entry: g(r, pi[0]), exit: g(r, pi[1]), pnl: (num(p) || 0) + (num(money(g(r, i.swap))) || 0), fees: money(g(r, i.comm)), src: 'mt5', ext: `mt5-${g(r, i.pos)}` })); });
   } else if (fmt.id === 'mt4-closed') {
     const ti = { open: col(hd, 'open time'), close: col(hd, 'close time') }; const pi = hd.reduce((a, h, k) => (h === 'price' ? a.concat(k) : a), []);
     const i = { tk: col(hd, 'ticket'), sym: col(hd, 'item'), type: col(hd, 'type'), vol: col(hd, 'size'), comm: col(hd, 'commission'), swap: col(hd, 'swap'), pnl: col(hd, 'profit') };
-    body.forEach((r) => { const type = g(r, i.type).toLowerCase(); if (!/^(buy|sell)$/.test(type)) return; trades.push(tradeFrom({ when: parseWhen(g(r, ti.open), { tz }), exitWhen: parseWhen(g(r, ti.close), { tz }), symbol: g(r, i.sym), side: type === 'sell' ? 'Short' : 'Long', qty: g(r, i.vol), entry: g(r, pi[0]), exit: g(r, pi[1]), pnl: (num(money(g(r, i.pnl))) || 0) + (num(money(g(r, i.swap))) || 0), fees: money(g(r, i.comm)), src: 'mt4', ext: `mt4-${g(r, i.tk)}` })); });
+    body.forEach((r) => { const type = g(r, i.type).toLowerCase(); if (!/^(buy|sell)$/.test(type)) return; trades.push(tradeFrom({ when: PW(g(r, ti.open), { tz }), exitWhen: PW(g(r, ti.close), { tz }), symbol: g(r, i.sym), side: type === 'sell' ? 'Short' : 'Long', qty: g(r, i.vol), entry: g(r, pi[0]), exit: g(r, pi[1]), pnl: (num(money(g(r, i.pnl))) || 0) + (num(money(g(r, i.swap))) || 0), fees: money(g(r, i.comm)), src: 'mt4', ext: `mt4-${g(r, i.tk)}` })); });
   } else if (fmt.id === 'nt-exec') {
     const i = { sym: col(hd, 'instrument'), act: col(hd, 'action'), qty: col(hd, 'quantity'), px: col(hd, 'price'), t: col(hd, 'time'), id: col(hd, 'execution id', 'id'), comm: col(hd, 'commission'), acc: col(hd, 'account') };
-    body.forEach((r) => { const w = parseWhen(g(r, i.t), { tz }); if (!w) return; fills.push({ when: w, symbol: cleanSymbol(g(r, i.sym)), side: /sell|short/i.test(g(r, i.act)) ? 'S' : 'B', qty: Math.abs(num(g(r, i.qty))), price: num(g(r, i.px)), fee: Math.abs(num(money(g(r, i.comm))) || 0), account: g(r, i.acc), id: g(r, i.id), src: 'ninjatrader' }); });
+    body.forEach((r) => { const w = PW(g(r, i.t), { tz }); if (!w) return; fills.push({ when: w, symbol: cleanSymbol(g(r, i.sym)), side: /sell|short/i.test(g(r, i.act)) ? 'S' : 'B', qty: Math.abs(num(g(r, i.qty))), price: num(g(r, i.px)), fee: Math.abs(num(money(g(r, i.comm))) || 0), account: g(r, i.acc), id: g(r, i.id), src: 'ninjatrader' }); });
   } else if (fmt.id === 'tradovate-orders' || fmt.id === 'rithmic') {
     const i = { side: col(hd, 'b/s', 'buy/sell', 'side'), sym: col(hd, 'contract', 'symbol', 'product'), qty: col(hd, 'filledqty', 'filled qty', 'qty filled', 'filled', 'quantity', 'qty'), px: col(hd, 'avgprice', 'avg fill price', 'fill price', 'price'), t: col(hd, 'fill time', 'filltime', 'update time', 'timestamp', 'date'), st: col(hd, 'status'), acc: col(hd, 'account'), id: col(hd, 'orderid', 'order id', 'order number', 'id') };
-    body.forEach((r) => { const st = g(r, i.st); if (st && !/fill/i.test(st)) return; const q = Math.abs(num(g(r, i.qty))); const p = num(String(g(r, i.px)).replace(/[^0-9.\-]/g, '')); const w = parseWhen(g(r, i.t), { tz }); if (!q || !p || !w) return; fills.push({ when: w, symbol: cleanSymbol(g(r, i.sym)), side: /^s|sell/i.test(g(r, i.side).trim()) ? 'S' : 'B', qty: q, price: p, fee: 0, account: g(r, i.acc), id: g(r, i.id), src: fmt.id === 'rithmic' ? 'rithmic' : 'tradovate' }); });
+    body.forEach((r) => { const st = g(r, i.st); if (st && !/fill/i.test(st)) return; const q = Math.abs(num(g(r, i.qty))); const p = num(String(g(r, i.px)).replace(/[^0-9.\-]/g, '')); const w = PW(g(r, i.t), { tz }); if (!q || !p || !w) return; fills.push({ when: w, symbol: cleanSymbol(g(r, i.sym)), side: /^s|sell/i.test(g(r, i.side).trim()) ? 'S' : 'B', qty: q, price: p, fee: 0, account: g(r, i.acc), id: g(r, i.id), src: fmt.id === 'rithmic' ? 'rithmic' : 'tradovate' }); });
   } else {
     const i = { d: col(hd, 'date', 'time', 'opened', 'entry time', 'open time'), xt: col(hd, 'exit time', 'close time', 'closed'), sym: col(hd, 'symbol', 'instrument', 'contract', 'product', 'item'), side: col(hd, 'side', 'direction', 'action', 'type', 'b/s'), qty: col(hd, 'qty', 'quantity', 'size', 'volume', 'lots', 'contracts'), ep: col(hd, 'entry price', 'entry', 'open price', 'buy price', 'price'), xp: col(hd, 'exit price', 'exit', 'close price', 'sell price'), pnl: col(hd, 'pnl', 'p&l', 'profit', 'net p&l', 'realized'), fees: col(hd, 'fees', 'fee', 'commission') };
-    body.forEach((r) => trades.push(tradeFrom({ when: parseWhen(g(r, i.d), { tz }), exitWhen: parseWhen(g(r, i.xt), { tz }), symbol: g(r, i.sym), side: /sell|short|^s$/i.test(g(r, i.side)) ? 'Short' : 'Long', qty: g(r, i.qty), entry: g(r, i.ep), exit: g(r, i.xp), pnl: money(g(r, i.pnl)), fees: money(g(r, i.fees)), src: 'csv' })));
+    const tk = col(hd, 'ticket #', 'ticket', 'trade id', 'position id', 'deal', 'order id', 'id');
+    body.forEach((r) => trades.push(tradeFrom({ when: PW(g(r, i.d), { tz }), exitWhen: PW(g(r, i.xt), { tz }), symbol: g(r, i.sym), side: /sell|short|^s$/i.test(g(r, i.side)) ? 'Short' : 'Long', qty: g(r, i.qty), entry: g(r, i.ep), exit: g(r, i.xp), pnl: money(g(r, i.pnl)), fees: money(g(r, i.fees)), src: 'csv', ext: tk >= 0 && g(r, tk) ? `csv-${String(g(r, tk)).trim()}` : '' })));
   }
   return { trades: trades.filter(Boolean), fills };
 }
@@ -176,7 +183,12 @@ const extKey = (t) => (t.ext ? `${String(t.ext).split('@')[0]}|${t.accountId || 
 export function dedupe(trades) {
   const ext = new Set(S.trade.map(extKey).filter(Boolean)); const fp = new Set(S.trade.map(fingerprint));
   const seen = new Set(); const fresh = []; let dup = 0;
-  trades.forEach((t) => { const f = fingerprint(t); const e = extKey(t); if ((e && ext.has(e)) || fp.has(f) || seen.has(f)) { dup++; return; } seen.add(f); if (e) ext.add(e); fresh.push(t); });
+  const fpNoId = new Set(S.trade.filter((t) => !t.ext).map(fingerprint)); // trades typed by hand have no id: match those by their details
+  trades.forEach((t) => {
+    const f = fingerprint(t); const e = extKey(t);
+    if (e ? ext.has(e) || fpNoId.has(f) : fp.has(f) || seen.has(f)) { dup++; return; }
+    seen.add(f); if (e) ext.add(e); fresh.push(t);
+  });
   return { fresh, dup };
 }
 export function guessAccount(brokerAccount) {

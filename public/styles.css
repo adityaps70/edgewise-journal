@@ -1377,3 +1377,24 @@ body.mp { overflow: auto; background: var(--scene); background-color: var(--bg);
 .otp__foot { margin: 2px 0 0; text-align: center; font-size: var(--fs-sm); }
 .otp__hint { margin: 0; text-align: center; font-size: var(--fs-xs); }
 .linkbtn:disabled { color: var(--muted); cursor: default; text-decoration: none; }
+/* onboarding: editable chips, add box, copy trading, trade file */
+.chip--ed { display: inline-flex; align-items: center; gap: 2px; padding-right: 6px; cursor: pointer; }
+.chip__b { display: inline-grid; place-items: center; width: 22px; height: 22px; border: 0; border-radius: 50%; background: transparent; color: inherit; opacity: .55; cursor: pointer; padding: 0; }
+.chip__b svg { width: 12px; height: 12px; }
+.chip__b:hover, .chip__b:focus-visible { opacity: 1; background: rgba(127,127,127,.18); }
+.chip--ed > span { padding-right: 2px; }
+.chipin { display: inline-flex; align-items: center; gap: 6px; }
+.chipin .in { width: 210px; height: 36px; border-radius: 99px; }
+.chipin .btn--sm { height: 36px; border-radius: 99px; }
+.ibtn--sm { width: 32px; height: 32px; }
+.btn--skip { background: var(--card-3) !important; color: var(--ink) !important; box-shadow: inset 0 0 0 1px var(--line-2) !important; }
+.obcopy { margin-top: 16px; padding: 14px 16px; border-radius: 16px; box-shadow: inset 0 0 0 1px var(--line-2); }
+.obcopy__q { display: flex; gap: 10px; align-items: flex-start; } .obcopy__q > svg { width: 18px; height: 18px; color: var(--accent-text); margin-top: 2px; flex: none; }
+.obcopy__q small { display: block; color: var(--muted); font-size: var(--fs-sm); margin-top: 2px; }
+.obcopy__b { display: grid; grid-template-columns: minmax(200px, 1fr) 2fr; gap: 14px; margin-top: 14px; }
+.obcopy__b em { display: block; font-style: normal; color: var(--muted); font-size: var(--fs-xs); margin-top: 6px; }
+.obtrades { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--good) 8%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--good) 35%, transparent); }
+.obtrades > svg { width: 18px; height: 18px; color: var(--good); align-self: center; }
+.obtrades > span { flex: 1 1 220px; } .obtrades small { display: block; color: var(--muted); font-size: var(--fs-sm); }
+.obtrades .field { flex: 1 1 200px; margin: 0; }
+@media (max-width: 600px) { .obcopy__b { grid-template-columns: 1fr; } .chipin .in { width: 150px; } }

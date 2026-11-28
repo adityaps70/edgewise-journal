@@ -2,10 +2,10 @@
 import {
   S, P, $, $$, esc, uid, num, sum, today, fmtDate, money, icon, save, accountMetrics, accName, isLive,
   passStatus, payoutStatus, isChallenge, isFundedAcc, copiersOf, daysBetween, accCost,
-} from './core.js?v=13aa090b';
-import { modal, helpers, payoutModal, accountModal } from './views.js?v=13aa090b';
-import { toast } from './motion.js?v=13aa090b';
-import { firmById, accountFromPlan } from './firms.js?v=13aa090b';
+} from './core.js?v=7966b2a2';
+import { modal, helpers, payoutModal, accountModal } from './views.js?v=7966b2a2';
+import { toast } from './motion.js?v=7966b2a2';
+import { firmById, accountFromPlan } from './firms.js?v=7966b2a2';
 
 const H = () => helpers.hooks();
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
