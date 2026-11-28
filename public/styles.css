@@ -1304,3 +1304,69 @@ body.mp { overflow: auto; background: var(--scene); background-color: var(--bg);
 .payrules summary::after { content: '▾'; margin-left: auto; opacity: .6; }
 @media (max-width: 560px) { .ptrack__h { flex-wrap: wrap; } .ptrack__btns { width: 100%; } .ptrack__btns .btn { flex: 1; } .certgrid { grid-template-columns: 1fr 1fr; } .certgrid--life { grid-template-columns: 1fr; } }
 .modal--wide { width: min(860px, 100%); }
+
+/* ---------------------------------------------------------------- upgrade window */
+.modal--upx { width: min(920px, 100%); padding: 0; overflow: hidden; }
+.modal--upx .modal__head { position: absolute; top: 14px; right: 14px; z-index: 3; margin: 0; padding: 0; }
+.modal--upx .modal__head h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.modal--upx .modal__foot { display: none; }
+.upx { display: grid; grid-template-columns: 1fr 1.1fr; min-height: 520px; }
+.upx__hero { position: relative; isolation: isolate; overflow: hidden; padding: 34px 32px 28px; display: flex; flex-direction: column; color: #fff;
+  background: radial-gradient(120% 80% at 0% 0%, #3a0710 0%, #14060a 45%, #08080a 100%); }
+.upx__hero::before { content: ''; position: absolute; inset: 0; z-index: -1; opacity: .5;
+  background-image: linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+  background-size: 28px 28px; mask-image: radial-gradient(90% 70% at 30% 30%, #000 20%, transparent 75%); }
+.upx__aura { position: absolute; z-index: -1; width: 420px; height: 420px; right: -170px; bottom: -150px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,48,72,.55), rgba(255,48,72,0) 65%); filter: blur(10px); animation: upxPulse 6s ease-in-out infinite; }
+@keyframes upxPulse { 50% { transform: scale(1.12) translate(-14px, -10px); opacity: .8; } }
+.upx__brand { display: flex; align-items: center; gap: 10px; }
+.upx__brand img { border-radius: 10px; box-shadow: 0 6px 24px rgba(255,48,72,.35); }
+.upx__badge { position: relative; overflow: hidden; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .18em;
+  color: #1b0a00; background: linear-gradient(135deg, #ffe7a3, #ffc35a 45%, #ff9f43); box-shadow: 0 0 0 1px rgba(255,214,140,.5), 0 4px 18px rgba(255,170,70,.35); }
+.upx__badge::after { content: ''; position: absolute; inset: 0; transform: translateX(-120%); background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.75) 50%, transparent 70%); animation: upxShine 3.2s ease-in-out infinite 1s; }
+@keyframes upxShine { 60%, 100% { transform: translateX(120%); } }
+.upx__h { margin: 26px 0 10px; font-size: 40px; line-height: 1.02; letter-spacing: -.035em; font-weight: 800; }
+.upx__h span { background: linear-gradient(90deg, #ff5a6a, #ff9f43); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.upx__why { margin: 0; color: rgba(255,255,255,.68); font-size: var(--fs-md); line-height: 1.5; max-width: 32ch; }
+.upx__price { display: flex; align-items: baseline; gap: 8px; margin-top: auto; padding-top: 26px; }
+.upx__price b { font-size: 56px; line-height: 1; letter-spacing: -.045em; font-weight: 800; }
+.upx__price span { color: rgba(255,255,255,.6); font-weight: 600; }
+.upx__day { margin: 6px 0 18px; color: rgba(255,255,255,.55); font-size: var(--fs-sm); }
+.upx__cta { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 54px; border: 0; border-radius: 16px;
+  font: inherit; font-size: 16px; font-weight: 750; color: #fff; text-decoration: none; cursor: pointer;
+  background: linear-gradient(135deg, #ff5a6a, #ff3048 45%, #c90f29); box-shadow: 0 0 0 1px rgba(255,255,255,.14) inset, 0 12px 34px rgba(255,48,72,.45); transition: transform .2s, box-shadow .2s; }
+.upx__cta::after { content: ''; position: absolute; inset: 0; transform: translateX(-130%); background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.35) 50%, transparent 70%); animation: upxShine 3.6s ease-in-out infinite; }
+.upx__cta:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(255,255,255,.2) inset, 0 16px 44px rgba(255,48,72,.6); }
+.upx__cta:disabled { opacity: .75; cursor: progress; }
+.upx__cta svg { width: 18px; height: 18px; }
+.upx__arrow { font-style: normal; transition: transform .2s; } .upx__cta:hover .upx__arrow { transform: translateX(4px); }
+.upx__trust { display: flex; gap: 10px; align-items: flex-start; margin: 14px 0 0; font-size: var(--fs-sm); color: rgba(255,255,255,.75); line-height: 1.4; }
+.upx__trust svg { width: 16px; height: 16px; flex: none; margin-top: 2px; color: #3ecf8e; }
+.upx__trust small { color: rgba(255,255,255,.5); font-size: var(--fs-xs); }
+.upx__side { padding: 34px 30px 24px; display: flex; flex-direction: column; gap: 16px; }
+.upx__eyebrow { color: var(--muted); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 11px; }
+.upx__feats { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.upx__feats li { display: flex; gap: 12px; align-items: flex-start; }
+.upx__feats b { display: block; font-size: var(--fs-base); }
+.upx__feats em { display: block; font-style: normal; color: var(--muted); font-size: var(--fs-sm); margin-top: 2px; line-height: 1.4; }
+.upx__ico { flex: none; width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; color: var(--accent-text);
+  background: linear-gradient(145deg, var(--accent-soft), transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
+.upx__ico svg { width: 17px; height: 17px; }
+.upx__cmp { display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px; margin-top: 4px; }
+.upx__cmp > div { border-radius: 14px; padding: 12px 14px; box-shadow: inset 0 0 0 1px var(--line-2); }
+.upx__cmp small { display: block; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; }
+.upx__use { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--ink-2); margin-top: 6px; } .upx__use em { font-style: normal; font-weight: 700; }
+.upx__bar { height: 5px; border-radius: 9px; background: var(--card-3); margin-top: 4px; overflow: hidden; } .upx__bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ff9f43, #ff3048); }
+.upx__cmp-pro { background: linear-gradient(160deg, var(--accent-soft), transparent 80%); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent) !important; }
+.upx__cmp-pro b { display: block; font-size: 17px; letter-spacing: -.01em; } .upx__cmp-pro em { display: block; font-style: normal; color: var(--muted); font-size: var(--fs-xs); margin-bottom: 6px; }
+.upx__fine { margin: auto 0 0; font-size: var(--fs-xs); color: var(--muted); } .upx__fine a { color: var(--accent-text); }
+.upx__later { align-self: center; border: 0; background: none; font: inherit; color: var(--muted); cursor: pointer; padding: 4px 10px; font-size: var(--fs-sm); }
+.upx__later:hover { color: var(--ink); }
+.modal--upx .modal__head .ibtn { color: var(--ink); }
+@media (max-width: 760px) {
+  .upx { grid-template-columns: 1fr; min-height: 0; }
+  .upx__hero { padding: 26px 22px 22px; } .upx__h { font-size: 32px; margin-top: 18px; } .upx__price { padding-top: 20px; } .upx__price b { font-size: 46px; }
+  .upx__side { padding: 22px; } .upx__cmp { grid-template-columns: 1fr 1fr; }
+  .modal--upx .modal__head .ibtn { color: #fff; }
+}
+@media (prefers-reduced-motion: reduce) { .upx__aura, .upx__badge::after, .upx__cta::after { animation: none; } }

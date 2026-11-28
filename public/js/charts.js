@@ -1,5 +1,5 @@
 // Charts as SVG/HTML strings; motion.js animates [data-draw], [data-fade], [data-grow], [data-pop].
-import { esc, money, short, fmtDate, $$, icon } from './core.js?v=6b792348';
+import { esc, money, short, fmtDate, $$, icon } from './core.js?v=e8349dbb';
 
 // drill-down registry: any element with data-drill opens the trades behind it
 export const drill = new Map(); let dn = 0;

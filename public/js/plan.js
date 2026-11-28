@@ -1,7 +1,7 @@
 // Free vs Pro: the upgrade screen, the usage meter, and the admin panel.
-import { S, $, $$, esc, icon, API, isPro, tradesLeft, aiLeft } from './core.js?v=6b792348';
-import { modal, confirmBox, helpers } from './views.js?v=6b792348';
-import { toast } from './motion.js?v=6b792348';
+import { S, $, $$, esc, icon, API, isPro, tradesLeft, aiLeft } from './core.js?v=e8349dbb';
+import { modal, confirmBox, helpers } from './views.js?v=e8349dbb';
+import { toast } from './motion.js?v=e8349dbb';
 
 const SUPPORT = 'support@thesmarttrade.in';
 const price = () => S.sub?.price || '999';
@@ -40,21 +40,57 @@ export async function checkout(btn, months = 1) {
 let open = false;
 export function upgradeModal(reason = '') {
   if (open || isPro()) return; open = true;
-  const why = reason === 'trades' ? `You've logged your ${S.sub?.trades.limit || 10} free trades.` : reason === 'ai' ? `You've used your ${S.sub?.ai.limit || 10} free AI requests.` : 'Get everything, without limits.';
+  const t = S.sub?.trades || { used: 0, limit: 10 }; const a = S.sub?.ai || { used: 0, limit: 10 };
+  const why = reason === 'trades' ? `You've used all ${t.limit} free trades. Keep journaling without a cap.` : reason === 'ai' ? `You've used all ${a.limit} free AI requests. Keep your coach on every day.` : 'Every tool in the journal, with no caps.';
   const co = !!S.sub?.checkout; const pay = !co && S.sub?.payLink;
-  const m = modal('Upgrade to Pro', `<div class="upg">
-    <p class="upg__why">${esc(why)} Pro keeps your journal going with no caps on trades.</p>
-    <div class="upg__plans">
-      <div class="upg__p"><small>Free</small><b>$0</b><ul><li>${icon('check')}${S.sub?.trades.limit || 10} trade logs</li><li>${icon('check')}${S.sub?.ai.limit || 10} AI coach requests</li><li>${icon('check')}Every feature to try</li></ul></div>
-      <div class="upg__p upg__p--pro"><small>Pro</small><b>${esc(priceTxt())}<em>/month</em></b><ul><li>${icon('check')}Unlimited trade logs and imports</li><li>${icon('check')}AI coach, 60 requests a day</li><li>${icon('check')}Screenshot logging, replay, AI backtests</li><li>${icon('check')}Broker sync and mentor links</li></ul></div>
+  const perDay = Number(price()) / 30; const day = inr() ? '₹' + Math.ceil(perDay) : '$' + (perDay < 1 ? perDay.toFixed(2) : Math.ceil(perDay));
+  const ctaTxt = `${icon('bolt')}<span>Upgrade to Pro</span><i class="upx__arrow">→</i>`;
+  const cta = co ? `<button class="upx__cta" data-act="buy">${ctaTxt}</button>`
+    : pay ? `<a class="upx__cta" href="${esc(pay)}" target="_blank" rel="noopener" data-act="pay">${ctaTxt}</a>`
+    : `<a class="upx__cta" href="mailto:${SUPPORT}?subject=${encodeURIComponent('Upgrade to Pro')}">${ctaTxt}</a>`;
+  const trust = co ? (inr() ? 'UPI · Cards · Netbanking · Wallets' : 'Secure card checkout')
+    : !inr() && S.sub?.currency ? `Card payments from outside India are coming soon. Write to ${SUPPORT} and we'll upgrade you today.` : `Write to ${SUPPORT} and we'll switch you to Pro.`;
+  const feats = [
+    ['trades', 'Unlimited trades and imports', 'Log and import every trade, on every account'],
+    ['coach', 'AI coach, 60 requests a day', 'Reviews, behaviour checks and answers from your own data'],
+    ['image', 'Screenshot logging', 'Drop a chart or broker screenshot, the trade fills itself in'],
+    ['play', 'Replay and AI backtests', 'Replay any trade and test a setup on your history'],
+    ['link', 'Broker sync and mentor links', 'Trades arrive on their own; share read-only with a mentor'],
+  ];
+  const bar = (x) => Math.min(100, (x.used / x.limit) * 100);
+  const m = modal('Upgrade to Pro', `<div class="upx">
+    <div class="upx__hero">
+      <div class="upx__aura" aria-hidden="true"></div>
+      <div class="upx__brand"><img src="brand/mark.svg?v=8" alt="" width="34" height="34"><span class="upx__badge">PRO</span></div>
+      <h3 class="upx__h">Trade without<br><span>limits.</span></h3>
+      <p class="upx__why">${esc(why)}</p>
+      <div class="upx__price"><b>${esc(priceTxt())}</b><span>per month</span></div>
+      <p class="upx__day">About ${esc(day)} a day · cancel any time</p>
+      ${cta}
+      <p class="upx__trust">${icon('shield')}<span>${co ? 'Secure checkout by Razorpay' : ''}${co ? '<br>' : ''}<small>${esc(trust)}</small></span></p>
     </div>
-    <p class="upg__fine">${co ? (inr() ? 'Secure payment by Razorpay: UPI, cards, netbanking and wallets. ' : 'Secure payment by Razorpay. ') + 'Pro switches on right after payment. Cancel any time; see the <a href="/refund" target="_blank" rel="noopener">refund policy</a>.' : !inr() && S.sub?.currency ? `Card payments from outside India are coming soon. Write to ${SUPPORT} and we'll upgrade you by email today.` : pay ? 'You pay on a secure checkout page. Your account switches to Pro as soon as the payment is confirmed.' : `Write to ${SUPPORT} and we'll switch your account to Pro.`}</p>
-  </div>`, `<button class="btn" data-act="x">Not now</button>${co ? `<button class="btn btn--primary" data-act="buy">Upgrade for ${esc(priceTxt())}/month</button>` : pay ? `<a class="btn btn--primary" href="${esc(pay)}" target="_blank" rel="noopener" data-act="pay">Upgrade for ${esc(priceTxt())}/month</a>` : `<a class="btn btn--primary" href="mailto:${SUPPORT}?subject=${encodeURIComponent('Upgrade to Pro')}&body=${encodeURIComponent('Please switch my account to Pro: ' + (S.user?.email || ''))}">Email to upgrade</a>`}`);
+    <div class="upx__side">
+      <small class="upx__eyebrow">Everything in Pro</small>
+      <ul class="upx__feats">${feats.map(([ic, h, d]) => `<li><span class="upx__ico">${icon(ic)}</span><span><b>${esc(h)}</b><em>${esc(d)}</em></span></li>`).join('')}</ul>
+      <div class="upx__cmp">
+        <div><small>Your free plan</small>
+          <div class="upx__use"><span>Trades</span><em>${Math.min(t.used, t.limit)}/${t.limit}</em></div><div class="upx__bar"><i style="width:${bar(t)}%"></i></div>
+          <div class="upx__use"><span>AI requests</span><em>${Math.min(a.used, a.limit)}/${a.limit}</em></div><div class="upx__bar"><i style="width:${bar(a)}%"></i></div></div>
+        <div class="upx__cmp-pro"><small>With Pro</small><b>Unlimited</b><em>trades</em><b>60 a day</b><em>AI requests</em></div>
+      </div>
+      <p class="upx__fine">Pro switches on the moment the payment goes through. <a href="/refund" target="_blank" rel="noopener">Refund policy</a></p>
+      <button type="button" class="upx__later" data-act="x">Not now</button>
+    </div>
+  </div>`, '', 'modal modal--upx');
   m.el.parentElement.style.zIndex = '400'; // above any open form
   const done = () => (open = false);
   const obs = new MutationObserver(() => { if (!document.body.contains(m.el)) { done(); obs.disconnect(); } }); obs.observe(document.body, { childList: true });
   m.on('pay', () => {});
-  m.on('buy', (e) => checkout(e?.currentTarget || m.el.querySelector('[data-act="buy"]')));
+  m.on('buy', () => checkout(m.el.querySelector('[data-act="buy"]')));
+  if (window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    window.gsap.fromTo(m.el.querySelectorAll('.upx__feats li'), { opacity: 0, x: 14 }, { opacity: 1, x: 0, duration: 0.5, stagger: 0.06, ease: 'power3.out', delay: 0.2 });
+    window.gsap.fromTo(m.el.querySelector('.upx__price b'), { opacity: 0, y: 12, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: 'back.out(1.8)', delay: 0.15 });
+  }
 }
 
 // ---------------------------------------------------------------- usage meter (sidebar, settings)
