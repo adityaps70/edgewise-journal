@@ -3,18 +3,18 @@ import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
   goalIdea, passStatus, payoutStatus,
-} from './core.js?v=7966b2a2';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=7966b2a2';
-import { slider, liveRate, fxAgo } from './ui.js?v=7966b2a2';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=7966b2a2';
+} from './core.js?v=5169429f';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=5169429f';
+import { slider, liveRate, fxAgo } from './ui.js?v=5169429f';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=5169429f';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=7966b2a2';
-import * as V2 from './views2.js?v=7966b2a2';
-import * as V3 from './views3.js?v=7966b2a2';
-import * as PL from './plan.js?v=7966b2a2';
-import * as V4 from './views4.js?v=7966b2a2';
-import * as IM from './importers.js?v=7966b2a2';
-import * as MS from './milestones.js?v=7966b2a2';
+import * as V from './views.js?v=5169429f';
+import * as V2 from './views2.js?v=5169429f';
+import * as V3 from './views3.js?v=5169429f';
+import * as PL from './plan.js?v=5169429f';
+import * as V4 from './views4.js?v=5169429f';
+import * as IM from './importers.js?v=5169429f';
+import * as MS from './milestones.js?v=5169429f';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -364,18 +364,17 @@ function obExtras() {
   // trades read from an uploaded history file, added when setup finishes
   const tb = $('#o_trades'); if (tb) {
     const pd = ob.pending;
-    tb.innerHTML = pd ? `<div class="obtrades">${icon('check')}<span><b>${pd.trades.length} trades ready to import</b><small>${esc(pd.file)} · ${esc(fmtDate(pd.from))} to ${esc(fmtDate(pd.to))} · added when you finish</small></span>
+    tb.innerHTML = pd ? `<div class="obtrades">${icon('check')}<span><b>${pd.trades.length} trades ready to import</b><small>${esc(pd.file)} · ${esc(fmtDate(pd.from))} to ${esc(fmtDate(pd.to))} · added when you finish</small>${pd.issues?.length ? `<small class="warn">${esc(pd.issues.join(' '))} You can re-import with the right columns from Trades → Import later.</small>` : ''}</span>
       <label class="field"><span>Add them to</span><select class="in" id="o_tAcc">${ob.accounts.map((a) => `<option value="${a.id}" ${pd.accountId === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('') || '<option value="">Add an account above first</option>'}</select></label><button type="button" class="linkbtn" id="o_tDrop">Remove</button></div>` : '';
     const sel = $('#o_tAcc', tb); if (sel) { pd.accountId = sel.value; sel.onchange = () => (pd.accountId = sel.value); }
     const rm = $('#o_tDrop', tb); if (rm) rm.onclick = () => { ob.pending = null; ob.imported = null; $('#o_dropInfo').textContent = 'A trade export from your platform (CSV, Excel or HTML), or a sheet with Firm, Cost and Quantity columns'; obExtras(); };
   }
 }
 async function readTradeFile(file) {
-  const rows = await IM.readRows(file); const fmt = IM.detect(rows); if (!fmt) return null;
-  const p = IM.parse(rows, fmt, { tz: 'local' }); const trades = p.trades.concat(IM.pairFills(p.fills, {}).trades);
-  if (!trades.length) return null;
-  const dates = trades.map((t) => t.date).sort();
-  return { trades, fmt: fmt.label, from: dates[0], to: dates[dates.length - 1] };
+  const r = await IM.smartRead(file, { tz: 'local' }); if (!r.trades.length) return null;
+  if (r.via === 'ai' && r.map && r.sig) IM.saveMap(r.sig, r.map);
+  const dates = r.trades.map((t) => t.date).sort();
+  return { trades: r.trades, fmt: r.via === 'ai' ? 'columns read by AI' : r.label, from: dates[0], to: dates[dates.length - 1], issues: r.issues };
 }
 function obAccounts() {
   mountPicker($('#o_picker'), Object.assign(ob._pk ||= {}, { accounts: ob.accounts, markets: ob.markets, allowOwn: true, onChange: () => obExtras() }));
@@ -587,7 +586,7 @@ function navItems() { // every page this trader can open (the menu shows them gr
 let current = null;
 function shell(first = false) {
   setTimeout(paintPlan, 0);
-  import('./pet.js?v=7966b2a2').then((m) => m.mountPet()).catch(() => {});
+  import('./pet.js?v=5169429f').then((m) => m.mountPet()).catch(() => {});
   const p = P();
   app.innerHTML = `<div class="app"><div class="slab" id="slab">
     <aside class="side"><div class="side__top">${LOGO}<a class="side__name" href="index.html" aria-label="${APP.name} home">${WORDMARK}</a><button class="side__fold" id="fold" aria-label="Collapse sidebar">${icon('fold')}</button></div>

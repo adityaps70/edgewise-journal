@@ -209,6 +209,11 @@ OPERAND is one of: a number; {"price": "open"|"high"|"low"|"close"}; {"ema": N};
 {"trades": [{"symbol": string, "side": "Long"|"Short", "qty": number|null, "entry": number|null, "exit": number|null, "date": "YYYY-MM-DD"|null, "time": "HH:MM"|null, "exitTime": "HH:MM"|null, "pnl": number|null, "fees": number|null, "stop": number|null, "target": number|null, "account": string|null}],
  "platform": string|null, "confidence": "high"|"medium"|"low", "notes": one short sentence ONLY if something was unclear or cut off, otherwise ""}
 Rules: read only what is visible; never invent numbers, use null instead. A buy then sell is Long, sell then buy is Short. Combine partial fills of the same position into one trade with average prices and total quantity. pnl is the realised P&L as shown (negative for losses; "(200.00)" means -200); if fees/commissions are shown separately put them in fees. Times in 24-hour HH:MM exactly as displayed; dates as YYYY-MM-DD (use the year given in the trader's message if the screenshot omits it). Symbols in the short form traders use (e.g. "MNQ" for "MNQZ6" or "MNQ 12-26", "XAUUSD" for "XAUUSD.m"). List trades oldest first, at most 20. If the screenshot shows no trade at all, return {"trades": [], "confidence": "low", "notes": "what the image shows instead"}.`,
+  importmap: `Task: the trader uploaded a trade history file. You get its first rows as a JSON array of rows (each row an array of cell strings, index 0 = first row of the file). Work out the LAYOUT only, never copy or compute numbers. Reply with ONLY a JSON object, no prose, no code fences:
+{"headerRow": index of the row holding the column names (or -1 if there is none), "rowKind": "trades" if each row is a complete round trip (open and close) or "fills" if each row is one buy or sell execution,
+ "columns": {"date": col, "time": col|null, "exitDate": col|null, "exitTime": col|null, "symbol": col, "side": col|null, "qty": col|null, "entry": col|null, "exit": col|null, "pnl": col|null, "fees": [cols]|null, "account": col|null, "id": col|null},
+ "dateOrder": "DMY"|"MDY"|"YMD", "long": [exact cell values that mean a long/buy], "short": [exact cell values that mean a short/sell], "pnlIsNet": true if the P&L column already has fees taken out, "notes": one short sentence only if something is unclear, else ""}
+Rules: col is a 0-based column index into the rows. "date" is the open/entry (or fill) date-time column; set "time" only when the time sits in its own column. For fills, "entry" is the fill price column. "fees" lists every commission/fee column. Decide dateOrder from the values (a first part over 12 means DMY). If the file has no side column but quantities are signed, set side to null and long ["+"], short ["-"]. Use null for anything the file does not have.`,
   insight: `Task: give ONE sharp insight for the dashboard (max 40 words, no headers, no bullets) — the single most useful observation from this data right now.`,
 };
 
@@ -244,7 +249,7 @@ async function callClaude(env, { mode, messages, context, image }) {
     body: JSON.stringify({
       model: env.CLAUDE_MODEL || 'claude-sonnet-5-5',
       max_tokens: mode === 'insight' ? 200 : 1500,
-      system: mode === 'firmrules' ? MODES.firmrules : mode === 'backtest' ? MODES.backtest : mode === 'readtrade' ? MODES.readtrade : system,
+      system: mode === 'firmrules' ? MODES.firmrules : mode === 'backtest' ? MODES.backtest : mode === 'readtrade' ? MODES.readtrade : mode === 'importmap' ? MODES.importmap : system,
       messages: msgs,
       ...(mode === 'firmrules' ? { tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 4 }] } : {}),
     }),

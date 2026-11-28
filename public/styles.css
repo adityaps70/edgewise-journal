@@ -1398,3 +1398,16 @@ body.mp { overflow: auto; background: var(--scene); background-color: var(--bg);
 .obtrades > span { flex: 1 1 220px; } .obtrades small { display: block; color: var(--muted); font-size: var(--fs-sm); }
 .obtrades .field { flex: 1 1 200px; margin: 0; }
 @media (max-width: 600px) { .obcopy__b { grid-template-columns: 1fr; } .chipin .in { width: 150px; } }
+/* import: warnings and the column panel */
+.imwarn { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; font-size: var(--fs-sm); color: var(--ink-2); background: color-mix(in srgb, var(--warn) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 35%, transparent); }
+.imwarn > svg { width: 16px; height: 16px; flex: none; color: var(--warn); margin-top: 1px; }
+.imcols { border-radius: 14px; box-shadow: inset 0 0 0 1px var(--line-2); padding: 10px 14px; }
+.imcols summary { display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none; }
+.imcols summary::-webkit-details-marker { display: none; }
+.imcols summary > svg { width: 16px; height: 16px; color: var(--accent-text); flex: none; }
+.imcols summary > span { flex: 1; min-width: 0; } .imcols summary small { display: block; color: var(--muted); font-size: var(--fs-xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.imcols summary em { font-style: normal; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; }
+.imcols[open] summary em { visibility: hidden; }
+.imcols__g { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px 12px; margin: 12px 0; }
+.imcols__g .checkrow { align-self: end; padding-bottom: 8px; }
+.obtrades small.warn { color: var(--warn); }

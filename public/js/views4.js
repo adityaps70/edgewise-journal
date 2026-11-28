@@ -2,11 +2,11 @@
 import {
   S, P, $, $$, esc, uid, num, sum, clamp, today, addDays, fmtDate, fmtDay, money, pct, tone, net, icon, API, save, saveProfile, pointValue, setupsOf, tradesLeft,
   copiersOf, copyRatio, ratioFor, copyOfTrade, isLive,
-} from './core.js?v=7966b2a2';
-import { equityChart } from './charts.js?v=7966b2a2';
-import { helpers, modal, confirmBox, tradeList } from './views.js?v=7966b2a2';
-import { toast, shake } from './motion.js?v=7966b2a2';
-import * as IM from './importers.js?v=7966b2a2';
+} from './core.js?v=5169429f';
+import { equityChart } from './charts.js?v=5169429f';
+import { helpers, modal, confirmBox, tradeList } from './views.js?v=5169429f';
+import { toast, shake } from './motion.js?v=5169429f';
+import * as IM from './importers.js?v=5169429f';
 
 const card = (...a) => helpers.card(...a); const phead = (...a) => helpers.phead(...a); const after = (...a) => helpers.after(...a);
 const field = (...a) => helpers.field(...a); const inp = (...a) => helpers.inp(...a); const optionList = (...a) => helpers.optionList(...a); const formData = (...a) => helpers.formData(...a);
@@ -44,23 +44,49 @@ export function importModal() {
     <p class="muted" style="margin:0;font-size:var(--fs-md)">Drop the export from your platform. Tradovate, TopstepX/ProjectX, NinjaTrader, MetaTrader 4/5, Rithmic R|Trader and most other CSV, Excel or HTML trade files are recognised automatically. Trades you already have are skipped.</p>
     <div class="drop" id="imDrop">${icon('upload')}<div style="flex:1"><b>Choose or drop a file</b><span class="muted" id="imInfo" style="font-size:var(--fs-sm)">.csv, .xlsx, .xls or .html</span></div><input type="file" accept=".csv,.txt,.xlsx,.xls,.htm,.html" id="imFile" hidden><button class="btn btn--sm" id="imPick">Choose</button></div>
     <div class="grid g-2" style="gap:12px">${field('Times in the file are in', `<select class="in" id="imTz">${optionList(TZS, 'local')}</select>`, '', 'Most platforms export your computer\'s time; MetaTrader uses its server time')}${field('Default account', `<select class="in" id="imAcc">${optionList(S.account.map((a) => [a.id, a.name]))}<option value="">No account</option></select>`, '', 'for trades whose account isn\'t recognised')}</div>
-    <div id="imAlso"></div><div id="imMap"></div><div id="imPrev"></div></div>`,
+    <div id="imWarn"></div><div id="imCols"></div><div id="imAlso"></div><div id="imMap"></div><div id="imPrev"></div></div>`,
   '<button class="btn" data-act="cancel">Cancel</button><button class="btn btn--primary" data-act="go" disabled>Import</button>', 'modal');
-  let file = null; let result = null;
+  let file = null; let result = null; let R = null; let edited = false;
+  const show = () => {
+    const trades = R.trades; result = trades;
+    const est = () => IM.dedupe(trades.map((t) => ({ ...t, accountId: IM.guessAccount(t.brokerAccount) || $('#imAcc', m.el).value })));
+    const { fresh, dup } = est();
+    const tag = R.via === 'ai' ? `<span class="pill pill--accent">${icon('coach')}Columns read by AI</span>` : R.via === 'saved' ? `<span class="pill">${icon('check')}Saved columns</span>` : R.via === 'manual' ? `<span class="pill">${icon('edit')}Your columns</span>` : '';
+    $('#imInfo', m.el).innerHTML = `${R.label && R.via === 'known' ? `<span style="color:var(--ink);font-weight:600">${esc(R.label)}</span> · ` : ''}${trades.length} trades found${dup ? `, ${dup} already in your journal` : ''} ${tag}`;
+    const warn = [...(R.issues || []), ...(R.notes ? [R.notes] : []), ...(R.aiError && R.via !== 'ai' ? [`AI couldn't check this file (${R.aiError}). Set the columns below.`] : [])];
+    $('#imWarn', m.el).innerHTML = warn.length ? `<div class="imwarn">${icon('info')}<span>${warn.map(esc).join('<br>')}${R.issues?.length ? ' Check the columns below before importing.' : ''}</span></div>` : '';
+    colsUI(!!(R.issues?.length) || R.via === 'ai' || R.via === null);
+    const brokers = [...new Set(fresh.map((t) => t.brokerAccount).filter(Boolean))];
+    $('#imMap', m.el).innerHTML = brokers.length ? `<div class="field"><span>Match platform accounts to your journal</span><div class="stack" style="gap:6px">${brokers.map((b) => `<div class="maprow"><code>${esc(b)}</code><span>${icon('left')}</span><select class="in" data-broker="${esc(b)}">${optionList(S.account.map((a) => [a.id, a.name]), IM.guessAccount(b))}<option value="" ${IM.guessAccount(b) ? '' : 'selected'}>Use default account</option></select></div>`).join('')}</div></div>` : '';
+    $('#imPrev', m.el).innerHTML = fresh.length ? `<div class="field"><span>Preview</span></div>${tradeList(fresh.slice(-6).reverse().map((t, i) => ({ ...t, id: 'pv' + i })))}` : '<div class="empty">Nothing new to import.</div>';
+    $('[data-act="go"]', m.el).disabled = !fresh.length; $('[data-act="go"]', m.el).textContent = fresh.length ? `Import ${fresh.length} trades` : 'Import';
+  };
+  // which column holds what: shown after an AI read, when something looks off, or on request; every choice can be changed
+  const colsUI = (open) => {
+    const box = $('#imCols', m.el); if (!R?.rows) { box.innerHTML = ''; return; }
+    const map = R.map || IM.guessMap(R.rows); R.map = map; const c = map.columns;
+    const hdr = R.rows[map.headerRow] || []; const ex = R.rows.slice(map.headerRow + 1).find((r) => r.filter((x) => String(x ?? '').trim()).length >= 3) || [];
+    const opts = (sel) => `<option value="">—</option>${hdr.map((h, i) => `<option value="${i}" ${String(sel) === String(i) ? 'selected' : ''}>${esc(String(h || 'Column ' + (i + 1)).slice(0, 28))}${ex[i] !== undefined && String(ex[i]).trim() ? ` · ${esc(String(ex[i]).slice(0, 18))}` : ''}</option>`).join('')}`;
+    const summary = IM.FIELDS.filter(([k]) => (k === 'fees' ? c.fees?.length : c[k] !== null && c[k] !== undefined)).map(([k, l]) => `${l.split(' (')[0]} ← ${esc(String(hdr[k === 'fees' ? c.fees[0] : c[k]] ?? '?'))}`).slice(0, 6).join(' · ');
+    box.innerHTML = `<details class="imcols" ${open ? 'open' : ''}><summary>${icon('sheet')}<span><b>Columns</b><small>${summary || 'Choose which column holds what'}</small></span><em>Change</em></summary>
+      <div class="imcols__g">${IM.FIELDS.map(([k, l]) => `<label class="field"><span>${esc(l)}</span><select class="in" data-col="${k}">${opts(k === 'fees' ? (c.fees || [])[0] : c[k])}</select></label>`).join('')}
+        <label class="field"><span>Dates are written</span><select class="in" data-opt="dateOrder">${optionList([['DMY', 'Day first (25-11-2026)'], ['MDY', 'Month first (11/25/2026)'], ['YMD', 'Year first (2026-11-25)']], map.dateOrder || 'MDY')}</select></label>
+        <label class="field"><span>Each row is</span><select class="in" data-opt="rowKind">${optionList([['trades', 'A whole trade (open and close)'], ['fills', 'One buy or sell fill']], map.rowKind || 'trades')}</select></label>
+        <label class="checkrow"><input type="checkbox" data-opt="pnlIsNet" ${map.pnlIsNet ? 'checked' : ''}> P&amp;L already has fees taken off</label></div>
+      <div class="row" style="justify-content:flex-end;gap:8px"><button type="button" class="btn btn--sm btn--primary" id="imApply">${icon('refresh')}Re-read with these columns</button></div></details>`;
+    $('#imApply', box).onclick = () => {
+      const cols = { ...c }; $$('[data-col]', box).forEach((s) => { const v = s.value === '' ? null : +s.value; if (s.dataset.col === 'fees') cols.fees = v === null ? null : [v, ...(c.fees || []).slice(1).filter((x) => x !== v)]; else cols[s.dataset.col] = v; });
+      const nm = { ...map, columns: cols, dateOrder: $('[data-opt="dateOrder"]', box).value, rowKind: $('[data-opt="rowKind"]', box).value, pnlIsNet: $('[data-opt="pnlIsNet"]', box).checked };
+      const pr = IM.parseMapped(R.rows, nm, { tz: tzVal($('#imTz', m.el).value) });
+      R = { ...R, ...pr, map: nm, via: 'manual', label: '', issues: IM.checkRead(pr.trades, pr.rowsSeen, pr.fills), notes: '', aiError: '' }; edited = true; show();
+    };
+  };
   const run = async () => {
     if (!file) return;
+    $('#imInfo', m.el).innerHTML = `<span class="typing"><i></i><i></i><i></i></span> Reading ${esc(file.name)}…${S.ai?.configured ? ' Unfamiliar layouts are checked by AI.' : ''}`;
     try {
-      const rows = await IM.readRows(file); const fmt = IM.detect(rows);
-      if (!fmt) { $('#imInfo', m.el).innerHTML = `<span class="bad">Couldn't recognise this file.</span> It needs a header row with symbol, prices or P&amp;L.`; $('[data-act="go"]', m.el).disabled = true; return; }
-      const tz = tzVal($('#imTz', m.el).value);
-      const p = IM.parse(rows, fmt, { tz }); const trades = p.trades.concat(IM.pairFills(p.fills, {}).trades);
-      result = trades; const est = () => IM.dedupe(trades.map((t) => ({ ...t, accountId: IM.guessAccount(t.brokerAccount) || $('#imAcc', m.el).value })));
-      const { fresh, dup } = est();
-      $('#imInfo', m.el).innerHTML = `<span style="color:var(--text);font-weight:600">${esc(fmt.label)}</span> · ${trades.length} trades found${dup ? `, ${dup} already in your journal` : ''}`;
-      const brokers = [...new Set(fresh.map((t) => t.brokerAccount).filter(Boolean))];
-      $('#imMap', m.el).innerHTML = brokers.length ? `<div class="field"><span>Match platform accounts to your journal</span><div class="stack" style="gap:6px">${brokers.map((b) => `<div class="maprow"><code>${esc(b)}</code><span>${icon('left')}</span><select class="in" data-broker="${esc(b)}">${optionList(S.account.map((a) => [a.id, a.name]), IM.guessAccount(b))}<option value="" ${IM.guessAccount(b) ? '' : 'selected'}>Use default account</option></select></div>`).join('')}</div></div>` : '';
-      $('#imPrev', m.el).innerHTML = fresh.length ? `<div class="field"><span>Preview</span></div>${tradeList(fresh.slice(-6).reverse().map((t, i) => ({ ...t, id: 'pv' + i })))}` : '<div class="empty">Nothing new to import.</div>';
-      $('[data-act="go"]', m.el).disabled = !fresh.length; $('[data-act="go"]', m.el).textContent = fresh.length ? `Import ${fresh.length} trades` : 'Import';
+      R = await IM.smartRead(file, { tz: tzVal($('#imTz', m.el).value) }); edited = false;
+      show();
     } catch (e) { $('#imInfo', m.el).innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
   };
   const pick = (f) => { file = f; $('#imInfo', m.el).textContent = 'Reading ' + f.name + '…'; run(); };
@@ -82,6 +108,7 @@ export function importModal() {
     Object.entries(map).forEach(([b, id]) => { const a = S.account.find((x) => x.id === id); if (a && a.brokerAccount !== b) save('account', { ...a, brokerAccount: b }); });
     const def = $('#imAcc', m.el).value;
     const also = $$('#imAlso [data-also].is-on', m.el).map((b) => b.dataset.also);
+    if (R && (R.via === 'ai' || R.via === 'manual') && R.map && R.sig) IM.saveMap(R.sig, R.map); // next time this layout imports without asking
     const r = commit(result.map((t) => ({ ...t, accountId: map[t.brokerAccount] || '' })), { defaultAccount: def, also });
     m.close(); H().refresh(); toast(`${r.added} trades imported${copyNote(r)}${r.dup ? `, ${r.dup} duplicates skipped` : ''}${r.over ? `, ${r.over} over the free limit` : ''}`, icon('check'));
   });

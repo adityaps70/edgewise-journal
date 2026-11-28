@@ -1,6 +1,6 @@
 // Trade importers: platform exports (CSV / XLSX / HTML), fill pairing (FIFO), and conversion of synced data.
 // Every importer returns either round-trip trades or fills; fills are paired into trades here.
-import { S, P, iso, num, calcPnl, pointValue, sessionFromTime, net } from './core.js?v=7966b2a2';
+import { S, P, API, saveProfile, iso, num, calcPnl, pointValue, sessionFromTime, net } from './core.js?v=5169429f';
 
 // ------------------------------------------------------------------ reading files
 export function parseDelimited(text) {
@@ -255,3 +255,87 @@ export async function binanceBars(sym, fromSec, toSec, interval = '1m') {
 }
 export const tradeEpoch = (date, time) => Math.floor(+new Date(`${date}T${(time || '00:00').slice(0, 5)}:00`) / 1000);
 export { net };
+
+// ------------------------------------------------------------------ smart read: known formats, saved layouts, AI-read layouts
+// The AI only reads the LAYOUT (which column is which, date order, how buy/sell is written). Every number is then copied by code.
+export const FIELDS = [['date', 'Open date / time'], ['time', 'Open time (own column)'], ['exitDate', 'Close date / time'], ['exitTime', 'Close time (own column)'], ['symbol', 'Symbol'], ['side', 'Side (buy / sell)'], ['qty', 'Quantity'], ['entry', 'Entry / fill price'], ['exit', 'Exit price'], ['pnl', 'P&L'], ['fees', 'Fees / commission'], ['account', 'Account'], ['id', 'Trade or ticket ID']];
+const cellsOf = (r) => (r || []).map((c) => String(c ?? '').trim());
+export const headerSig = (row) => cellsOf(row).map((c) => c.toLowerCase().replace(/[^a-z0-9#&%]/g, '')).join('|');
+const dataRows = (rows, at) => rows.slice(at + 1).filter((r) => cellsOf(r).filter(Boolean).length >= 3);
+
+// if the 'header' row actually holds a trade (its date cell reads as a date), step back to the real header so no trade is lost
+export function fixHeader(rows, map) {
+  const c = map.columns || {}; const dayFirst = map.dateOrder === 'DMY' ? true : map.dateOrder === 'MDY' ? false : undefined;
+  let at = map.headerRow ?? -1; while (at >= 0 && c.date >= 0 && parseWhen(String((rows[at] || [])[c.date] ?? '').trim(), { dayFirst })) at--;
+  map.headerRow = at; return at;
+}
+export function parseMapped(rows, map, { tz = 'local' } = {}) {
+  const c = map.columns || {}; const dayFirst = map.dateOrder === 'DMY' ? true : map.dateOrder === 'MDY' ? false : undefined;
+  const at = fixHeader(rows, map); const body = dataRows(rows, at);
+  const g = (r, i) => (i === null || i === undefined || i < 0 ? '' : String(r[i] ?? '').trim());
+  const when = (r, d, t) => { const v = g(r, d); if (!v) return null; return parseWhen(t !== null && t !== undefined && t >= 0 && g(r, t) ? `${v} ${g(r, t)}` : v, { tz, dayFirst }); };
+  const L = (map.long || []).map((x) => String(x).toLowerCase()); const Sh = (map.short || []).map((x) => String(x).toLowerCase());
+  const sideOf = (r) => { const v = g(r, c.side).toLowerCase(); if (v) { if (Sh.includes(v)) return 'S'; if (L.includes(v)) return 'B'; return /sell|short|^s$/.test(v) ? 'S' : 'B'; } const q = num(g(r, c.qty)); return q < 0 ? 'S' : 'B'; };
+  const feeOf = (r) => (Array.isArray(c.fees) ? c.fees : c.fees >= 0 ? [c.fees] : []).reduce((s2, i) => s2 + Math.abs(num(money(g(r, i))) || 0), 0);
+  const trades = []; const fills = [];
+  body.forEach((r) => {
+    const w = when(r, c.date, c.time); if (!w) return;
+    const fee = Math.round(feeOf(r) * 100) / 100; const side = sideOf(r); const id = g(r, c.id);
+    if (map.rowKind === 'fills') { const price = num(String(g(r, c.entry)).replace(/[^0-9.\-]/g, '')); const q = Math.abs(num(g(r, c.qty))); if (!price || !q) return; fills.push({ when: w, symbol: cleanSymbol(g(r, c.symbol)), side, qty: q, price, fee, account: g(r, c.account), id, src: 'csv' }); return; }
+    let pnl = money(g(r, c.pnl)); if (pnl !== '' && map.pnlIsNet) pnl = Math.round((pnl + fee) * 100) / 100; // the journal keeps P&L before fees
+    trades.push(tradeFrom({ when: w, exitWhen: when(r, c.exitDate, c.exitTime), symbol: g(r, c.symbol), side: side === 'S' ? 'Short' : 'Long', qty: g(r, c.qty), entry: g(r, c.entry), exit: g(r, c.exit), pnl, fees: fee, account: g(r, c.account), src: 'csv', ext: id ? `csv-${id}` : '' }));
+  });
+  return { trades: trades.filter(Boolean).concat(pairFills(fills, {}).trades), rowsSeen: body.length, fills: map.rowKind === 'fills' };
+}
+// does this result look right? returns plain-language problems
+export function checkRead(trades, rowsSeen, isFills) {
+  const out = []; const now = Date.now() + 2 * 864e5;
+  if (!trades.length) return ['No trades could be read.'];
+  if (!isFills && rowsSeen && trades.length < rowsSeen * 0.9) out.push(`Only ${trades.length} of ${rowsSeen} rows could be read.`);
+  const bad = trades.filter((t) => { const d = +new Date(t.date); return !t.date || d > now || d < +new Date('2000-01-01'); }).length;
+  if (bad) out.push(`${bad} trade${bad === 1 ? ' has a date' : 's have dates'} that look wrong.`);
+  if (trades.every((t) => !t.symbol)) out.push('No symbols found.');
+  return out;
+}
+const savedMaps = () => P().importMaps || {};
+export function saveMap(sig, map) { const all = { ...savedMaps(), [sig]: { ...map, at: Date.now() } }; const keep = Object.entries(all).sort((a, b) => (b[1].at || 0) - (a[1].at || 0)).slice(0, 20); saveProfile({ ...P(), importMaps: Object.fromEntries(keep) }); }
+// first row with 3+ filled cells is the best guess at a header
+export function guessHeader(rows) { for (let i = 0; i < Math.min(rows.length, 40); i++) if (cellsOf(rows[i]).filter(Boolean).length >= 3) return i; return 0; }
+async function aiMap(rows) {
+  const sample = rows.slice(0, 16).map((r) => cellsOf(r).slice(0, 30).map((x) => x.slice(0, 40)));
+  const r = await API.ai({ mode: 'importmap', messages: [{ role: 'user', content: JSON.stringify(sample) }] });
+  const j = JSON.parse((r.text.match(/\{[\s\S]*\}/) || ['{}'])[0]);
+  if (!j.columns || j.columns.date === undefined) throw new Error('AI could not work out the columns');
+  return j;
+}
+// file -> { trades, label, via, map?, issues, rows, sig }
+export async function smartRead(file, { tz = 'local', useAI = true } = {}) {
+  const rows = await readRows(file); const fmt = detect(rows);
+  const hIdx = fmt ? fmt.headerIndex : guessHeader(rows); const sig = headerSig(rows[hIdx]);
+  const saved = savedMaps()[sig];
+  if (saved) { const p = parseMapped(rows, saved, { tz }); return { ...p, rows, sig, map: saved, via: 'saved', label: 'Your saved columns', issues: checkRead(p.trades, p.rowsSeen, p.fills) }; }
+  let best = null;
+  if (fmt) {
+    const p = parse(rows, fmt, { tz }); const trades = p.trades.concat(pairFills(p.fills, {}).trades);
+    const isFills = !!p.fills.length; const rowsSeen = isFills ? 0 : dataRows(rows, fmt.headerIndex).length;
+    best = { trades, rows, sig, via: 'known', label: fmt.label, issues: checkRead(trades, rowsSeen, isFills) };
+    if (!best.issues.length) return best;
+  }
+  if (useAI && S.ai?.configured) {
+    try {
+      const map = await aiMap(rows); fixHeader(rows, map); const p = parseMapped(rows, map, { tz }); const issues = checkRead(p.trades, p.rowsSeen, p.fills);
+      if (!best || p.trades.length >= best.trades.length) { const sig2 = map.headerRow >= 0 ? headerSig(rows[map.headerRow]) : sig; return { ...p, rows, sig: sig2, map, via: 'ai', label: 'Columns read by AI', issues, notes: map.notes || '' }; }
+    } catch (e) { if (best) best.aiError = e.message; else best = { trades: [], rows, sig, via: null, issues: [], aiError: e.message }; }
+  }
+  return best || { trades: [], rows, sig, via: null, label: '', issues: ['This file\'s layout wasn\'t recognised.'] };
+}
+
+// a starting point for setting columns by hand: matched from the header names
+export function guessMap(rows, hIdx = guessHeader(rows)) {
+  const hd = H(rows[hIdx] || []); const c = (...n) => { const i = col(hd, ...n); return i >= 0 ? i : null; };
+  const body = dataRows(rows, hIdx); const dIdx = c('date', 'time', 'opened', 'entry time', 'open time', 'timestamp', 'fill time', 'when opened', 'when', 'open');
+  let order = 'MDY'; for (const r of body) { const m = String(r[dIdx] ?? '').trim().match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-]\d{2,4}/); if (!m) { if (/^\d{4}-/.test(String(r[dIdx] ?? '').trim())) { order = 'YMD'; break; } continue; } if (+m[1] > 12) { order = 'DMY'; break; } if (+m[2] > 12) { order = 'MDY'; break; } }
+  const fee = [c('commission', 'commissions'), c('fees', 'fee', 'broker cost', 'cost')].filter((x) => x !== null);
+  return { headerRow: hIdx, rowKind: 'trades', dateOrder: order, long: [], short: [], pnlIsNet: false,
+    columns: { date: dIdx, time: null, exitDate: c('exit time', 'close time', 'closed', 'closed at'), exitTime: null, symbol: c('symbol', 'instrument', 'contract', 'product', 'item', 'ticker'), side: c('side', 'direction', 'dir', 'action', 'type', 'b/s', 'buy/sell', 'long/short'), qty: c('qty', 'quantity', 'size', 'volume', 'lots', 'contracts'), entry: c('entry price', 'open price', 'entry', 'in @', 'in', 'buy price', 'price', 'avg price'), exit: c('exit price', 'close price', 'exit', 'out @', 'out', 'sell price'), pnl: c('pnl', 'p&l', 'profit', 'net p&l', 'realized', 'result', 'gain'), fees: fee.length ? fee : null, account: c('account'), id: c('ticket #', 'ticket', 'trade id', 'id', 'order id') } };
+}
