@@ -120,6 +120,54 @@ async function revokePro(env, paymentId, full) {
   else await env.DB.prepare('UPDATE users SET pro_until = ? WHERE id = ?').bind(until, p.user_id).run();
   return true;
 }
+// ---------------------------------------------------------------- email codes (sign-up and first sign-in)
+// Sends through Cloudflare Email Service: the SEND_EMAIL binding if Pages provides it, else the REST API with CF_EMAIL_TOKEN + CF_ACCOUNT_ID.
+const MAIL_FROM = (env) => env.MAIL_FROM || 'no-reply@thesmarttrade.in';
+const mailOn = (env) => !!(env.SEND_EMAIL || (env.CF_EMAIL_TOKEN && env.CF_ACCOUNT_ID));
+let authReady = false;
+async function ensureAuthTables(env) {
+  if (authReady) return; authReady = true;
+  try { await env.DB.prepare('ALTER TABLE users ADD COLUMN email_verified INTEGER').run(); } catch (e) { /* exists */ }
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS email_codes (email TEXT PRIMARY KEY, purpose TEXT, code_hash TEXT, data TEXT, expires_at INTEGER, attempts INTEGER DEFAULT 0, sent_at INTEGER, sends INTEGER DEFAULT 0, window_start INTEGER)').run();
+}
+async function sendMail(env, to, subject, html, text) {
+  const from = { email: MAIL_FROM(env), name: 'The Smart Trade' };
+  if (env.SEND_EMAIL) { await env.SEND_EMAIL.send({ to, from, subject, html, text }); return; }
+  const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/email/sending/send`, { method: 'POST', headers: { authorization: 'Bearer ' + env.CF_EMAIL_TOKEN, 'content-type': 'application/json' }, body: JSON.stringify({ to, from: `The Smart Trade <${MAIL_FROM(env)}>`, subject, html, text }) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || d.success === false) throw new Error((d.errors && d.errors[0] && d.errors[0].message) || 'Email service error ' + r.status);
+}
+const sha = async (x) => b64(await crypto.subtle.digest('SHA-256', enc.encode(x)));
+function codeMail(code, purpose) {
+  const h = purpose === 'signup' ? 'Confirm your email' : 'Your sign-in code';
+  const text = `${h}\n\nYour code for The Smart Trade is ${code}. It expires in 10 minutes.\n\nIf you didn't ask for this, you can ignore this email.`;
+  const html = `<!doctype html><html><body style="margin:0;background:#0b0b0d;font-family:Arial,Helvetica,sans-serif;color:#f3f4f7"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 12px"><tr><td align="center">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:460px;background:#141417;border:1px solid #26262b;border-radius:18px;padding:32px">
+  <tr><td style="font-size:16px;font-weight:700;color:#fff">The Smart <span style="color:#ff3048">Trade</span></td></tr>
+  <tr><td style="padding-top:22px;font-size:22px;font-weight:700;color:#fff">${h}</td></tr>
+  <tr><td style="padding-top:8px;font-size:14px;line-height:1.5;color:#a3a7b3">Enter this code to ${purpose === 'signup' ? 'finish creating your journal' : 'sign in'}. It expires in 10 minutes.</td></tr>
+  <tr><td style="padding:24px 0"><div style="font-size:36px;letter-spacing:10px;font-weight:700;color:#fff;background:#1d0b10;border:1px solid #5a1220;border-radius:14px;padding:16px 0;text-align:center">${code}</div></td></tr>
+  <tr><td style="font-size:12px;line-height:1.5;color:#7d8190">If you didn't ask for this, you can ignore this email. Nobody can sign in without the code.</td></tr></table>
+  <p style="font-size:11px;color:#5d6170;margin-top:16px">thesmarttrade.in</p></td></tr></table></body></html>`;
+  return { subject: `${code} is your The Smart Trade code`, html, text };
+}
+async function issueCode(env, email, purpose, data) {
+  await ensureAuthTables(env);
+  const now = Date.now(); const row = await env.DB.prepare('SELECT * FROM email_codes WHERE email = ?').bind(email).first();
+  if (row && now - (row.sent_at || 0) < 45_000) return { wait: Math.ceil((45_000 - (now - row.sent_at)) / 1000) };
+  const fresh = !row || now - (row.window_start || 0) > 3600_000; const sends = fresh ? 1 : (row.sends || 0) + 1;
+  if (sends > 6) return { blocked: true };
+  const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, '0');
+  await env.DB.prepare('INSERT OR REPLACE INTO email_codes (email, purpose, code_hash, data, expires_at, attempts, sent_at, sends, window_start) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)')
+    .bind(email, purpose, await sha(email + ':' + code), JSON.stringify(data || {}), now + 600_000, now, sends, fresh ? now : row.window_start).run();
+  const m = codeMail(code, purpose); await sendMail(env, email, m.subject, m.html, m.text);
+  return { sent: true };
+}
+async function codeReply(env, email, purpose, data) {
+  let r; try { r = await issueCode(env, email, purpose, data); } catch (e) { return err('We couldn\'t send the email right now. Try again in a minute, or continue with Google.', 502); }
+  if (r.blocked) return err('Too many codes sent to this email. Try again in an hour.', 429);
+  return json({ verify: true, email, purpose, sent: !!r.sent, wait: r.wait || 45 });
+}
 async function startSession(env, request, user) {
   const token = randomId(32);
   await env.DB.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)')
@@ -322,11 +370,42 @@ export async function onRequest(context) {
       if (String(password || '').length < 8) return err('Password needs at least 8 characters.');
       const exists = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(e).first();
       if (exists) return err('An account with this email already exists. Sign in instead.', 409);
+      if (!mailOn(env)) return err('Email sign-up is paused for a moment. Continue with Google instead.', 503);
       const { hash, salt } = await hashPassword(String(password));
-      const user = { id: randomId(12), email: e, name: String(name || '').slice(0, 80), plan: 'free' };
-      await env.DB.prepare('INSERT INTO users (id, email, name, pass_hash, salt, plan, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .bind(user.id, user.email, user.name, hash, salt, user.plan, Date.now()).run();
-      return startSession(env, request, user);
+      return codeReply(env, e, 'signup', { name: String(name || '').slice(0, 80), hash, salt });
+    }
+    // check the 6-digit code from the email, then create the account (sign-up) or mark the email verified (first sign-in)
+    if (path === '/auth/verify' && method === 'POST') {
+      await ensureAuthTables(env);
+      const { email, code } = await request.json(); const e = String(email || '').trim().toLowerCase();
+      const row = await env.DB.prepare('SELECT * FROM email_codes WHERE email = ?').bind(e).first();
+      if (!row || Date.now() > row.expires_at) return err('That code has expired. Send a new one.', 410);
+      if ((row.attempts || 0) >= 5) return err('Too many wrong tries. Send a new code.', 429);
+      if (!safeEqual(await sha(e + ':' + String(code || '').replace(/\D/g, '')), row.code_hash)) {
+        await env.DB.prepare('UPDATE email_codes SET attempts = attempts + 1 WHERE email = ?').bind(e).run();
+        return err(`Wrong code. ${Math.max(0, 4 - (row.attempts || 0))} tries left.`, 401);
+      }
+      await env.DB.prepare('DELETE FROM email_codes WHERE email = ?').bind(e).run();
+      const d = JSON.parse(row.data || '{}');
+      if (row.purpose === 'signup') {
+        const exists = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(e).first();
+        if (exists) return err('An account with this email already exists. Sign in instead.', 409);
+        const user = { id: randomId(12), email: e, name: d.name || '', plan: 'free' };
+        await env.DB.prepare('INSERT INTO users (id, email, name, pass_hash, salt, plan, created_at, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, 1)')
+          .bind(user.id, user.email, user.name, d.hash, d.salt, user.plan, Date.now()).run();
+        return startSession(env, request, user);
+      }
+      const u = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(e).first();
+      if (!u) return err('Account not found.', 404);
+      await env.DB.prepare('UPDATE users SET email_verified = 1 WHERE id = ?').bind(u.id).run();
+      return startSession(env, request, { id: u.id, email: u.email, name: u.name, plan: u.plan });
+    }
+    if (path === '/auth/resend' && method === 'POST') {
+      await ensureAuthTables(env);
+      const { email } = await request.json(); const e = String(email || '').trim().toLowerCase();
+      const row = await env.DB.prepare('SELECT purpose, data FROM email_codes WHERE email = ?').bind(e).first();
+      if (!row) return err('Start again: enter your email and password.', 404);
+      return codeReply(env, e, row.purpose, JSON.parse(row.data || '{}'));
     }
 
     // economic calendar: this week's events from the Forex Factory feed, cached at the edge for 30 min with a stale copy in D1
@@ -352,11 +431,12 @@ export async function onRequest(context) {
       const g = await verifyGoogle(env, credential);
       const e = String(g.email).trim().toLowerCase();
       const row = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(e).first();
-      if (row) return startSession(env, request, { id: row.id, email: row.email, name: row.name, plan: row.plan });
+      await ensureAuthTables(env);
+      if (row) { if (!row.email_verified) await env.DB.prepare('UPDATE users SET email_verified = 1 WHERE id = ?').bind(row.id).run(); return startSession(env, request, { id: row.id, email: row.email, name: row.name, plan: row.plan }); }
       if (env.ALLOW_SIGNUP === 'false' || (await settings(env)).signup === 'off') return err('Sign-ups are closed.', 403);
       const { hash, salt } = await hashPassword(randomId(24)); // Google accounts get an unguessable password; they sign in with Google
       const user = { id: randomId(12), email: e, name: String(g.name || '').slice(0, 80), plan: 'free' };
-      await env.DB.prepare('INSERT INTO users (id, email, name, pass_hash, salt, plan, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(user.id, user.email, user.name, hash, salt, user.plan, Date.now()).run();
+      await env.DB.prepare('INSERT INTO users (id, email, name, pass_hash, salt, plan, created_at, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, 1)').bind(user.id, user.email, user.name, hash, salt, user.plan, Date.now()).run();
       return startSession(env, request, user);
     }
 
@@ -366,6 +446,9 @@ export async function onRequest(context) {
       if (!row) return err('Wrong email or password.', 401);
       const { hash } = await hashPassword(String(password || ''), row.salt);
       if (!safeEqual(hash, row.pass_hash)) return err('Wrong email or password.', 401);
+      await ensureAuthTables(env);
+      // accounts made before email codes existed confirm their email once, on their next password sign-in
+      if (mailOn(env) && !row.email_verified && !isAdmin(env, row)) return codeReply(env, row.email, 'login', {});
       return startSession(env, request, { id: row.id, email: row.email, name: row.name, plan: row.plan });
     }
 

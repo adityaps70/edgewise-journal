@@ -1370,3 +1370,10 @@ body.mp { overflow: auto; background: var(--scene); background-color: var(--bg);
   .modal--upx .modal__head .ibtn { color: #fff; }
 }
 @media (prefers-reduced-motion: reduce) { .upx__aura, .upx__badge::after, .upx__cta::after { animation: none; } }
+/* sign-in code */
+.otp { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.otp__d { height: 56px; padding: 0; text-align: center; font-size: 24px; font-weight: 700; letter-spacing: 0; caret-color: var(--accent); }
+.otp__d:focus { box-shadow: 0 0 0 2px var(--accent); }
+.otp__foot { margin: 2px 0 0; text-align: center; font-size: var(--fs-sm); }
+.otp__hint { margin: 0; text-align: center; font-size: var(--fs-xs); }
+.linkbtn:disabled { color: var(--muted); cursor: default; text-decoration: none; }

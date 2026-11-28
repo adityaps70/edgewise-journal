@@ -2,11 +2,11 @@
 import {
   S, P, $, $$, esc, uid, num, sum, clamp, today, addDays, fmtDate, fmtDay, money, pct, tone, net, icon, API, save, saveProfile, pointValue, setupsOf, tradesLeft,
   copiersOf, copyRatio, ratioFor, copyOfTrade, isLive,
-} from './core.js?v=e8349dbb';
-import { equityChart } from './charts.js?v=e8349dbb';
-import { helpers, modal, confirmBox, tradeList } from './views.js?v=e8349dbb';
-import { toast, shake } from './motion.js?v=e8349dbb';
-import * as IM from './importers.js?v=e8349dbb';
+} from './core.js?v=13aa090b';
+import { equityChart } from './charts.js?v=13aa090b';
+import { helpers, modal, confirmBox, tradeList } from './views.js?v=13aa090b';
+import { toast, shake } from './motion.js?v=13aa090b';
+import * as IM from './importers.js?v=13aa090b';
 
 const card = (...a) => helpers.card(...a); const phead = (...a) => helpers.phead(...a); const after = (...a) => helpers.after(...a);
 const field = (...a) => helpers.field(...a); const inp = (...a) => helpers.inp(...a); const optionList = (...a) => helpers.optionList(...a); const formData = (...a) => helpers.formData(...a);

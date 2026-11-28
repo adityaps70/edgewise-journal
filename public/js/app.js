@@ -3,17 +3,17 @@ import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
   goalIdea, passStatus, payoutStatus,
-} from './core.js?v=e8349dbb';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=e8349dbb';
-import { slider, liveRate, fxAgo } from './ui.js?v=e8349dbb';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=e8349dbb';
+} from './core.js?v=13aa090b';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=13aa090b';
+import { slider, liveRate, fxAgo } from './ui.js?v=13aa090b';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=13aa090b';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=e8349dbb';
-import * as V2 from './views2.js?v=e8349dbb';
-import * as V3 from './views3.js?v=e8349dbb';
-import * as PL from './plan.js?v=e8349dbb';
-import * as V4 from './views4.js?v=e8349dbb';
-import * as MS from './milestones.js?v=e8349dbb';
+import * as V from './views.js?v=13aa090b';
+import * as V2 from './views2.js?v=13aa090b';
+import * as V3 from './views3.js?v=13aa090b';
+import * as PL from './plan.js?v=13aa090b';
+import * as V4 from './views4.js?v=13aa090b';
+import * as MS from './milestones.js?v=13aa090b';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -80,11 +80,48 @@ function auth(mode = 'login') {
     e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)); const btn = $('#authForm button'); btn.disabled = true;
     try {
       const r = mode === 'login' ? await API.login(f) : await API.signup(f);
+      if (r.verify) { codeStep(card, r); return; }
       S.user = r.user;
       if (window.gsap && !reduced.matches) await window.gsap.to(card, { scale: 0.96, opacity: 0, duration: 0.3, ease: 'power2.in' });
       boot();
     } catch (err) { $('#authErr').textContent = err.message; shake(card); btn.disabled = false; }
   };
+}
+
+// step two: the 6-digit code we emailed
+function codeStep(card, r) {
+  const email = r.email; let left = r.wait || 45; let tm = 0;
+  card.innerHTML = `${LOGO}<h1>Check your email</h1>
+    <p>We sent a 6-digit code to <b>${esc(email)}</b>${r.purpose === 'login' ? '. Confirm your email once and you\'re in' : ' to confirm it\'s yours'}. It expires in 10 minutes.</p>
+    <form class="stack" id="codeForm"><div class="otp" id="otp">${Array.from({ length: 6 }, (_, i) => `<input class="in otp__d" inputmode="numeric" autocomplete="${i ? 'off' : 'one-time-code'}" maxlength="6" aria-label="Digit ${i + 1}">`).join('')}</div>
+      <div class="err" id="authErr"></div>
+      <button class="btn btn--primary" style="height:46px" id="codeGo">${r.purpose === 'login' ? 'Confirm and sign in' : 'Confirm and create my journal'}</button>
+      <p class="otp__foot"><button type="button" class="linkbtn" id="codeAgain" disabled>Send a new code</button><span class="muted" id="codeT"></span> · <button type="button" class="linkbtn" id="codeBack">Use a different email</button></p>
+      <p class="muted otp__hint">Can't find it? Check spam or promotions.</p></form>`;
+  const ins = $$('.otp__d', card); ins[0].focus();
+  const val = () => ins.map((i) => i.value).join('');
+  const fill = (str, from = 0) => { const d = str.replace(/\D/g, '').slice(0, 6 - from).split(''); d.forEach((ch, k) => (ins[from + k].value = ch)); (ins[Math.min(5, from + d.length)] || ins[5]).focus(); if (val().length === 6) submit(); };
+  ins.forEach((i, k) => {
+    i.oninput = () => { const v = i.value.replace(/\D/g, ''); i.value = ''; if (v) fill(v, k); };
+    i.onkeydown = (e) => { if (e.key === 'Backspace' && !i.value && k) { ins[k - 1].value = ''; ins[k - 1].focus(); e.preventDefault(); } if (e.key === 'ArrowLeft' && k) ins[k - 1].focus(); if (e.key === 'ArrowRight' && k < 5) ins[k + 1].focus(); };
+    i.onpaste = (e) => { e.preventDefault(); fill((e.clipboardData || window.clipboardData).getData('text'), 0); };
+  });
+  const tick = () => { clearInterval(tm); const b = $('#codeAgain'); const t = $('#codeT'); b.disabled = true; tm = setInterval(() => { left--; if (!document.body.contains(b)) return clearInterval(tm); if (left <= 0) { clearInterval(tm); b.disabled = false; t.textContent = ''; } else t.textContent = ` in ${left}s`; }, 1000); t.textContent = ` in ${left}s`; };
+  tick();
+  let busy = false;
+  const submit = async () => {
+    if (busy) return; const code = val(); if (code.length < 6) { $('#authErr').textContent = 'Enter all 6 digits.'; shake(card); return; }
+    busy = true; const go = $('#codeGo'); go.disabled = true; $('#authErr').textContent = '';
+    try {
+      const d = await API.verify({ email, code }); S.user = d.user; clearInterval(tm);
+      if (window.gsap && !reduced.matches) await window.gsap.to(card, { scale: 0.96, opacity: 0, duration: 0.3, ease: 'power2.in' });
+      boot();
+    } catch (e) { $('#authErr').textContent = e.message; shake(card); ins.forEach((i) => (i.value = '')); ins[0].focus(); go.disabled = false; busy = false; }
+  };
+  $('#codeForm').onsubmit = (e) => { e.preventDefault(); submit(); };
+  $('#codeAgain').onclick = async () => { try { const d = await API.resend({ email }); left = d.wait || 45; tick(); toast(d.sent ? 'New code sent' : `Wait ${left}s before asking for another code`, icon(d.sent ? 'send' : 'clock')); } catch (e) { $('#authErr').textContent = e.message; } };
+  $('#codeBack').onclick = () => { clearInterval(tm); auth(r.purpose === 'login' ? 'login' : 'signup'); };
+  if (window.gsap && !reduced.matches) window.gsap.fromTo(card.children, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.05, ease: 'expo.out', clearProps: 'transform,opacity' });
 }
 
 async function googleButton(card) {
@@ -466,7 +503,7 @@ function navItems() { // every page this trader can open (the menu shows them gr
 let current = null;
 function shell(first = false) {
   setTimeout(paintPlan, 0);
-  import('./pet.js?v=e8349dbb').then((m) => m.mountPet()).catch(() => {});
+  import('./pet.js?v=13aa090b').then((m) => m.mountPet()).catch(() => {});
   const p = P();
   app.innerHTML = `<div class="app"><div class="slab" id="slab">
     <aside class="side"><div class="side__top">${LOGO}<a class="side__name" href="index.html" aria-label="${APP.name} home">${WORDMARK}</a><button class="side__fold" id="fold" aria-label="Collapse sidebar">${icon('fold')}</button></div>
