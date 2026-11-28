@@ -7,6 +7,10 @@ binding = "DB"
 database_name = "smarttrade-db"
 database_id = "e4e2edf6-18fe-40f5-8c83-9a41c0c5215d"
 
+# Cloudflare Email Service: sends the sign-up and sign-in codes from no-reply@thesmarttrade.in
+[[send_email]]
+name = "SEND_EMAIL"
+
 [vars]
 # Model used for every AI feature. Change any time without redeploying code.
 CLAUDE_MODEL = "claude-sonnet-5-5"
