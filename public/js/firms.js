@@ -1,6 +1,6 @@
 // Prop firm catalog + picker. Rules live in data/firms.json so they can be updated without touching code.
-import { $, $$, esc, uid, num, today, money, short, icon, S, P } from './core.js?v=79ab0b80';
-import { slider } from './ui.js?v=79ab0b80';
+import { $, $$, esc, uid, num, today, money, short, icon, S, P } from './core.js?v=6b792348';
+import { slider } from './ui.js?v=6b792348';
 
 let CAT = null;
 export async function loadFirms() {
@@ -40,6 +40,16 @@ export function planRules(firm, program, size, stage) {
     priceCurrency: program.priceCurrency || 'USD',
     activation: program.activation || '',
     note: program.note || '',
+    ...(funded ? payoutRules(program, s.size, s.maxLoss) : {}),
+  };
+}
+// funded payout rules from the catalog, resolved for one account size
+const bySize = (v, size) => (v && typeof v === 'object' ? v[String(size)] ?? '' : v ?? '');
+export function payoutRules(program, size, maxLoss) {
+  const r = program?.payout; if (!r) return {};
+  return {
+    payWinDays: r.winDays || '', payWinMin: bySize(r.winMin, size), payConsistency: r.consistency || '', payBuffer: r.buffer === 'maxLoss' ? maxLoss : bySize(r.buffer, size),
+    payMin: r.min || '', payMax: bySize(r.max, size), payMaxPct: r.maxPct || '', payCalDays: r.calDays || '', payTradeDays: r.tradeDays || '', payMaxCount: r.payouts || '', payNote: r.note || '',
   };
 }
 export function accountFromPlan(firm, program, size, stage, n = 1) {
@@ -50,6 +60,7 @@ export function accountFromPlan(firm, program, size, stage, n = 1) {
     type: stage === 'funded' ? 'funded' : 'challenge', status: stage === 'funded' ? 'funded' : 'active',
     size: r.size, cost: r.cost, target: r.target, maxLoss: r.maxLoss, ddType: r.ddType,
     dailyLimit: r.dailyLimit, personalDaily: defaultDaily(r), minDays: r.minDays, consistency: r.consistency, split: r.split,
+    ...Object.fromEntries(Object.entries(r).filter(([k2]) => k2.startsWith('pay'))),
     purchaseDate: today(), startPnl: '', rulesFrom: program.custom ? `${firm.name} ${program.name}, added by you` : `${firm.name} ${program.name}, catalog ${catalog().verified}`,
   };
 }
@@ -140,7 +151,7 @@ export function mountPicker(box, state) {
     $$('[data-rm]', box).forEach((b) => (b.onclick = () => { state.accounts.splice(+b.dataset.rm, 1); draw(); state.onChange?.(); }));
   };
   // user-added firm or plan: saved once, then it's in the list like any other
-  const addMissing = (firm) => import('./views.js?v=79ab0b80').then((V) => V.planModal({ firm, size: sel?.size || 50000, onSave: ({ firmId, programId, size }) => {
+  const addMissing = (firm) => import('./views.js?v=6b792348').then((V) => V.planModal({ firm, size: sel?.size || 50000, onSave: ({ firmId, programId, size }) => {
     shown = shownF(); const f = firmById(firmId); const p = f.programs.find((x) => x.id === programId);
     sel = { firm: f, program: p, size, stage: firstStage(p, 'challenge'), qty: 1 }; draw(); anim();
   } }));

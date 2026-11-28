@@ -382,11 +382,11 @@ export function accountMetrics(a) {
   const maxLoss = num(a.maxLoss);
   let buffer = null;
   if (maxLoss) {
-    if (a.ddType === 'static') buffer = maxLoss + pnl;
+    if (a.ddType === 'static') buffer = maxLoss + pnl - withdrawn;
     else {
       const lockAt = num(a.size) ? 0 : Infinity; // trailing stops at break-even on most futures firms
       const floor = Math.min(peak - maxLoss, a.ddLock === false ? Infinity : lockAt);
-      buffer = pnl - floor;
+      buffer = pnl - withdrawn - floor;
     }
   }
   const todayLoss = Math.min(0, sum(trades.filter((t) => t.date === today()), net));
@@ -397,6 +397,55 @@ export function accountMetrics(a) {
   const balance = num(a.size) + pnl - withdrawn;
   const tradingDays = new Set(trades.map((t) => t.date)).size + num(a.startDays);
   return { trades, tradePnl, pnl, withdrawn, buffer, maxLoss, dailyLeft, stop, target, progress, balance, peak, tradingDays, todayPnl: sum(trades.filter((t) => t.date === today()), net) };
+}
+// ---------------------------------------------------------------- milestones: passing a challenge, earning a payout
+const dayPnl = (trades) => { const m = {}; trades.forEach((t) => (m[t.date] = (m[t.date] || 0) + net(t))); return m; };
+const fmtM = (x) => money(Math.round(x));
+export const isChallenge = (a) => a && a.status === 'active' && a.type !== 'funded' && a.type !== 'personal' && a.stage !== 'funded';
+export const isFundedAcc = (a) => a && (a.status === 'funded' || a.type === 'funded' || a.stage === 'funded') && !['failed', 'closed', 'passed'].includes(a.status);
+// What still stands between a challenge and a pass: target, minimum days, consistency.
+export function passStatus(a) {
+  const m = accountMetrics(a); const target = num(a.target); if (!target) return { applies: false };
+  const days = dayPnl(m.trades); const profit = m.pnl; const best = Math.max(0, ...Object.values(days));
+  const checks = [];
+  checks.push({ key: 'target', ok: profit >= target, label: 'Profit target', have: fmtM(profit), need: fmtM(target), left: profit >= target ? '' : `${fmtM(target - profit)} to go` });
+  const minDays = num(a.minDays); if (minDays) checks.push({ key: 'days', ok: m.tradingDays >= minDays, label: 'Trading days', have: m.tradingDays, need: minDays, left: m.tradingDays >= minDays ? '' : `${minDays - m.tradingDays} more trading day${minDays - m.tradingDays === 1 ? '' : 's'}` });
+  const cons = num(a.consistency);
+  if (cons && profit > 0) { const share = best / profit; const ok = share <= cons / 100 + 1e-9; checks.push({ key: 'cons', ok, label: 'Consistency', have: Math.round(share * 100) + '%', need: '≤ ' + cons + '%', left: ok ? '' : `best day is ${Math.round(share * 100)}% of profit; ${fmtM(best / (cons / 100) - profit)} more, spread over other days` }); }
+  const passed = checks.every((c) => c.ok);
+  return { applies: true, passed, checks, profit, best, days: m.tradingDays, firstDay: Object.keys(days).sort()[0] || '', lastDay: Object.keys(days).sort().pop() || '' };
+}
+// Where a funded account stands on its next payout, cycle by cycle (each payout restarts the count).
+export function payoutStatus(a) {
+  if (!isFundedAcc(a)) return { applies: false };
+  const hasRules = ['payWinDays', 'payWinMin', 'payConsistency', 'payBuffer', 'payMin', 'payMax', 'payMaxPct', 'payCalDays', 'payTradeDays'].some((k) => num(a[k]));
+  const m = accountMetrics(a);
+  const pays = S.payout.filter((p) => p.accountId === a.id && p.status !== 'rejected').sort((x, y) => (x.reqDate || '').localeCompare(y.reqDate || ''));
+  const last = pays[pays.length - 1];
+  const start = last ? last.reqDate : (a.fundedDate || a.purchaseDate || '');
+  const cyc = m.trades.filter((t) => !start || (last ? t.date > start : t.date >= start));
+  const days = dayPnl(cyc); const dates = Object.keys(days).sort();
+  const cycleProfit = sum(Object.values(days), (x) => x); const best = Math.max(0, ...Object.values(days));
+  const winMin = num(a.payWinMin); const winDays = dates.filter((d) => (winMin ? days[d] >= winMin : days[d] > 0)).length;
+  const profitLeft = m.pnl - m.withdrawn; // profit still in the account
+  const checks = []; const todo = [];
+  const need = num(a.payWinDays);
+  if (need) { const ok = winDays >= need; checks.push({ key: 'win', ok, label: winMin ? `Winning days of ${fmtM(winMin)}+` : 'Profitable days', have: winDays, need }); if (!ok) todo.push(`${need - winDays} more ${winMin ? `day${need - winDays === 1 ? '' : 's'} of ${fmtM(winMin)}+` : `profitable day${need - winDays === 1 ? '' : 's'}`}`); }
+  const td = num(a.payTradeDays); if (td) { const ok = dates.length >= td; checks.push({ key: 'td', ok, label: 'Trading days this cycle', have: dates.length, need: td }); if (!ok) todo.push(`${td - dates.length} more trading day${td - dates.length === 1 ? '' : 's'}`); }
+  const cal = num(a.payCalDays); if (cal) { const from = last ? last.reqDate : (dates[0] || start); const since = from ? daysBetween(from, today()) : 0; const ok = !!from && since >= cal; checks.push({ key: 'cal', ok, label: last ? 'Days since last payout' : 'Days since first funded trade', have: since, need: cal }); if (!ok) todo.push(from ? `${cal - since} more day${cal - since === 1 ? '' : 's'} of waiting` : 'your first funded trade'); }
+  const cons = num(a.payConsistency); if (cons) { const share = cycleProfit > 0 ? best / cycleProfit : 1; const ok = cycleProfit > 0 && share <= cons / 100 + 1e-9; checks.push({ key: 'cons', ok, label: `Consistency (best day ≤ ${cons}%)`, have: cycleProfit > 0 ? Math.round(share * 100) + '%' : '—', need: cons + '%' }); if (!ok && cycleProfit > 0) todo.push(`${fmtM(best / (cons / 100) - cycleProfit)} more profit on other days (best day is ${Math.round(share * 100)}% of this cycle)`); }
+  const buf = num(a.payBuffer);
+  // what could be requested now
+  let avail = buf ? profitLeft - buf : (last ? cycleProfit : profitLeft);
+  if (num(a.payMaxPct)) avail = Math.min(avail, profitLeft * num(a.payMaxPct) / 100);
+  if (num(a.payMax)) avail = Math.min(avail, num(a.payMax));
+  avail = Math.max(0, Math.floor(avail));
+  if (buf) { const ok = profitLeft > buf; checks.push({ key: 'buf', ok, label: `Profit above the ${fmtM(buf)} buffer`, have: fmtM(profitLeft), need: fmtM(buf) }); if (!ok) todo.push(`${fmtM(buf - profitLeft + (num(a.payMin) || 1))} more profit to clear the buffer`); }
+  const pmin = num(a.payMin) || 1; const okAmt = avail >= pmin; checks.push({ key: 'amt', ok: okAmt, label: num(a.payMin) ? `Requestable now (min ${fmtM(num(a.payMin))})` : 'Requestable now', have: fmtM(avail), need: fmtM(pmin) });
+  if (!okAmt && !todo.some((x) => x.includes('buffer'))) todo.push(`${fmtM(pmin - avail)} more profit`);
+  const maxCount = num(a.payMaxCount); const countLeft = maxCount ? maxCount - pays.length : null;
+  const eligible = hasRules ? checks.every((c) => c.ok) && (countLeft === null || countLeft > 0) : profitLeft > 0;
+  return { applies: true, hasRules, eligible, checks, todo, amount: avail, cycleStart: start, cycleProfit, winDays, tradingDays: dates.length, payoutsTaken: pays.filter((p) => p.status === 'credited').length, pending: pays.filter((p) => p.status === 'requested'), countLeft, profitLeft, split: num(a.split) || 0 };
 }
 export function safeToRisk() {
   const live = S.account.filter(isLive);
@@ -536,6 +585,7 @@ const I = {
   bolt: '<path d="M13 2 3 14h9l-1 8 10-12h-9z"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   long: '<path d="M7 17 17 7M8 7h9v9"/>', short: '<path d="M7 7l10 10M17 8v9H8"/>',
+  award: '<circle cx="12" cy="9" r="6"/><path d="m8.5 13.8-1.5 7.2 5-3 5 3-1.5-7.2"/>',
   star: '<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>',
   logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
   sheet: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M3 15h18M9 3v18"/>',

@@ -42,7 +42,19 @@
        "price": 149
       }
      ],
-     "note": "No firm daily loss limit by default on TopstepX; you can add one at setup."
+     "note": "No firm daily loss limit by default on TopstepX; you can add one at setup.",
+     "payout": {
+      "winDays": 5,
+      "winMin": 150,
+      "min": 125,
+      "max": {
+       "50000": 2000,
+       "100000": 3000,
+       "150000": 5000
+      },
+      "maxPct": 50,
+      "note": "XFA Standard path: 5 winning days of $150+, up to 50% of balance with a cap by size. The Consistency path (3 days, 40%) is an alternative."
+     }
     }
    ],
    "mono": "TS"
@@ -92,7 +104,14 @@
        "maxLoss": 4500,
        "price": 219
       }
-     ]
+     ],
+     "payout": {
+      "winDays": 5,
+      "consistency": 50,
+      "min": 500,
+      "payouts": 6,
+      "note": "5 qualifying days, 50% consistency, $500 minimum, 6 payouts per PA, balance above the Safety Net. Set the daily minimum for a qualifying day from Apex's table."
+     }
     },
     {
      "id": "intraday",
@@ -133,7 +152,14 @@
        "maxLoss": 4500,
        "price": 189
       }
-     ]
+     ],
+     "payout": {
+      "winDays": 5,
+      "consistency": 50,
+      "min": 500,
+      "payouts": 6,
+      "note": "5 qualifying days, 50% consistency, $500 minimum, 6 payouts per PA, balance above the Safety Net."
+     }
     }
    ],
    "mono": "AX"
@@ -187,7 +213,19 @@
        "daily": 3750,
        "price": 297
       }
-     ]
+     ],
+     "payout": {
+      "tradeDays": 5,
+      "winDays": 5,
+      "winMin": {
+       "25000": 200,
+       "50000": 250,
+       "100000": 300,
+       "150000": 350
+      },
+      "consistency": 40,
+      "note": "5 funded days with 5 winning days at the size minimum, 40% consistency."
+     }
     },
     {
      "id": "access",
@@ -229,7 +267,19 @@
        "price": 39
       }
      ],
-     "note": "No daily loss limit in the evaluation; a daily limit applies once funded. Set it on the account."
+     "note": "No daily loss limit in the evaluation; a daily limit applies once funded. Set it on the account.",
+     "payout": {
+      "tradeDays": 5,
+      "winDays": 5,
+      "winMin": {
+       "25000": 200,
+       "50000": 250,
+       "100000": 300,
+       "150000": 350
+      },
+      "consistency": 40,
+      "note": "5 funded days with 5 winning days at the size minimum, 40% consistency."
+     }
     },
     {
      "id": "ignite",
@@ -263,7 +313,10 @@
        "maxLoss": 6000
       }
      ],
-     "note": "Instant funding, no evaluation. Sources disagree on a soft daily limit and on prices for sizes other than 50K, so set those on the account after checking your dashboard."
+     "note": "Instant funding, no evaluation. Sources disagree on a soft daily limit and on prices for sizes other than 50K, so set those on the account after checking your dashboard.",
+     "payout": {
+      "note": "No minimum days. Check the payout terms for your size."
+     }
     },
     {
      "id": "instant",
@@ -300,7 +353,18 @@
        "maxLoss": 4500,
        "daily": 3750
       }
-     ]
+     ],
+     "payout": {
+      "tradeDays": 5,
+      "consistency": 20,
+      "buffer": {
+       "25000": 1500,
+       "50000": 2000,
+       "100000": 3000,
+       "150000": 4500
+      },
+      "note": "5 funded days, 20% consistency, no payout from inside the buffer."
+     }
     },
     {
      "id": "s2f",
@@ -333,7 +397,13 @@
        "maxLoss": 4500
       }
      ],
-     "note": "Instant account with intraday trailing drawdown. Price varies; enter what you paid."
+     "note": "Instant account with intraday trailing drawdown. Price varies; enter what you paid.",
+     "payout": {
+      "tradeDays": 10,
+      "winDays": 7,
+      "consistency": 20,
+      "note": "10 trading days with 7 profitable, 20% consistency."
+     }
     }
    ],
    "mono": "T1"
@@ -388,7 +458,17 @@
        "fundedDaily": 1750
       }
      ],
-     "note": "No daily loss limit in the evaluation. The Daily payout path adds one when funded."
+     "note": "No daily loss limit in the evaluation. The Daily payout path adds one when funded.",
+     "payout": {
+      "winDays": 5,
+      "maxPct": 50,
+      "max": {
+       "50000": 3000,
+       "100000": 4000,
+       "150000": 5000
+      },
+      "note": "Select Flex: every 5 winning days, up to 50% of profit, no funded consistency rule. Select Daily is the alternative."
+     }
     },
     {
      "id": "growth",
@@ -434,7 +514,17 @@
        "price": 359
       }
      ],
-     "note": "Daily loss limit is a soft breach: trading pauses for the day."
+     "note": "Daily loss limit is a soft breach: trading pauses for the day.",
+     "payout": {
+      "winDays": 5,
+      "consistency": 35,
+      "max": {
+       "50000": 3000,
+       "100000": 4000,
+       "150000": 5000
+      },
+      "note": "5 qualifying days, 35% consistency, minimum balance, capped per payout."
+     }
     }
    ],
    "mono": "TF"
@@ -484,7 +574,17 @@
        "maxLoss": 4500,
        "price": 449
       }
-     ]
+     ],
+     "payout": {
+      "calDays": 1,
+      "min": 500,
+      "buffer": {
+       "50000": 2100,
+       "100000": 3100,
+       "150000": 4600
+      },
+      "note": "Daily payouts once the buffer is cleared, $500 minimum, no consistency rule."
+     }
     },
     {
      "id": "pro",
@@ -519,7 +619,15 @@
        "maxLoss": 4500,
        "price": 557
       }
-     ]
+     ],
+     "payout": {
+      "calDays": 14,
+      "min": 1000,
+      "buffer": {
+       "50000": 2100
+      },
+      "note": "Every 14 days, $1,000 minimum, buffer before the first payout."
+     }
     }
    ],
    "mono": "MF"
@@ -569,7 +677,23 @@
        "maxLoss": 4500,
        "price": 323
       }
-     ]
+     ],
+     "payout": {
+      "winDays": 5,
+      "winMin": {
+       "25000": 100,
+       "50000": 150,
+       "100000": 200,
+       "150000": 250
+      },
+      "min": 500,
+      "maxPct": 50,
+      "max": {
+       "25000": 1000,
+       "150000": 3000
+      },
+      "note": "5 profitable days at the size minimum, net positive cycle, up to 50% of profit, $500 minimum, no buffer or consistency."
+     }
     },
     {
      "id": "pro",
@@ -614,7 +738,17 @@
        "price": 385
       }
      ],
-     "note": "Daily loss limit is soft: it locks you out until the next session."
+     "note": "Daily loss limit is soft: it locks you out until the next session.",
+     "payout": {
+      "winDays": 5,
+      "winMin": {
+       "50000": 200,
+       "100000": 250,
+       "150000": 300
+      },
+      "consistency": 35,
+      "note": "5 days with the size minimum profit, 35% consistency per cycle, profit above the buffer balance."
+     }
     }
    ],
    "mono": "LT"
@@ -670,7 +804,11 @@
        "maxLoss": 4500,
        "price": 360
       }
-     ]
+     ],
+     "payout": {
+      "buffer": "maxLoss",
+      "note": "PRO: withdraw anything above the buffer (start + max drawdown), no cap, 80% split."
+     }
     }
    ],
    "mono": "TP"
@@ -740,7 +878,11 @@
       }
      ],
      "priceCurrency": "EUR",
-     "note": "Fee refunded with your first reward."
+     "note": "Fee refunded with your first reward.",
+     "payout": {
+      "calDays": 14,
+      "note": "First reward 14 days after your first funded trade, then on demand."
+     }
     },
     {
      "id": "1step",
@@ -794,7 +936,11 @@
       }
      ],
      "priceCurrency": "EUR",
-     "note": "Best Day Rule: no single day over 50% of profit."
+     "note": "Best Day Rule: no single day over 50% of profit.",
+     "payout": {
+      "calDays": 14,
+      "note": "First reward 14 days after your first funded trade, then on demand."
+     }
     }
    ],
    "mono": "FT"
@@ -861,10 +1007,15 @@
        "daily": 5000,
        "price": 529
       }
-     ]
+     ],
+     "payout": {
+      "calDays": 14,
+      "note": "Bi-weekly cycle at 80% (weekly 60%, monthly 100%, on demand 90% with 35% consistency)."
+     }
     }
    ],
    "mono": "FP"
   }
- ]
+ ],
+ "payoutChecked": "2026-11"
 }

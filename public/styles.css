@@ -1260,3 +1260,47 @@ body.mp { overflow: auto; background: var(--scene); background-color: var(--bg);
 .ctrow .cell__text { flex: 1; min-width: 0; } .ctrow small { color: var(--muted); }
 .ctrow__k { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-weight: 600; } .ctrow__k .in { width: 74px; height: 36px; padding: 0 10px; }
 #tAlso .chip em, #imAlso .chip em { font-style: normal; opacity: .7; margin-left: 4px; }
+
+/* ---------------------------------------------------------------- milestones: pass, payouts, certificates */
+.confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999; }
+.pill--btn { cursor: pointer; border: 0; font: inherit; display: inline-flex; align-items: center; gap: 5px; }
+.pill--btn svg { width: 12px; height: 12px; }
+.pill--btn:hover { filter: brightness(1.12); }
+.chain { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 3px; color: var(--muted); font-size: var(--fs-xs, 12px); }
+.chain svg { width: 12px; height: 12px; color: var(--accent-text); }
+.chain i { font-style: normal; opacity: .55; }
+.ptrack { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; background: var(--surface-2, rgba(255,255,255,.02)); }
+.ptrack__h { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ptrack__checks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.pchk { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; background: rgba(255,255,255,.04); border: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.pchk svg { width: 13px; height: 13px; }
+.pchk em { font-style: normal; }
+.pchk b { color: var(--ink); font-weight: 650; }
+.pchk.is-ok { color: var(--good); border-color: color-mix(in srgb, var(--good) 35%, transparent); background: color-mix(in srgb, var(--good) 8%, transparent); }
+.ptrack__f { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; font-size: var(--fs-sm, 13px); flex-wrap: wrap; }
+.ptrack__btns { display: flex; gap: 6px; margin-left: auto; }
+.celebrate__sub { margin: 0 0 14px; color: var(--muted); line-height: 1.55; }
+.celebrate__sub b { color: var(--ink); }
+.celebrate__stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.celebrate__stats div { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.celebrate__stats small { display: block; color: var(--muted); font-size: 12px; }
+.celebrate__stats b { font-size: 18px; }
+.certimg { display: block; width: 100%; aspect-ratio: 1.6; border-radius: 12px; background: #0d0d0f; border: 1px solid var(--line); object-fit: cover; }
+.passnext { margin-top: 14px; padding: 14px; border-radius: 14px; border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); }
+.passnext p { margin: 4px 0 12px; font-size: var(--fs-sm, 13px); }
+.modal--celebrate .modal__head h2 { font-size: 22px; }
+.certgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.certgrid--life { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.certcard { display: flex; flex-direction: column; gap: 8px; padding: 8px; border-radius: 16px; border: 1px solid var(--line); background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: transform .2s, border-color .2s; }
+.certcard:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.certcard__img img { display: block; width: 100%; aspect-ratio: 1.6; border-radius: 10px; background: #0d0d0f; }
+.certcard__t { padding: 2px 4px 4px; display: flex; flex-direction: column; }
+.certcard__t small { color: var(--muted); font-size: 12px; }
+.certcard.is-locked img { filter: grayscale(1) brightness(.5); }
+.certcard.is-locked .certcard__t b::after { content: ' · locked'; color: var(--muted); font-weight: 500; }
+.payrules summary { cursor: pointer; list-style: none; }
+.payrules summary::-webkit-details-marker { display: none; }
+.payrules[open] summary { margin-bottom: 10px; }
+.payrules summary::after { content: '▾'; margin-left: auto; opacity: .6; }
+@media (max-width: 560px) { .ptrack__h { flex-wrap: wrap; } .ptrack__btns { width: 100%; } .ptrack__btns .btn { flex: 1; } .certgrid { grid-template-columns: 1fr 1fr; } .certgrid--life { grid-template-columns: 1fr; } }
+.modal--wide { width: min(860px, 100%); }

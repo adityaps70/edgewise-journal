@@ -2,17 +2,18 @@
 import {
   APP, LOGO, WORDMARK, S, P, $, $$, esc, uid, num, sum, clamp, iso, today, addDays, parseISO, fmtDate, money, short, pct, local, icon, API, hydrate, loadCache,
   saveProfile, save, remove, sync, flush, MARKETS, DEFAULT_SETUPS, SESSIONS, safeToRisk, accountMetrics, isLive, missionMetrics, net, runAgents,
-  goalIdea,
-} from './core.js?v=79ab0b80';
-import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=79ab0b80';
-import { slider, liveRate, fxAgo } from './ui.js?v=79ab0b80';
-import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=79ab0b80';
+  goalIdea, passStatus, payoutStatus,
+} from './core.js?v=6b792348';
+import { bootShell, enterPage, animateData, movePill, segInit, segSelect, installGlint, installPress, switchTheme, leavePage, toast, wobble, pop, shake, reduced, revealHeading } from './motion.js?v=6b792348';
+import { slider, liveRate, fxAgo } from './ui.js?v=6b792348';
+import { loadFirms, mountPicker, defaultDaily, mono } from './firms.js?v=6b792348';
 window.__segInit = segInit; window.__segSelect = segSelect;
-import * as V from './views.js?v=79ab0b80';
-import * as V2 from './views2.js?v=79ab0b80';
-import * as V3 from './views3.js?v=79ab0b80';
-import * as PL from './plan.js?v=79ab0b80';
-import * as V4 from './views4.js?v=79ab0b80';
+import * as V from './views.js?v=6b792348';
+import * as V2 from './views2.js?v=6b792348';
+import * as V3 from './views3.js?v=6b792348';
+import * as PL from './plan.js?v=6b792348';
+import * as V4 from './views4.js?v=6b792348';
+import * as MS from './milestones.js?v=6b792348';
 
 // ---------------------------------------------------------------- formatters used by count-ups
 window.__fmt = {
@@ -419,7 +420,7 @@ async function importWorkbook(file) {
 // ---------------------------------------------------------------- shell
 const VIEWS = {
   overview: ['Overview', 'overview', V.overview], trades: ['Trades', 'trades', V.trades], calendar: ['Calendar', 'calendar', V.calendar],
-  accounts: ['Accounts', 'accounts', V.accounts], payouts: ['Payouts', 'payouts', V.payouts], plan: ['Weekly plan', 'plan', V.plan],
+  accounts: ['Accounts', 'accounts', V.accounts], payouts: ['Payouts', 'payouts', V.payouts], certs: ['Certificates', 'award', MS.certs], plan: ['Weekly plan', 'plan', V.plan],
   analytics: ['Analytics', 'analytics', V.analytics], journal: ['Journal', 'journal', V.journal], playbook: ['Playbook', 'playbook', V.playbook],
   mindset: ['Mindset', 'brain', V2.mindset], firms: ['Prop firms', 'shield', V2.firms], reports: ['Reports', 'sheet', V2.reports],
   coach: ['AI coach', 'coach', V.coach], settings: ['Settings', 'settings', V.settings],
@@ -433,7 +434,7 @@ const HUBS = [
   ['analytics', 'Analytics', 'analytics', ['analytics', 'mindset', 'reports']],
   ['journal', 'Journal', 'journal', ['journal', 'notebook', 'plan']],
   ['playbook', 'Playbook', 'playbook', ['playbook', 'backtest']],
-  ['accounts', 'Accounts', 'accounts', ['accounts', 'firms', 'payouts']],
+  ['accounts', 'Accounts', 'accounts', ['accounts', 'firms', 'payouts', 'certs']],
   ['tools', 'Tools', 'calc', ['agents', 'tools', 'economic', 'connections', 'mentor']],
 ];
 const TAB_LABEL = { trades: 'Trade log', analytics: 'Stats', journal: 'Daily journal', accounts: 'Your accounts', firms: 'Firms & costs', tools: 'Calculators' };
@@ -456,6 +457,7 @@ function navItems() { // every page this trader can open (the menu shows them gr
   if (S.account.length || prop) list.push('accounts');
   if (prop) list.push('firms');
   if (prop || S.payout.length) list.push('payouts');
+  if (prop || S.payout.length) list.push('certs');
   if (prop || p.mission || S.plan.length) list.push('plan');
   list.push('connections', 'agents', 'reports', 'mentor', 'tools', 'economic', 'coach');
   if (S.user?.admin) list.push('admin');
@@ -464,7 +466,7 @@ function navItems() { // every page this trader can open (the menu shows them gr
 let current = null;
 function shell(first = false) {
   setTimeout(paintPlan, 0);
-  import('./pet.js?v=79ab0b80').then((m) => m.mountPet()).catch(() => {});
+  import('./pet.js?v=6b792348').then((m) => m.mountPet()).catch(() => {});
   const p = P();
   app.innerHTML = `<div class="app"><div class="slab" id="slab">
     <aside class="side"><div class="side__top">${LOGO}<a class="side__name" href="index.html" aria-label="${APP.name} home">${WORDMARK}</a><button class="side__fold" id="fold" aria-label="Collapse sidebar">${icon('fold')}</button></div>
@@ -553,7 +555,9 @@ function getAlerts() {
     const m = accountMetrics(a);
     if (m.buffer !== null && m.maxLoss && m.buffer < m.maxLoss * 0.3) out.push(['bad', 'shield', `${a.name}: only ${money(m.buffer)} drawdown left`, 'Size down or sit out until you rebuild a cushion.']);
     if (m.dailyLeft !== null && m.dailyLeft <= 0) out.push(['bad', 'flag', `${a.name}: daily loss limit hit`, 'Done for today on this account.']);
-    if (m.target && m.progress >= 1 && a.status === 'active') out.push(['good', 'target', `${a.name} reached its profit target`, `${m.tradingDays}${a.minDays ? '/' + a.minDays : ''} trading days. Mark it passed when confirmed.`]);
+    if (MS.isChallenge(a)) { const st = passStatus(a); if (st.applies && !st.passed && m.progress >= 1) out.push(['warn', 'target', `${a.name}: target hit, rules still open`, st.checks.filter((c) => !c.ok).map((c) => c.left).join(' · ')]); }
+    if (MS.isFundedAcc(a)) { const ps = payoutStatus(a); if (ps.hasRules && ps.eligible && !ps.pending.length) out.push(['good', 'payouts', `${a.name}: payout ready`, `About ${money(ps.amount)} can be requested. Log it when you request it.`]); }
+    if (m.target && m.progress >= 1 && a.status === 'active' && !(MS.isChallenge(a) && !passStatus(a).passed)) out.push(['good', 'target', `${a.name} reached its profit target`, `${m.tradingDays}${a.minDays ? '/' + a.minDays : ''} trading days. Mark it passed when confirmed.`]);
   });
   const r = safeToRisk(); if (r.rule && r.amount !== null && r.amount <= 0) out.push(['bad', 'flag', 'Personal daily stop reached', 'Close the platform. Tomorrow is another session.']);
   if (r.maxTrades && r.tradesToday >= r.maxTrades) out.push(['warn', 'clock', `Max ${r.maxTrades} trades reached`, 'Any more today would break your rule.']);
@@ -589,7 +593,7 @@ function route(first = false) {
     { const a = $(`.nav__item[data-id="${hid}"]`); if (a) a.setAttribute('href', '#' + id); }
     movePill($('#nav'), !first);
     main.scrollTop = 0;
-    VIEWS[id][2](main, pendingOpts); pendingOpts = {}; hubTabs(main, id);
+    VIEWS[id][2](main, pendingOpts); pendingOpts = {}; hubTabs(main, id); setTimeout(MS.checkMilestones, 900);
     V3.renderFilterBar(id);
     document.title = `${VIEWS[id][0]} · ${APP.name}`;
     enterPage(main, { first });
@@ -618,6 +622,7 @@ function refresh() {
   const h1 = $('.phead h1', main); if (h1) h1.dataset.split = '1';
   animateData(main);
   buildNav(); updateSide(); paintPlan();
+  setTimeout(MS.checkMilestones, 400);
 }
 function rerenderShell() { shell(false); }
 

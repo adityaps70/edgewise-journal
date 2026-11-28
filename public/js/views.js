@@ -6,14 +6,15 @@ import {
   safeToRisk, missionMetrics, planMetrics, aiContext, md, icon, API, flush, wipeAll, tradingDaysBetween,
   copiersOf, copyRatio, copyLeader, ratioFor, saveWithCopies, copySiblings, syncCopies, copyOfTrade as copyOfTradeX,
   FT, exitStats, passForecast, autoTags, runAgents, tagList, accCost, COST_FIELDS, TIMEFRAMES, EXIT_BEHAVIOR, edgeScore, zoneOf, durationMin, durationBucket, setupsOf, severeCombo, lateLoss, mastery, HOT,
-  goalIdea, tradesLeft,
-} from './core.js?v=79ab0b80';
-import { enterPage, animateData, segInit, segSelect, openModal, closeModal, toast, flash, pop, shake, wobble, cardStack, countUp } from './motion.js?v=79ab0b80';
-import { equityChart, tubes, hbars, bindTips, drill as drillStore, radar, reg } from './charts.js?v=79ab0b80';
+  goalIdea, tradesLeft, passStatus, payoutStatus,
+} from './core.js?v=6b792348';
+import { enterPage, animateData, segInit, segSelect, openModal, closeModal, toast, flash, pop, shake, wobble, cardStack, countUp } from './motion.js?v=6b792348';
+import { equityChart, tubes, hbars, bindTips, drill as drillStore, radar, reg } from './charts.js?v=6b792348';
 const drillMap = () => drillStore;
-import { slider, setSlider, liveRate, fxAgo, soundOn, setSound, refreshDate } from './ui.js?v=79ab0b80';
-import * as V3m from './views3.js?v=79ab0b80';
-import { catalog, firmById, planRules, defaultDaily, dailyCap, STAGE_LABEL, mono, firstStage, isInstant } from './firms.js?v=79ab0b80';
+import { slider, setSlider, liveRate, fxAgo, soundOn, setSound, refreshDate } from './ui.js?v=6b792348';
+import * as MS from './milestones.js?v=6b792348';
+import * as V3m from './views3.js?v=6b792348';
+import { catalog, firmById, planRules, defaultDaily, dailyCap, STAGE_LABEL, mono, firstStage, isInstant } from './firms.js?v=6b792348';
 
 let H = { go: () => {}, refresh: () => {}, rerenderShell: () => {} };
 export const setHooks = (h) => (H = h);
@@ -111,6 +112,7 @@ export function overview(el) {
         </div></div></section>`; })()}
     ${m ? missionCard(m) : card('Risk today', 'Your personal limits', riskBody())}
   </div>
+  ${(() => { const h = MS.trackerHTML({ compact: true }); return h ? `<div style="margin-top:var(--gap)">${h}</div>` : ''; })()}
   <div class="grid" style="margin-top:var(--gap)">
     ${card('Daily P&amp;L', 'Winning days pull up, losing days pull down. Click a bar for its trades.', `<div id="tubesBox"></div>`, `<div class="seg seg--accent" id="tubeSeg"><button data-v="10" class="is-on">2 weeks</button><button data-v="22">Month</button><button data-v="q">Quarter</button></div>`)}
   </div>
@@ -159,13 +161,14 @@ export function overview(el) {
   el.querySelector('[data-act="log"]').onclick = () => tradeModal(); { const b = el.querySelector('[data-act="shot"]'); if (b) b.onclick = () => tradeModal(null, {}, { shot: true }); }
   el.querySelector('[data-act="review"]').onclick = () => H.go('coach', { run: 'week' });
   el.querySelector('[data-act="hide"]').onclick = (e) => { el.classList.toggle('is-masked'); wobble(e.currentTarget); };
-  import('./views3.js?v=79ab0b80').then((V3) => V3.weeklyDigest($('#digest', el)));
+  import('./views3.js?v=6b792348').then((V3) => V3.weeklyDigest($('#digest', el)));
   const ins = el.querySelector('[data-act="insight"]');
   if (ins) ins.onclick = async () => {
     const box = $('#insight', el); box.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>'; wobble(ins);
     try { const r = await API.ai({ mode: 'insight', context: aiContext() }); box.innerHTML = md(r.text); insightCache(md(r.text)); animateData(box); }
     catch (e) { box.innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
   };
+  MS.bindTracker(el);
   bindCommon(el);
   after(el);
 }
@@ -278,7 +281,7 @@ export function trades(el) {
   $('#fOut', el).onchange = (e) => { TF.outcome = e.target.value; draw(); };
   $('#fQ', el).oninput = (e) => { TF.q = e.target.value; draw(); };
   el.querySelector('[data-act="log"]').onclick = () => tradeModal(); { const b = el.querySelector('[data-act="shot"]'); if (b) b.onclick = () => tradeModal(null, {}, { shot: true }); }
-  el.querySelector('[data-act="csv"]').onclick = () => import('./views4.js?v=79ab0b80').then((V4) => V4.importModal());
+  el.querySelector('[data-act="csv"]').onclick = () => import('./views4.js?v=6b792348').then((V4) => V4.importModal());
   draw(); after(el);
 }
 
@@ -392,7 +395,7 @@ export function tradeModal(t0, preset = {}, opts = {}) {
   m.el.addEventListener('click', () => setTimeout(mScore));
   const durHint = () => { const f = formData(m.el); const d = durationMin({ date: f.date, time: f.time, exitTime: f.exitTime }); $('#durHint', m.el).textContent = d !== null ? `held ${d < 60 ? Math.round(d) + ' min' : (d / 60).toFixed(1) + ' h'}` : ''; };
   m.el.addEventListener('input', durHint); durHint(); setTimeout(mScore);
-  $$('#tTabs button', m.el).forEach((b) => b.onclick = () => { $$('#tTabs button', m.el).forEach((x) => x.classList.toggle('is-on', x === b)); $$('[data-pane]', m.el).forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab)); const pane = $(`[data-pane="${b.dataset.tab}"]`, m.el); if (b.dataset.tab === 'e') { read(); import('./views4.js?v=79ab0b80').then((V4) => V4.replay($('#replayBox', m.el), { ...t }, { onExcursion: ({ mae, mfe }) => { $('[name="mae"]', m.el).value = mae; $('[name="mfe"]', m.el).value = mfe; } })); } if (window.gsap) window.gsap.fromTo(pane, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }); });
+  $$('#tTabs button', m.el).forEach((b) => b.onclick = () => { $$('#tTabs button', m.el).forEach((x) => x.classList.toggle('is-on', x === b)); $$('[data-pane]', m.el).forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab)); const pane = $(`[data-pane="${b.dataset.tab}"]`, m.el); if (b.dataset.tab === 'e') { read(); import('./views4.js?v=6b792348').then((V4) => V4.replay($('#replayBox', m.el), { ...t }, { onExcursion: ({ mae, mfe }) => { $('[name="mae"]', m.el).value = mae; $('[name="mfe"]', m.el).value = mfe; } })); } if (window.gsap) window.gsap.fromTo(pane, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }); });
   const gHint = () => { const g = $('#gradeC .is-on', m.el)?.dataset.v; const bg = P().risk?.byGrade; $('#gradeHint', m.el).textContent = g && bg && num(bg[g]) ? `your ${g} risk: ${money(bg[g])}` : g ? '' : 'A+ high conviction · B normal · C low probability'; };
   $$('#gradeC .chip', m.el).forEach((c) => c.onclick = () => { const on = c.classList.contains('is-on'); $$('#gradeC .chip', m.el).forEach((x) => x.classList.remove('is-on')); if (!on) c.classList.add('is-on'); pop(c); gHint(); hint(); });
   gHint();
@@ -605,6 +608,21 @@ function dayModal(date) {
 }
 
 // ======================================================================= ACCOUNTS
+// the story of an account: challenge → funded → payouts
+function chainLine(a) {
+  const from = a.fromId && S.account.find((x) => x.id === a.fromId); const to = a.fundedId && S.account.find((x) => x.id === a.fundedId);
+  const pays = S.payout.filter((p) => p.accountId === a.id && p.status === 'credited');
+  const bits = [];
+  if (from) { const pd = from.passedDate && from.purchaseDate ? daysBetween(from.purchaseDate, from.passedDate) : null; bits.push(`${esc(from.name)} passed${pd !== null && pd >= 0 ? ` in ${pd} day${pd === 1 ? '' : 's'}` : ''}`); bits.push('funded'); }
+  else if (to) { bits.push(`passed${a.passedDate ? ' ' + esc(fmtDate(a.passedDate)) : ''}`); bits.push(`→ ${esc(to.name)}`); }
+  if (pays.length) bits.push(`${pays.length} payout${pays.length === 1 ? '' : 's'} · ${money(sum(pays, (p) => num(p.amount)))}`);
+  return bits.length > 1 || pays.length ? `<small class="chain">${icon('flag')}${bits.join(' <i>→</i> ')}</small>` : '';
+}
+function msPill(a) {
+  if (MS.isChallenge(a)) { const st = passStatus(a); if (st.applies && st.passed) return `<button class="pill pill--good pill--btn" data-ms="${a.id}" data-k="pass">${icon('check')}Passed</button>`; return ''; }
+  if (MS.isFundedAcc(a)) { const ps = payoutStatus(a); if (ps.pending.length) return '<span class="pill pill--warn">Payout pending</span>'; if (ps.eligible && ps.hasRules) return `<button class="pill pill--good pill--btn" data-ms="${a.id}" data-k="pay">${icon('payouts')}Payout ready</button>`; if (ps.hasRules && ps.todo.length) return `<span class="pill" title="Next payout: ${esc(ps.todo.join(' · '))}">Payout ${ps.checks.filter((c) => c.ok).length}/${ps.checks.length}</span>`; }
+  return '';
+}
 export function accounts(el) {
   const accs = prefersStack();
   const spent = sum(S.account, accCost);
@@ -618,7 +636,7 @@ export function accounts(el) {
     <section class="card"><div class="chead"><div class="chead__text"><h3>All accounts</h3><p>Click one to edit rules, status or cost</p></div></div>
     ${groups.filter(([, l]) => l.length).map(([g, list]) => `<div class="daygroup"><span>${g}</span><span>${list.length}</span></div><div class="txlist">${list.map((a) => { const x = accountMetrics(a); const danger = x.buffer !== null && x.maxLoss && x.buffer < x.maxLoss * 0.3; return `<div class="txrow txrow--acc" data-acc="${a.id}"><span class="prodico ${a.status === 'failed' ? 'is-loss' : a.type === 'funded' ? '' : 't4'}">${icon(a.type === 'funded' ? 'shield' : a.type === 'personal' ? 'payouts' : 'flag')}</span>
       <span class="cell__text"><b>${esc(a.name)}</b><small>${esc(a.firm || 'Personal')} · ${a.size ? short(a.size) : ''} ${esc(a.type)} · bought ${esc(fmtDate(a.purchaseDate))} for ${money(num(a.cost))}${copyLeader(a) ? ` · <span class="copytag">${icon('copy')}copies ${esc(copyLeader(a).name)}${copyRatio(a) !== 1 ? ' ×' + copyRatio(a) : ''}</span>` : copiersOf(a.id).length ? ` · <span class="copytag">${icon('copy')}copied to ${copiersOf(a.id).length}</span>` : ''}</small>
-      ${x.target && isLive(a) ? `<div style="margin-top:6px;max-width:320px">${meter(x.progress)}</div>` : ''}</span>
+      ${chainLine(a)}${x.target && isLive(a) ? `<div style="margin-top:6px;max-width:320px">${meter(x.progress)}</div>` : ''}</span>${msPill(a)}
       ${(() => { const f = a.status === 'active' && x.target ? passForecast(a, { runs: 800 }) : null; return f && !f.insufficient ? `<span class="pill ${f.pass >= 0.6 ? 'pill--good' : f.pass < 0.35 ? 'pill--bad' : ''}" title="${pct(f.fail)} breach, ${pct(f.open)} still open after 60 days${f.medianDays ? ', median ' + f.medianDays + ' trading days to pass' : ''}">Pass ${pct(f.pass)}</span>` : ''; })()}${x.buffer !== null && isLive(a) ? `<span class="pill ${danger ? 'pill--bad' : ''}">Buffer ${money(x.buffer)}</span>` : ''}${statusPill(a.status)}<span class="amt ${tone(x.pnl)}">${money(x.pnl, { sign: true })}</span></div>`; }).join('')}</div>`).join('') || `<div class="empty">${icon('accounts')}<b>Add your first account</b>Prop challenge, funded or your own capital.</div>`}</section>
   </div></div>`;
   if (accs.length) {
@@ -630,6 +648,7 @@ export function accounts(el) {
   el.querySelector('[data-act="add"]').onclick = () => accountModal();
   { const c = el.querySelector('[data-act="copy"]'); if (c) c.onclick = () => copyTradingModal(); }
   $$('[data-acc]', el).forEach((r) => r.onclick = () => accountModal(S.account.find((a) => a.id === r.dataset.acc)));
+  $$('[data-ms]', el).forEach((b) => (b.onclick = (e) => { e.stopPropagation(); const a = S.account.find((x) => x.id === b.dataset.ms); if (b.dataset.k === 'pass') MS.passModal(a); else MS.requestPayout(a); }));
   after(el);
 }
 // ------------------------------------------------------------------ missing firm / plan
@@ -717,6 +736,10 @@ export function accountModal(a0) {
     <div class="half">${slider({ name: 'consistency', label: 'Consistency rule', value: num(a.consistency), min: 0, max: 100, step: 5, suffix: '%', zero: 'None' })}</div>
     <div class="full costs"><span class="costs__t">${icon('payouts')}What this account cost you <em>(${esc(cur())})</em></span><div class="costs__grid">${COST_FIELDS.map(([k, l]) => field(l, inp(k, a[k], 'type="number" step="any" placeholder="0"'))).join('')}</div></div>
     <div class="full costs"><span class="costs__t">${icon('copy')}Copy trading</span><div class="grid g-2" style="gap:12px">${field('Copies trades from', `<select class="in" name="copyOf"><option value="">Nothing, I trade it on its own</option>${optionList(S.account.filter((x) => x.id !== a.id && x.copyOf !== a.id).map((x) => [x.id, x.name]), a.copyOf || '')}</select>`, '', 'trades logged or imported there are added here too')}${field('Copy size', inp('copyRatio', a.copyRatio || 1, 'type="number" step="0.05" min="0.05" inputmode="decimal"'), '', '×1 same size, ×0.5 half, ×2 double')}</div></div>
+    <details class="full costs payrules" ${a.status === 'funded' || a.type === 'funded' ? 'open' : ''}><summary class="costs__t">${icon('payouts')}Payout rules <em>(funded accounts · filled from the firm, all editable)</em></summary>
+      <div class="costs__grid">${[['payWinDays', 'Qualifying days per payout', 'e.g. 5'], ['payWinMin', 'Min profit for a qualifying day', 'e.g. 150'], ['payTradeDays', 'Min trading days per cycle', ''], ['payConsistency', 'Consistency (best day max %)', 'e.g. 40'], ['payBuffer', 'Buffer to keep in the account', 'profit kept'], ['payMin', 'Minimum payout', ''], ['payMax', 'Maximum per payout', ''], ['payMaxPct', 'Max % of profit per payout', 'e.g. 50'], ['payCalDays', 'Days between payouts', 'e.g. 14'], ['payMaxCount', 'Payouts allowed (then closes)', '']].map(([k, l, ph]) => field(l, inp(k, a[k], `type="number" step="any" placeholder="${ph || '—'}"`))).join('')}</div>
+      ${field('Payout note', inp('payNote', a.payNote, 'placeholder="anything the firm adds, e.g. Safety Net"'), 'full')}
+      ${field('Funded on', inp('fundedDate', a.fundedDate, 'type="date"'), 'half', 'the payout count starts here')}</details>
     ${field('P&amp;L before journaling', inp('startPnl', a.startPnl, 'type="number" step="any" placeholder="0"'), '', 'e.g. −1000 if already down')}${field('Days already traded', inp('startDays', a.startDays, 'type="number" placeholder="0"'))}
     ${field('Notes', `<textarea class="in" name="notes" rows="2">${esc(a.notes || '')}</textarea>`, 'full')}
   </div>`,
@@ -732,6 +755,7 @@ export function accountModal(a0) {
     a.firmId = f.id; a.programId = p.id; a.stage = stage; a.rulesFrom = p.custom ? `${f.name} ${p.name}, added by you` : `${f.name} ${p.name}, catalog ${catalog().verified}`;
     setSlider(sl('size'), r.size); setSlider(sl('target'), num(r.target)); setSlider(sl('maxLoss'), num(r.maxLoss)); setSlider(sl('dailyLimit'), num(r.dailyLimit)); setSlider(sl('minDays'), num(r.minDays)); setSlider(sl('consistency'), num(r.consistency));
     $('[name=ddType]', m.el).value = r.ddType; $('[name=firm]', m.el).value = f.name;
+    ['payWinDays','payWinMin','payConsistency','payBuffer','payMin','payMax','payMaxPct','payCalDays','payTradeDays','payMaxCount'].concat(['payNote']).forEach((kk) => { const i = $(`[name=${kk}]`, m.el); if (i) i.value = r[kk] ?? ''; }); if (stage === 'funded') $('.payrules', m.el).open = true;
     if (!$('[name=name]', m.el).value.trim()) $('[name=name]', m.el).value = `${f.name.split(' ')[0]} ${Math.round(size / 1000)}K ${p.name}`;
     { const ci = $('[name=cost]', m.el); if (ci) ci.placeholder = r.cost ? `List ${r.cost} · enter what you paid` : 'What you paid'; } // list price is only a hint: coupons change it
     $('[name=status]', m.el).value = stage === 'funded' ? 'funded' : $('[name=status]', m.el).value === 'funded' ? 'active' : $('[name=status]', m.el).value;
@@ -767,6 +791,8 @@ export function accountModal(a0) {
     const f = formData(m.el); if (!f.name.trim()) { shake($('[name=name]', m.el)); return; }
     ['size', 'cost', 'resetCost', 'activationFee', 'subscriptionFees', 'platformFees', 'otherFees', 'target', 'maxLoss', 'dailyLimit', 'personalDaily', 'minDays', 'consistency', 'startPnl', 'startDays'].forEach((kk) => (f[kk] = f[kk] === '' || f[kk] === undefined ? '' : num(f[kk])));
     ['target', 'dailyLimit', 'minDays', 'consistency', 'maxLoss'].forEach((kk) => { if (f[kk] === 0) f[kk] = ''; });
+    ['payWinDays','payWinMin','payConsistency','payBuffer','payMin','payMax','payMaxPct','payCalDays','payTradeDays','payMaxCount'].forEach((kk) => (f[kk] = f[kk] === '' || f[kk] === undefined || num(f[kk]) === 0 ? '' : num(f[kk])));
+    if (f.status === 'passed' && !a.passedDate) f.passedDate = today(); if (f.status === 'failed' && !a.failedDate) f.failedDate = today();
     f.type = f.status === 'funded' ? 'funded' : !f.firm ? 'personal' : 'challenge';
     if (f.status === 'funded') a.stage = 'funded';
     f.copyRatio = num(f.copyRatio) > 0 ? num(f.copyRatio) : 1; if (!f.copyOf) { f.copyOf = ''; f.copyRatio = 1; }
@@ -834,6 +860,7 @@ export function payouts(el) {
   S.payout.forEach((p) => { const k = monthKey(p.creditDate || p.reqDate || today()); (months[k] ||= []).push(p); });
   const mrows = Object.keys(months).sort().map((k) => { const l = months[k]; const cr = l.filter((p) => p.status === 'credited'); const est = num(targets[k]) || sum(l, (p) => p.estimate); const act = sum(cr, (p) => p.amount); return { k, est, act, actL: sum(cr, (p) => p.amountLocal || (L?.rate ? p.amount * L.rate : 0)), last: cr.map((p) => p.creditDate).sort().pop(), pend: sum(l.filter((p) => p.status === 'requested'), (p) => p.amount) }; });
   el.innerHTML = `<div class="page">${phead('Money that actually hit your bank', 'Payouts', 'Track estimated vs actual payouts by month, in dollars and your local currency.', `<button class="btn" data-act="target">${icon('target')}Monthly targets</button><button class="btn btn--primary" data-act="add">${icon('plus')}Add payout</button>`)}
+  ${MS.trackerHTML() ? `<div style="margin-bottom:var(--gap)">${MS.trackerHTML()}</div>` : ''}
   <div class="grid g-ov2">
     ${m ? missionCard(m) : card('Payouts', '', `<div class="bal__num">${cnt(sum(S.payout.filter((p) => p.status === 'credited'), (p) => p.amount))}</div><p class="muted">received so far</p>`)}
     ${card('By month', 'Estimated vs actual, like your sheet', mrows.length ? `<div class="tablewrap"><table class="t"><thead><tr><th>Month</th><th class="r">Est.</th><th class="r">Actual</th>${L?.code ? `<th class="r">Actual ${esc(L.code)}</th>` : ''}<th>Credited</th><th style="min-width:120px">Goal</th></tr></thead><tbody>${mrows.map((r) => `<tr data-month="${r.k}"><td><b>${parseISO(r.k + '-01').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}</b></td><td class="r">${money(r.est)}</td><td class="r ${r.act ? 'good' : ''}">${money(r.act)}${r.pend ? `<br><small class="muted">+${money(r.pend)} pending</small>` : ''}</td>${L?.code ? `<td class="r">${money(r.actL, { c: L.code, dec: 0 })}</td>` : ''}<td>${r.last ? fmtDate(r.last) : '—'}</td><td>${r.est ? `<div class="row" style="gap:8px"><div style="flex:1">${meter(r.act / r.est)}</div><small>${pct(r.act / r.est)}</small></div>` : '—'}</td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td class="r">${money(sum(mrows, (r) => r.est))}</td><td class="r">${money(sum(mrows, (r) => r.act))}</td>${L?.code ? `<td class="r">${money(sum(mrows, (r) => r.actL), { c: L.code, dec: 0 })}</td>` : ''}<td></td><td></td></tr></tfoot></table></div>` : `<div class="empty">${icon('payouts')}<b>No payouts yet</b>Set a monthly target, then log payouts as you request them.</div>`)}
@@ -844,12 +871,13 @@ export function payouts(el) {
     <span class="amt">${money(p.amount || p.estimate)}${p.amountLocal || (L?.rate && p.amount) ? `<br><small class="muted">${money(p.amountLocal || p.amount * L.rate, { c: L?.code || 'INR', dec: 0 })}</small>` : ''}</span></div>`).join('')}</div>` : `<div class="empty">Nothing yet.</div>`}</section></div>`;
   el.querySelector('[data-act="add"]').onclick = () => payoutModal();
   el.querySelector('[data-act="target"]').onclick = () => targetsModal();
+  MS.bindTracker(el);
   $$('[data-pay]', el).forEach((r) => r.onclick = () => payoutModal(S.payout.find((p) => p.id === r.dataset.pay)));
   $$('[data-month]', el).forEach((r) => r.onclick = () => targetsModal(r.dataset.month));
   bindCommon(el); after(el);
 }
-function payoutModal(p0) {
-  const p = p0 ? { ...p0 } : { status: 'requested', reqDate: today(), accountId: (S.account.find((a) => a.status === 'funded') || S.account[0] || {}).id };
+export function payoutModal(p0, preset = {}) {
+  const p = p0 ? { ...p0 } : { ...{ status: 'requested', reqDate: today(), accountId: (S.account.find((a) => a.status === 'funded') || S.account[0] || {}).id }, ...preset };
   const L = P().local;
   const m = modal(p0 ? 'Edit payout' : 'Add payout', `<div class="form">
     ${field('Account', `<select class="in" name="accountId">${optionList(S.account.map((a) => [a.id, a.name]), p.accountId)}</select>`, 'half')}
@@ -865,7 +893,10 @@ function payoutModal(p0) {
     const f = formData(m.el); ['amount', 'amountLocal', 'gross', 'estimate'].forEach((k) => (f[k] = f[k] === '' ? '' : num(f[k])));
     if (f.status === 'credited' && !f.creditDate) f.creditDate = today();
     if (f.status === 'credited' && f.amountLocal === '' && L?.rate && f.amount) f.amountLocal = Math.round(f.amount * L.rate);
-    save('payout', { ...p, ...f }); m.close(); H.refresh(); toast(f.status === 'credited' ? 'Payout credited — nice.' : 'Payout saved', icon('check'));
+    if (f.status === 'credited' && f.gross === '' && f.amount) { const ac = S.account.find((x) => x.id === f.accountId); if (num(ac?.split)) f.gross = Math.round(f.amount / (num(ac.split) / 100)); }
+    const newly = f.status === 'credited' && p0?.status !== 'credited';
+    const sp = save('payout', { ...p, ...f }); m.close(); H.refresh();
+    if (newly && sp) setTimeout(() => MS.payoutCelebrate(sp), 250); else toast(f.status === 'requested' ? 'Payout request logged. Mark it credited when it lands.' : 'Payout saved', icon('check'));
   });
   m.on('del', () => { remove('payout', p.id); m.close(); H.refresh(); });
 }
@@ -1117,12 +1148,12 @@ export function settings(el) {
   $('#sMkSave', el).onclick = () => { const pv = {}; ($('[name=pv]', el).value || '').split(',').forEach((s) => { const [k, v] = s.split('='); if (k && v) pv[k.trim().toUpperCase()] = num(v); }); saveProfile({ ...P(), markets: $$('#sMk .is-on', el).map((c) => c.dataset.v), instruments: $('[name=inst]', el).value.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean), pointValues: pv }); toast('Saved', icon('check')); };
   segBind(el, '#sTheme', (v) => { const b = $('#sTheme .is-on', el).getBoundingClientRect(); window.__switchTheme(v, b.left + b.width / 2, b.top + b.height / 2); });
   $('#sFrost', el).oninput = (e) => { document.documentElement.style.setProperty('--frost', e.target.value); try { localStorage.setItem('ew_frost', e.target.value); } catch (er) {} };
-  { const up = $('#upgPreview', el); if (up) up.onclick = () => import('./plan.js?v=79ab0b80').then((m) => m.upgradeModal()); }
-  { const pm = $('#proMore', el); if (pm) pm.onclick = () => import('./plan.js?v=79ab0b80').then((m) => m.checkout(pm)); }
-  { const pu = $('#planUse', el); if (pu) import('./plan.js?v=79ab0b80').then((m) => { pu.innerHTML = m.usageHTML(false) + `<p class="muted" style="margin:10px 0 0;font-size:var(--fs-sm)">Pro is ${m.priceTxt()}/month: unlimited trades and imports, AI coach 60 requests a day, screenshot logging, replay and AI backtests.</p>`; m.bindUsage(pu); }); }
-  { const pv = $('#petPv', el); if (pv) import('./pet.js?v=79ab0b80').then((m) => (pv.innerHTML = m.petPreview('pip'))); }
-  $('#sPet', el).onclick = (e) => { const on = e.currentTarget.classList.toggle('is-on'); $('#petMoveRow', el).style.display = on ? '' : 'none'; import('./pet.js?v=79ab0b80').then((m) => m.setPet(on)); };
-  segBind(el, '#sPetMove', (v) => import('./pet.js?v=79ab0b80').then((m) => m.setFollow(v === 'follow')));
+  { const up = $('#upgPreview', el); if (up) up.onclick = () => import('./plan.js?v=6b792348').then((m) => m.upgradeModal()); }
+  { const pm = $('#proMore', el); if (pm) pm.onclick = () => import('./plan.js?v=6b792348').then((m) => m.checkout(pm)); }
+  { const pu = $('#planUse', el); if (pu) import('./plan.js?v=6b792348').then((m) => { pu.innerHTML = m.usageHTML(false) + `<p class="muted" style="margin:10px 0 0;font-size:var(--fs-sm)">Pro is ${m.priceTxt()}/month: unlimited trades and imports, AI coach 60 requests a day, screenshot logging, replay and AI backtests.</p>`; m.bindUsage(pu); }); }
+  { const pv = $('#petPv', el); if (pv) import('./pet.js?v=6b792348').then((m) => (pv.innerHTML = m.petPreview('pip'))); }
+  $('#sPet', el).onclick = (e) => { const on = e.currentTarget.classList.toggle('is-on'); $('#petMoveRow', el).style.display = on ? '' : 'none'; import('./pet.js?v=6b792348').then((m) => m.setPet(on)); };
+  segBind(el, '#sPetMove', (v) => import('./pet.js?v=6b792348').then((m) => m.setFollow(v === 'follow')));
   $('#sSnd', el).onclick = (e) => { const on = e.currentTarget.classList.toggle('is-on'); setSound(on); };
   $('#sRM', el).onclick = (e) => { e.currentTarget.classList.toggle('is-on'); try { localStorage.setItem('ew_rm', e.currentTarget.classList.contains('is-on') ? '1' : '0'); } catch (er) {} toast('Reload to apply', icon('info')); };
   $('#sExp', el).onclick = () => { const o = { exportedAt: new Date().toISOString(), profile: S.profile }; ['account', 'trade', 'payout', 'plan', 'journal', 'setup', 'rule'].forEach((k) => (o[k] = S[k])); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(o, null, 2)], { type: 'application/json' })); a.download = `smarttrade-${today()}.json`; a.click(); };

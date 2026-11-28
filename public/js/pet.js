@@ -1,7 +1,7 @@
 // Trading buddy: an optional little character that lives in the corner of the app.
 // It sleeps when you're away, wakes when the mouse comes near, follows the cursor with its eyes,
 // and talks only when something matters: your risk left today, losing streaks, news, your prep, your wins.
-import { S, P, $, esc, money, num, today, sum, net, safeToRisk, saveProfile, icon, API, addDays } from './core.js?v=79ab0b80';
+import { S, P, $, esc, money, num, today, sum, net, safeToRisk, saveProfile, icon, API, addDays, passStatus, payoutStatus, isChallenge, isFundedAcc } from './core.js?v=6b792348';
 
 export const PETS = { pip: { name: 'Pip', blurb: 'A little flame. Burns brighter when you stick to the plan.' } };
 
@@ -71,6 +71,12 @@ function read() {
   if (d.lossRun >= 2) return ['worried', `${d.lossRun} losses in a row. Breathe. Is the next one really an A+ setup?`, null];
   if (r.amount !== null && r.rule && r.amount < r.rule * 0.3) return ['worried', `Only ${money(r.amount)} left before your daily stop. Size down or call it a day.`, null];
   if (weekday() && !prepDone() && new Date().getHours() < 21) return ['calm', d.n ? 'You traded without your Start my day check. Two minutes now?' : 'Morning! Tick your Start my day checklist before the first trade?', ['journal', 'Start my day']];
+  { const ready = S.account.find((a) => isFundedAcc(a) && (() => { const ps = payoutStatus(a); return ps.hasRules && ps.eligible && !ps.pending.length; })());
+    if (ready) return ['happy', `${ready.name} can request a payout: about ${money(payoutStatus(ready).amount)}. Log it once you request it.`, ['payouts', 'Open payouts']];
+    const pass = S.account.find((a) => isChallenge(a) && passStatus(a).passed);
+    if (pass) return ['happy', `${pass.name} has met every pass rule. Mark it passed when the firm confirms!`, ['accounts', 'Open accounts']];
+    const near = S.account.filter(isFundedAcc).map((a) => [a, payoutStatus(a)]).find(([, ps]) => ps.hasRules && ps.todo.length === 1);
+    if (near && !d.n) return ['calm', `${near[0].name} is one step from a payout: ${near[1].todo[0]}.`, ['payouts', 'See payout rules']]; }
   if (d.n && d.pnl > 0) return ['happy', `Green day: ${money(d.pnl, { sign: true })} on ${d.n} trade${d.n > 1 ? 's' : ''}. Protect it.`, null];
   if (r.amount !== null) return ['calm', `You can still risk ${money(r.amount)} today${r.tradesLeft !== null ? `, ${r.tradesLeft} trade${r.tradesLeft === 1 ? '' : 's'} left` : ''}.`, null];
   return ['calm', 'Log your next trade and I will keep score.', null];
@@ -229,7 +235,7 @@ function menu() {
     e.stopPropagation(); const a = x.dataset.a;
     if (a === 'stay' || a === 'follow') { setFollow(a === 'follow'); b.querySelectorAll('.pet__seg button').forEach((y) => y.classList.toggle('is-on', y === x)); return; }
     hide();
-    if (a === 'log' || a === 'shot') { const V = await import('./views.js?v=79ab0b80'); V.tradeModal(null, {}, a === 'shot' ? { shot: true } : {}); }
+    if (a === 'log' || a === 'shot') { const V = await import('./views.js?v=6b792348'); V.tradeModal(null, {}, a === 'shot' ? { shot: true } : {}); }
     else if (a === 'coach') location.hash = '#coach'; else if (a === 'journal') location.hash = '#journal';
     else if (a === 'hide') { try { localStorage.setItem(HIDE_KEY, today()); } catch (err) {} if (window.gsap && !reduced.matches) window.gsap.to($('.pet__tilt', el), { scale: 0, duration: 0.3, ease: 'back.in(2)', onComplete: unmountPet }); else unmountPet(); }
   }));
